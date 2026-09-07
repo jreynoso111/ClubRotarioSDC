@@ -180,16 +180,16 @@
   justify-content: space-between;
   margin: 0 auto;
   max-width: var(--public-max);
-  padding: 22px 0 28px;
+  padding: 16px 0 20px;
   min-width: 0;
   width: min(var(--public-max), calc(100% - var(--public-gutter) - var(--public-gutter)));
 }
-.footerBrand { align-items: center; display: flex; gap: 13px; min-width: 0; }
-.footerBrand .signature img { width: 86px; }
-.footerBrand .signatureName { font-size: 8px; }
+.footerBrand { align-items: center; display: flex; gap: 11px; min-width: 0; }
+.footerBrand .signature img { width: 78px; }
+.footerBrand .signatureName { font-size: 7px; }
 .footerCopy { color: var(--ink-soft); text-align: center; }
-.footerCopy p { font-family: Georgia, "Times New Roman", serif; font-size: 16px; margin: 0 0 4px; }
-.footerCopy small { display: block; font-family: var(--font-geist-mono); font-size: 9px; letter-spacing: .08em; overflow-wrap: anywhere; }
+.footerCopy p { font-family: Georgia, "Times New Roman", serif; font-size: 14px; margin: 0 0 3px; }
+.footerCopy small { display: block; font-family: var(--font-geist-mono); font-size: 8px; letter-spacing: .06em; line-height: 1.25; overflow-wrap: anywhere; }
 .footerArrow { align-items: center; border: 1px solid var(--line); border-radius: 50%; display: flex; height: 34px; justify-content: center; transform: rotate(-45deg); width: 34px; }
 
 .cover { background: var(--paper-deep); min-height: 180px; overflow: hidden; position: relative; }
@@ -262,10 +262,11 @@
   .heroStamp h2 { font-size: clamp(31px, 5vw, 48px); }
   .heroStamp small { font-size: 9px; }
 
-  .footer { align-items: start; display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr) auto auto; padding-bottom: 16px; padding-top: 16px; }
-  .footerBrand { align-items: flex-start; flex-wrap: nowrap; gap: 12px; }
-  .footerCopy p { font-size: 13px; }
-  .footerCopy small { font-size: 8px; }
+  .footer { align-items: start; display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr) auto auto; padding-bottom: 14px; padding-top: 12px; }
+  .footerBrand { align-items: flex-start; flex-wrap: nowrap; gap: 10px; }
+  .footerBrand .signature img { width: 70px; }
+  .footerCopy p { font-size: 12px; }
+  .footerCopy small { font-size: 7px; }
   .footerArrow { margin-left: 0; }
 }
 
@@ -273,4 +274,32 @@
   .heroActions { gap: 8px; }
   .heroActions a { font-size: 7px; gap: 5px; letter-spacing: .04em; }
   .heroActions .button { font-size: 7px; gap: 5px; padding: 8px 6px; }
+}
+
+@media (orientation: portrait) and (max-width: 760px) {
+  .footer {
+    align-items: start;
+    display: grid;
+    gap: 16px 14px;
+    grid-template-areas:
+      "brand arrow"
+      "copy copy";
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding-bottom: 20px;
+    padding-top: 18px;
+  }
+
+  .footerBrand {
+    align-items: flex-start;
+    flex-wrap: nowrap;
+    gap: 10px;
+    grid-area: brand;
+  }
+
+  .footerBrand .signature img { width: 70px; }
+  .footerBrand .signatureName { font-size: 7px; }
+  .footerCopy { grid-area: copy; min-width: 0; text-align: left; }
+  .footerCopy p { font-size: 13px; margin-bottom: 3px; }
+  .footerCopy small { font-size: 8px; line-height: 1.25; }
+  .footerArrow { align-self: start; grid-area: arrow; margin-left: 0; }
 }
