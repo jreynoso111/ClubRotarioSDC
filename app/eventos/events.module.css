@@ -48,78 +48,32 @@
 .joinBand p { color: rgba(18,47,73,.72); font-size: 13px; line-height: 1.5; margin: 18px 0 0; max-width: 430px; }
 .joinBand a { align-items: center; border-bottom: 1px solid var(--ink); display: inline-flex; font-size: 11px; font-weight: 800; gap: 9px; letter-spacing: .07em; padding-bottom: 7px; text-transform: uppercase; }
 
-/* The public agenda opens with an editorial banner, then a real monthly grid. */
+/* The public agenda opens with an illustrated banner, then a real monthly grid. */
 .agendaBanner {
+  --teal: var(--lime-light);
   animation: reveal .8s .12s ease-out both;
-  border-bottom: 1px solid var(--ink);
-  border-top: 2px solid var(--ink);
-  display: grid;
-  gap: clamp(30px, 5vw, 66px);
-  grid-template-columns: minmax(0, 1.05fr) minmax(300px, .75fr);
-  margin-top: 32px;
-  padding: 14px 0 18px;
-}
-.agendaBannerCopy { align-self: center; min-width: 0; padding: 30px 0 22px; }
-.agendaBannerCopy h1 {
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(49px, 6.5vw, 84px);
-  font-weight: 400;
-  letter-spacing: -.075em;
-  line-height: .89;
-  margin: 15px 0 0;
-  max-width: 700px;
-  overflow-wrap: anywhere;
-}
-.agendaBannerCopy h1 em { color: var(--teal); font-style: italic; }
-.agendaBannerCopy > p { color: var(--ink-soft); font-size: 14px; line-height: 1.62; margin: 27px 0 24px; max-width: 440px; }
-.bannerLink {
-  align-items: center;
-  border-bottom: 1px solid var(--ink);
-  display: inline-flex;
-  font-size: 10px;
-  font-weight: 800;
-  gap: 9px;
-  letter-spacing: .08em;
-  padding-bottom: 7px;
-  text-transform: uppercase;
-}
-.bannerLink .icon { fill: none; height: 14px; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.25; transition: transform .2s ease; width: 14px; }
-.bannerLink:hover .icon { transform: translate(2px, -2px); }
-.agendaBannerArt {
   background: var(--rotary-blue);
+  border-block: 2px solid var(--ink);
   color: var(--paper);
-  min-height: 350px;
+  margin-top: 32px;
+  min-height: 380px;
   overflow: hidden;
-  padding: 24px;
+  padding: 13px clamp(26px, 6vw, 82px) 18px;
   position: relative;
 }
-.agendaBannerArt::before { border: 1px solid rgba(247,168,27,.55); border-radius: 50%; content: ""; height: 360px; position: absolute; right: -155px; top: -155px; width: 360px; }
-.agendaBannerArt::after { border: 1px solid rgba(255,253,248,.18); border-radius: 50%; bottom: -215px; content: ""; height: 420px; left: -160px; position: absolute; width: 420px; }
-.artMasthead, .artFooter { display: flex; font-family: var(--font-geist-mono); font-size: 8px; justify-content: space-between; letter-spacing: .13em; position: relative; text-transform: uppercase; z-index: 1; }
-.artMasthead span:last-child, .artFooter span:last-child { color: var(--rotary-gold); }
-.artCalendar {
-  background: var(--paper);
-  box-shadow: 12px 14px 0 rgba(7, 31, 51, .18);
-  color: var(--ink);
-  margin: 29px auto 25px;
-  max-width: 285px;
-  padding: 18px;
-  position: relative;
-  transform: rotate(-3deg);
-  z-index: 1;
-}
-.artCalendarTitle { align-items: end; border-bottom: 2px solid var(--ink); display: flex; justify-content: space-between; padding-bottom: 11px; }
-.artCalendarTitle strong { font-family: Georgia, "Times New Roman", serif; font-size: 24px; font-weight: 400; letter-spacing: -.05em; }
-.artCalendarTitle span { color: var(--teal); font-family: var(--font-geist-mono); font-size: 9px; letter-spacing: .1em; }
-.artWeekdays, .artDays { display: grid; grid-template-columns: repeat(7, 1fr); }
-.artWeekdays { border-bottom: 1px solid var(--line); color: var(--ink-soft); font-family: var(--font-geist-mono); font-size: 8px; letter-spacing: .08em; padding: 11px 0 8px; text-align: center; }
-.artDays { gap: 4px; padding-top: 10px; }
-.artDays span { align-items: center; aspect-ratio: 1; display: flex; font-family: var(--font-geist-mono); font-size: 9px; justify-content: center; }
-.artDays .artDayMarked { background: var(--rotary-gold); border-radius: 50%; color: var(--ink); font-weight: 800; }
-.artDays .artDayBlank { visibility: hidden; }
-.artFooter { margin-top: 1px; }
-.agendaBanner > .bannerFoot { align-items: center; border-top: 1px solid var(--line); display: flex; gap: 18px; grid-column: 1 / -1; justify-content: space-between; padding-top: 11px; }
-.agendaBanner > .bannerFoot span:last-child { color: var(--teal); }
+.agendaBannerArt { height: 100%; inset: 0; min-height: 380px; position: absolute; width: 100%; z-index: 0; }
+.agendaBannerArt::after { background: linear-gradient(112deg, rgba(0, 64, 122, .84), rgba(0, 64, 122, .48) 58%, rgba(0, 64, 122, .75)); content: ""; inset: 0; position: absolute; }
+.agendaBannerArt img { filter: saturate(.72) contrast(.92); opacity: .78; object-position: center 52%; }
+.agendaBannerContent { margin: 0 auto; max-width: 980px; position: relative; width: 100%; z-index: 1; }
+.agendaBannerTop { align-items: center; display: flex; gap: 20px; justify-content: space-between; }
+.agendaBanner .sectionLabel { color: var(--lime-light); margin: 0; }
+.agendaBanner .sectionLabelLine { background: var(--rotary-gold); }
+.agendaBannerDate { color: var(--rotary-gold); font-family: var(--font-geist-mono); font-size: 9px; letter-spacing: .15em; white-space: nowrap; }
+.agendaBannerContent h1 { font-family: Georgia, "Times New Roman", serif; font-size: clamp(56px, 8.5vw, 116px); font-weight: 400; letter-spacing: -.08em; line-height: .84; margin: 42px 0 0; max-width: 980px; overflow-wrap: anywhere; }
+.agendaBannerContent h1 em { color: var(--rotary-gold); font-style: italic; }
+.agendaBannerContent > p { color: rgba(255, 253, 248, .78); font-size: 14px; line-height: 1.62; margin: 30px 0 0; max-width: 560px; }
+.agendaBanner > .bannerFoot { align-items: center; border-top: 1px solid rgba(255, 253, 248, .24); color: rgba(255, 253, 248, .62); display: flex; gap: 18px; justify-content: space-between; margin-top: 54px; padding-top: 11px; position: relative; text-transform: uppercase; z-index: 1; }
+.agendaBanner > .bannerFoot span:last-child { color: var(--rotary-gold); }
 .calendarSection { animation: reveal .8s .25s ease-out both; padding: 92px 0 98px; }
 .calendarHeading { align-items: end; display: flex; justify-content: space-between; margin-bottom: 22px; }
 .calendarEyebrow { color: var(--teal); font-family: var(--font-geist-mono); font-size: 9px; font-weight: 800; letter-spacing: .14em; margin: 0 0 12px; text-transform: uppercase; }
@@ -189,22 +143,14 @@
 
 @media (max-width: 760px) {
   .main, .detailMain { --route-gutter: 20px; width: min(620px, calc(100% - var(--route-gutter) - var(--route-gutter))); }
-  .agendaBanner { display: flex; flex-direction: column; gap: 18px; margin-top: 16px; padding: 10px 0 14px; }
-  .agendaBannerCopy { padding: 29px 0 8px; }
-  .agendaBannerCopy h1 { font-size: clamp(48px, 14vw, 70px); margin-top: 13px; }
-  .agendaBannerCopy > p { font-size: 13px; margin: 23px 0 21px; max-width: 330px; }
-  .bannerLink { font-size: 9px; gap: 7px; padding-bottom: 6px; }
-  .bannerLink .icon { height: 12px; width: 12px; }
-  .agendaBannerArt { min-height: 315px; padding: 19px; }
-  .artMasthead, .artFooter { font-size: 7px; }
-  .artCalendar { margin: 24px auto 21px; max-width: 245px; padding: 14px; }
-  .artCalendarTitle { padding-bottom: 9px; }
-  .artCalendarTitle strong { font-size: 20px; }
-  .artCalendarTitle span { font-size: 8px; }
-  .artWeekdays { font-size: 7px; padding: 9px 0 7px; }
-  .artDays { gap: 3px; padding-top: 8px; }
-  .artDays span { font-size: 8px; }
-  .bannerFoot { font-size: 7px; gap: 9px; flex-wrap: wrap; }
+  .agendaBanner { min-height: 0; margin-top: 16px; padding: 30px 20px 15px; }
+  .agendaBannerTop { align-items: flex-start; flex-direction: column; gap: 16px; }
+  .agendaBanner .sectionLabel { font-size: 9px; }
+  .agendaBannerDate { font-size: 7px; }
+  .agendaBannerContent h1 { font-size: clamp(49px, 14vw, 76px); margin-top: 34px; }
+  .agendaBannerContent > p { font-size: 13px; margin: 24px 0 0; max-width: 470px; }
+  .agendaBannerArt { min-height: 380px; }
+  .agendaBanner > .bannerFoot { flex-wrap: wrap; font-size: 7px; gap: 9px 14px; margin-top: 37px; }
   .hero { display: flex; flex-direction: column; gap: 38px; padding: 54px 0 60px; }
   .heroCopy h1, .detailHeader h1 { font-size: clamp(49px, 14vw, 76px); }
   .heroStamp { min-height: 260px; width: 100%; }
@@ -256,22 +202,14 @@
     width: min(1240px, calc(100% - var(--route-gutter) - var(--route-gutter)));
   }
 
-  .agendaBanner { display: grid; gap: clamp(18px, 3vw, 30px); grid-template-columns: minmax(0, 1.08fr) minmax(250px, .82fr); margin-top: 14px; padding: 9px 0 13px; }
-  .agendaBannerCopy { padding: 22px 0 17px; }
-  .agendaBannerCopy h1 { font-size: clamp(37px, 7vw, 58px); margin-top: 10px; }
-  .agendaBannerCopy > p { font-size: 11px; line-height: 1.45; margin: 17px 0 16px; max-width: 310px; }
-  .bannerLink { font-size: 8px; gap: 6px; padding-bottom: 5px; }
-  .bannerLink .icon { height: 11px; width: 11px; }
-  .agendaBannerArt { min-height: 252px; padding: 17px; }
-  .artMasthead, .artFooter { font-size: 6px; }
-  .artCalendar { margin: 18px auto 16px; max-width: 205px; padding: 11px; }
-  .artCalendarTitle { padding-bottom: 7px; }
-  .artCalendarTitle strong { font-size: 16px; }
-  .artCalendarTitle span { font-size: 7px; }
-  .artWeekdays { font-size: 6px; padding: 7px 0 5px; }
-  .artDays { gap: 2px; padding-top: 6px; }
-  .artDays span { font-size: 6px; }
-  .agendaBanner > .bannerFoot { grid-column: 1 / -1; font-size: 6px; gap: 8px; padding-top: 7px; }
+  .agendaBanner { margin-top: 14px; padding: 28px clamp(24px, 5vw, 52px) 13px; }
+  .agendaBannerTop { flex-direction: row; }
+  .agendaBanner .sectionLabel { font-size: 8px; }
+  .agendaBannerDate { font-size: 6px; }
+  .agendaBannerContent h1 { font-size: clamp(36px, 7vw, 64px); margin-top: 25px; }
+  .agendaBannerContent > p { font-size: 11px; line-height: 1.45; margin-top: 16px; max-width: 560px; }
+  .agendaBannerArt { min-height: 300px; }
+  .agendaBanner > .bannerFoot { font-size: 6px; gap: 8px; margin-top: 30px; padding-top: 7px; }
   .calendarSection { padding: 48px 0 54px; }
   .calendarHeading { margin-bottom: 16px; }
   .calendarEyebrow { font-size: 7px; margin-bottom: 8px; }
@@ -338,17 +276,12 @@
 }
 
 @media (orientation: landscape) and (max-height: 520px) and (max-width: 620px) {
-  .agendaBanner { gap: 12px; grid-template-columns: minmax(0, 1.1fr) minmax(205px, .9fr); }
-  .agendaBannerCopy { padding: 17px 0 12px; }
-  .agendaBannerCopy h1 { font-size: clamp(32px, 7.5vw, 47px); }
-  .agendaBannerCopy > p { font-size: 9px; margin: 12px 0; }
-  .bannerLink { font-size: 7px; }
-  .agendaBannerArt { min-height: 222px; padding: 13px; }
-  .artCalendar { margin: 14px auto 12px; max-width: 177px; padding: 9px; }
-  .artCalendarTitle strong { font-size: 13px; }
-  .artWeekdays { font-size: 5px; padding-block: 6px 4px; }
-  .artDays { gap: 1px; padding-top: 5px; }
-  .artDays span { font-size: 5px; }
+  .agendaBanner { padding-inline: 18px; }
+  .agendaBannerTop { gap: 10px; }
+  .agendaBannerDate { font-size: 5px; }
+  .agendaBannerContent h1 { font-size: clamp(32px, 7.5vw, 47px); }
+  .agendaBannerContent > p { font-size: 9px; margin: 12px 0 0; }
+  .agendaBannerArt { min-height: 255px; }
   .agendaBanner > .bannerFoot { font-size: 5px; gap: 6px; }
   .calendarSection { padding-block: 38px 43px; }
   .calendarHeading h2 { font-size: 34px; }

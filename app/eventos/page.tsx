@@ -4,6 +4,7 @@ import Link from "next/link";
 import {
   ArrowLink,
   ArrowUpRight,
+  CoverArt,
   PublicShell,
   SectionLabel,
   formatEventDate,
@@ -64,24 +65,14 @@ export default async function EventosPage() {
     <PublicShell active="eventos">
       <main className={styles.main}>
         <section className={styles.agendaBanner} aria-labelledby="agenda-title">
-          <div className={styles.agendaBannerCopy}>
-            <SectionLabel>Agenda pública · Ciudad Colonial</SectionLabel>
+          <CoverArt src="/agenda-banner-illustration.webp" alt="Ilustración editorial de un encuentro en una plaza de la Ciudad Colonial" className={styles.agendaBannerArt} priority />
+          <div className={styles.agendaBannerContent}>
+            <div className={styles.agendaBannerTop}>
+              <SectionLabel>Agenda pública · Ciudad Colonial</SectionLabel>
+              <span className={styles.agendaBannerDate}>{String(events.length).padStart(2, "0")} ACTIVIDADES</span>
+            </div>
             <h1 id="agenda-title">Un calendario para <em>encontrarnos.</em></h1>
             <p>Reuniones, proyectos y espacios de conversación para participar en la vida del club.</p>
-            <a className={styles.bannerLink} href="#calendario">Ver el calendario <ArrowUpRight /></a>
-          </div>
-          <div className={styles.agendaBannerArt} role="img" aria-label="Ilustración editorial de un calendario con fechas del club">
-            <div className={styles.artMasthead}><span>AGENDA / SDQ</span><span>2026 · 01</span></div>
-            <div className={styles.artCalendar}>
-              <div className={styles.artCalendarTitle}><strong>SEPTIEMBRE</strong><span>2026</span></div>
-              <div className={styles.artWeekdays}>{["L", "M", "M", "J", "V", "S", "D"].map((day, index) => <span key={`${day}-${index}`}>{day}</span>)}</div>
-              <div className={styles.artDays}>
-                {["", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30"].map((day, index) => (
-                  <span className={[day === "14" || day === "28" ? styles.artDayMarked : "", day === "" ? styles.artDayBlank : ""].filter(Boolean).join(" ")} key={`${day}-${index}`}>{day}</span>
-                ))}
-              </div>
-            </div>
-            <div className={styles.artFooter}><span>Personas en acción</span><span>●</span></div>
           </div>
           <div className={styles.bannerFoot}>
             <span>Encuentros · servicio · comunidad</span>

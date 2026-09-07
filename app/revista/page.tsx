@@ -71,6 +71,7 @@ export default async function RevistaPage() {
     <PublicShell active="revista">
       <main className={styles.main}>
         <section className={styles.magazineBanner} aria-labelledby="revista-title">
+          <CoverArt src="/revista-banner-illustration.webp" alt="Ilustración editorial de una publicación sobre servicio y comunidad" className={styles.magazineBannerArt} priority />
           <div className={styles.bannerMasthead}>
             <span>Club Rotario Santo Domingo Colonial</span>
             <strong>Revista Colonial</strong>
@@ -85,7 +86,6 @@ export default async function RevistaPage() {
               <p>
                 Crónicas, ideas y memoria para mirar de cerca cómo el club se conecta con su comunidad.
               </p>
-              <a className={styles.bannerLink} href="#archivo">Explorar publicaciones <ArrowUpRight /></a>
             </div>
           </div>
           <div className={styles.bannerFoot}>
