@@ -5,6 +5,7 @@
   background: var(--rotary-blue);
   border-block: 2px solid var(--ink);
   color: var(--paper);
+  --teal: var(--lime-light);
   margin-top: 32px;
   min-height: 370px;
   overflow: hidden;
@@ -13,6 +14,9 @@
 }
 .aboutBanner::before { border: 1px solid rgba(247, 168, 27, .58); border-radius: 50%; content: ""; height: 620px; position: absolute; right: -230px; top: -330px; width: 620px; }
 .aboutBanner::after { border: 1px solid rgba(255, 253, 248, .2); border-radius: 50%; bottom: -280px; content: ""; height: 560px; left: -210px; position: absolute; width: 560px; }
+.aboutBannerArt { height: 100%; inset: 0; min-height: 370px; position: absolute; width: 100%; z-index: 0; }
+.aboutBannerArt::after { background: linear-gradient(115deg, rgba(0, 64, 122, .82), rgba(0, 64, 122, .5) 58%, rgba(0, 64, 122, .78)); content: ""; inset: 0; position: absolute; }
+.aboutBannerArt img { filter: saturate(.72) contrast(.92); opacity: .78; object-position: center 52%; }
 .aboutBannerContent { margin: 0 auto; max-width: 980px; position: relative; width: 100%; z-index: 1; }
 .aboutBannerTop { align-items: center; display: flex; gap: 20px; justify-content: space-between; }
 .aboutBanner .sectionLabel { color: var(--lime-light); margin: 0; }

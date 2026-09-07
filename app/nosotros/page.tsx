@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import {
   ArrowLink,
   ArrowUpRight,
+  CoverArt,
   PublicShell,
   SectionLabel,
 } from "@/components/public/PublicChrome";
@@ -146,6 +147,7 @@ export default function NosotrosPage() {
     <PublicShell active="nosotros">
       <main className={styles.main}>
         <section className={styles.aboutBanner} aria-labelledby="about-title">
+          <CoverArt src="/alcazar-colon-illustration.png" alt="Ilustración del Alcázar de Colón en la Ciudad Colonial de Santo Domingo" className={styles.aboutBannerArt} priority />
           <div className={styles.aboutBannerContent}>
             <div className={styles.aboutBannerTop}>
               <SectionLabel>El club · Historia y relación</SectionLabel>
