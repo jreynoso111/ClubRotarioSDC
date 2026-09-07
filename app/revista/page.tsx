@@ -19,10 +19,26 @@ export const metadata: Metadata = {
     "Historias, ideas y referencias para seguir el servicio del Club Rotario Santo Domingo Colonial.",
 };
 
-function StoryCard({ story, featured = false }: { story: PublicStory; featured?: boolean }) {
+function StoryCard({
+  story,
+  featured = false,
+  compact = false,
+}: {
+  story: PublicStory;
+  featured?: boolean;
+  compact?: boolean;
+}) {
+  const cardClassName = [
+    styles.storyCard,
+    featured && styles.storyCardFeatured,
+    compact && styles.storyCardCompact,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
     <Link
-      className={featured ? `${styles.storyCard} ${styles.storyCardFeatured}` : styles.storyCard}
+      className={cardClassName}
       href={`/revista/${story.slug}`}
     >
       <CoverArt
@@ -38,7 +54,7 @@ function StoryCard({ story, featured = false }: { story: PublicStory; featured?:
         </div>
         <h2>{story.title}</h2>
         <p>{story.excerpt}</p>
-        <span className={styles.readMore}>Leer la historia <ArrowUpRight /></span>
+        <span className={styles.readMore}>Abrir publicación <ArrowUpRight /></span>
       </div>
     </Link>
   );
@@ -47,42 +63,71 @@ function StoryCard({ story, featured = false }: { story: PublicStory; featured?:
 export default async function RevistaPage() {
   const [stories] = await Promise.all([getPublicStories(12)]);
   const guides = getEditorialGuides();
+  const publications = stories.length > 0 ? stories : guides;
+  const hasClubStories = stories.length > 0;
+  const currentYear = new Date().getFullYear();
 
   return (
     <PublicShell active="revista">
       <main className={styles.main}>
-        <section className={styles.hero}>
-          <div className={styles.heroCopy}>
-            <SectionLabel>Revista social · Archivo abierto</SectionLabel>
-            <h1>El servicio tiene historias. <em>Aquí las contamos.</em></h1>
-            <p>
-              Una publicación para mirar de cerca las conversaciones, aprendizajes y acciones que conectan al club con su comunidad.
-            </p>
-            <div className={styles.heroActions}>
-              <a className={styles.buttonPrimary} href="#archivo">Explorar el archivo <ArrowUpRight /></a>
-              <Link className={styles.textLink} href="/nosotros#rotary-international">Conocer Rotary <ArrowUpRight /></Link>
+        <section className={styles.magazineBanner} aria-labelledby="revista-title">
+          <div className={styles.bannerMasthead}>
+            <span>Club Rotario Santo Domingo Colonial</span>
+            <strong>Revista Colonial</strong>
+            <span>Edición abierta · {currentYear}</span>
+          </div>
+          <div className={styles.bannerIntro}>
+            <div className={styles.bannerTitle}>
+              <SectionLabel>Revista social · Publicaciones</SectionLabel>
+              <h1 id="revista-title">El servicio <em>en primera plana.</em></h1>
+            </div>
+            <div className={styles.bannerAside}>
+              <p>
+                Crónicas, ideas y memoria para mirar de cerca cómo el club se conecta con su comunidad.
+              </p>
+              <a className={styles.bannerLink} href="#archivo">Explorar publicaciones <ArrowUpRight /></a>
             </div>
           </div>
-          <div className={styles.heroStamp} aria-label="Identidad editorial de la revista">
-            <div className={styles.heroStampTop}><span>SDQ / ZC</span><span>01 — REVISTA</span></div>
-            <strong>Personas de acción<br /><em>en primera persona.</em></strong>
-            <div className={styles.heroStampBottom}><span>Club Rotario Santo Domingo Colonial</span><span>●</span></div>
+          <div className={styles.bannerFoot}>
+            <span>Historias · ideas · memoria</span>
+            <span>Ciudad Colonial · Santo Domingo</span>
+            <span>Vol. 01</span>
           </div>
         </section>
 
-        <section className={styles.archive} id="archivo">
+        <section className={styles.issue} id="archivo">
           <div className={styles.sectionHeading}>
             <div>
-              <SectionLabel>Historias del club</SectionLabel>
-              <h2>Lo que hacemos <span>merece memoria.</span></h2>
+              <SectionLabel>{hasClubStories ? "Crónicas del club" : "Edición de referencia"}</SectionLabel>
+              <h2>Publicaciones <span>para quedarse.</span></h2>
             </div>
-            <p>Crónicas y voces publicadas por el equipo editorial del club.</p>
+            <p>
+              {hasClubStories
+                ? "Crónicas y voces publicadas por el equipo editorial del club."
+                : "Una selección de lecturas para conocer el movimiento y su manera de servir."}
+            </p>
           </div>
 
-          {stories.length > 0 ? (
-            <div className={styles.storyGrid}>
-              {stories.map((story, index) => <StoryCard key={story.id} story={story} featured={index === 0} />)}
-            </div>
+          {publications.length > 0 ? (
+            <>
+              <div className={styles.newspaperGrid}>
+                <StoryCard story={publications[0]} featured />
+                {publications.length > 1 ? (
+                  <div className={styles.newspaperStack}>
+                    {publications.slice(1, 4).map((publication) => (
+                      <StoryCard key={publication.id} story={publication} compact />
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+              {publications.length > 4 ? (
+                <div className={styles.newspaperArchive}>
+                  {publications.slice(4).map((publication) => (
+                    <StoryCard key={publication.id} story={publication} compact />
+                  ))}
+                </div>
+              ) : null}
+            </>
           ) : (
             <div className={styles.emptyArchive}>
               <div>
@@ -99,20 +144,22 @@ export default async function RevistaPage() {
           )}
         </section>
 
-        <section className={styles.guides}>
-          <div className={styles.sectionHeading}>
-            <div>
-              <SectionLabel>Lecturas de referencia</SectionLabel>
-              <h2>Para entender el movimiento.</h2>
+        {hasClubStories && guides.length > 0 ? (
+          <section className={styles.guides}>
+            <div className={styles.sectionHeading}>
+              <div>
+                <SectionLabel>Lecturas de referencia</SectionLabel>
+                <h2>Para entender el movimiento.</h2>
+              </div>
+              <p>Material informativo basado en fuentes oficiales de Rotary International.</p>
             </div>
-            <p>Material informativo basado en fuentes oficiales de Rotary International.</p>
-          </div>
-          <div className={styles.guideGrid}>
-            {guides.map((guide, index) => (
-              <StoryCard key={guide.id} story={guide} featured={index === 0} />
-            ))}
-          </div>
-        </section>
+            <div className={styles.guideGrid}>
+              {guides.map((guide, index) => (
+                <StoryCard key={guide.id} story={guide} featured={index === 0} />
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         <section className={styles.joinBand}>
           <div>
