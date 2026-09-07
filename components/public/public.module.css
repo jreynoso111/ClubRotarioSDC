@@ -10,7 +10,7 @@
   align-items: center;
   animation: publicReveal .8s .1s ease-out both;
   display: grid;
-  height: 92px;
+  height: 72px;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   margin: 0 auto;
   max-width: 1440px;
@@ -191,7 +191,7 @@
 @media (max-width: 900px) {
   .header {
     display: flex;
-    height: 82px;
+    height: 68px;
     padding-inline: var(--public-gutter);
   }
 
@@ -212,7 +212,7 @@
 
 @media (max-width: 760px) {
   .page { --public-gutter: 20px; }
-  .header { height: 76px; padding-inline: var(--public-gutter); }
+  .header { height: 64px; padding-inline: var(--public-gutter); }
   .signatureCompact img { width: 165px; }
   .desktopNav, .headerCta { display: none; }
   .mobileMenu { display: block; margin-left: auto; }
@@ -228,7 +228,7 @@
 
 @media (orientation: landscape) and (max-height: 520px) and (max-width: 900px) {
   .page { --public-gutter: clamp(16px, 4vw, 28px); }
-  .header { height: 62px; padding-inline: var(--public-gutter); }
+  .header { height: 56px; padding-inline: var(--public-gutter); }
   .signature { gap: 8px; }
   .signature img { width: 145px; }
   .mobileMenu summary span { margin: 4px 0; width: 21px; }
