@@ -2,39 +2,27 @@
 
 .aboutBanner {
   animation: reveal .8s .12s ease-out both;
-  border-bottom: 1px solid var(--ink);
-  border-top: 2px solid var(--ink);
-  display: grid;
-  gap: clamp(30px, 5vw, 68px);
-  grid-template-columns: minmax(0, 1.05fr) minmax(300px, .75fr);
+  background: var(--rotary-blue);
+  border-block: 2px solid var(--ink);
+  color: var(--paper);
   margin-top: 32px;
-  padding: 14px 0 18px;
+  min-height: 370px;
+  overflow: hidden;
+  padding: clamp(34px, 5vw, 62px) clamp(26px, 6vw, 86px) 18px;
+  position: relative;
 }
-.aboutBannerCopy { align-self: center; min-width: 0; padding: 38px 0 26px; }
-.aboutBannerCopy h1 { font-family: Georgia, "Times New Roman", serif; font-size: clamp(50px, 6.8vw, 88px); font-weight: 400; letter-spacing: -.075em; line-height: .88; margin: 15px 0 0; max-width: 730px; overflow-wrap: anywhere; }
-.aboutBannerCopy h1 em { color: var(--teal); font-style: italic; }
-.aboutBannerCopy > p { color: var(--ink-soft); font-size: 14px; line-height: 1.62; margin: 27px 0 24px; max-width: 465px; }
-.aboutBannerActions { align-items: center; display: flex; flex-wrap: wrap; gap: 24px; }
-.aboutBannerActions a { align-items: center; display: inline-flex; font-size: 10px; font-weight: 800; gap: 9px; letter-spacing: .08em; text-transform: uppercase; }
-.aboutBannerActions .icon { fill: none; height: 14px; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.25; width: 14px; }
-.aboutBannerActions .buttonPrimary { background: var(--rotary-blue); color: var(--paper); padding: 16px 20px; transition: transform .2s ease, background .2s ease; }
-.aboutBannerActions .buttonPrimary:hover { background: var(--teal); transform: translateY(-2px); }
-.aboutBannerActions .textLink { border-bottom: 1px solid var(--ink); padding-bottom: 6px; }
-.aboutBannerVisual { background: var(--rotary-blue); min-height: 370px; overflow: hidden; padding: 20px; position: relative; }
-.aboutBannerVisual::before { border: 1px solid rgba(247, 168, 27, .58); border-radius: 50%; content: ""; height: 390px; position: absolute; right: -160px; top: -140px; width: 390px; }
-.aboutBannerVisual::after { border: 1px solid rgba(255, 253, 248, .25); border-radius: 50%; bottom: -180px; content: ""; height: 370px; left: -100px; position: absolute; width: 370px; }
-.aboutBannerImage { height: 100%; inset: 0; min-height: 370px; position: absolute; width: 100%; }
-.aboutBannerImage::after { background: linear-gradient(145deg, rgba(0, 64, 122, .72), rgba(0, 64, 122, .22) 62%, rgba(0, 64, 122, .7)); content: ""; inset: 0; position: absolute; z-index: 1; }
-.aboutBannerImage img { filter: saturate(.75); opacity: .6; }
-.aboutBannerVisualCard { background: var(--paper); color: var(--ink); left: 28px; padding: 19px 21px; position: absolute; top: 28px; transform: rotate(-3deg); width: min(270px, calc(100% - 56px)); z-index: 2; }
-.aboutBannerVisualCard > div { display: flex; font-family: var(--font-geist-mono); font-size: 8px; justify-content: space-between; letter-spacing: .12em; text-transform: uppercase; }
-.aboutBannerVisualCard > div span:last-child { color: var(--teal); }
-.aboutBannerVisualCard strong { display: block; font-family: Georgia, "Times New Roman", serif; font-size: clamp(42px, 5vw, 60px); font-weight: 400; letter-spacing: -.08em; line-height: .85; margin: 40px 0 18px; }
-.aboutBannerVisualCard strong em { color: var(--rotary-gold); font-style: normal; }
-.aboutBannerVisualCard p { border-top: 1px solid var(--line); color: var(--ink-soft); font-family: var(--font-geist-mono); font-size: 9px; line-height: 1.4; letter-spacing: .08em; margin: 0; padding-top: 10px; text-transform: uppercase; }
-.aboutBannerVisualTag { bottom: 20px; color: var(--paper); font-family: var(--font-geist-mono); font-size: 8px; letter-spacing: .14em; position: absolute; text-transform: uppercase; z-index: 2; }
-.aboutBannerFoot { align-items: center; border-top: 1px solid var(--line); color: var(--ink-soft); display: flex; font-family: var(--font-geist-mono); font-size: 9px; gap: 18px; grid-column: 1 / -1; justify-content: space-between; letter-spacing: .11em; padding-top: 11px; text-transform: uppercase; }
-.aboutBannerFoot span:last-child { color: var(--teal); }
+.aboutBanner::before { border: 1px solid rgba(247, 168, 27, .58); border-radius: 50%; content: ""; height: 620px; position: absolute; right: -230px; top: -330px; width: 620px; }
+.aboutBanner::after { border: 1px solid rgba(255, 253, 248, .2); border-radius: 50%; bottom: -280px; content: ""; height: 560px; left: -210px; position: absolute; width: 560px; }
+.aboutBannerContent { margin: 0 auto; max-width: 980px; position: relative; width: 100%; z-index: 1; }
+.aboutBannerTop { align-items: center; display: flex; gap: 20px; justify-content: space-between; }
+.aboutBanner .sectionLabel { color: var(--lime-light); margin: 0; }
+.aboutBanner .sectionLabelLine { background: var(--rotary-gold); }
+.aboutBannerDate { color: var(--rotary-gold); font-family: var(--font-geist-mono); font-size: 9px; letter-spacing: .15em; white-space: nowrap; }
+.aboutBannerContent h1 { font-family: Georgia, "Times New Roman", serif; font-size: clamp(56px, 8.5vw, 116px); font-weight: 400; letter-spacing: -.08em; line-height: .84; margin: 42px 0 0; max-width: 980px; overflow-wrap: anywhere; }
+.aboutBannerContent h1 em { color: var(--lime-light); font-style: italic; }
+.aboutBannerContent > p { color: rgba(255, 253, 248, .78); font-size: 14px; line-height: 1.62; margin: 30px 0 0; max-width: 600px; }
+.aboutBannerFoot { align-items: center; border-top: 1px solid rgba(255, 253, 248, .24); color: rgba(255, 253, 248, .62); display: flex; font-family: var(--font-geist-mono); font-size: 9px; gap: 18px; justify-content: space-between; letter-spacing: .11em; margin-top: 54px; padding-top: 11px; position: relative; text-transform: uppercase; z-index: 1; }
+.aboutBannerFoot span:last-child { color: var(--rotary-gold); }
 
 .relationship, .clubHistory, .sources { animation: reveal .8s .25s ease-out both; padding: 110px 0 120px; }
 .relationship { border-bottom: 1px solid var(--line); }
@@ -103,7 +91,7 @@
 
 @media (max-width: 760px) {
   .main { --route-gutter: 20px; width: min(620px, calc(100% - var(--route-gutter) - var(--route-gutter))); }.hero { display: flex; flex-direction: column; gap: 38px; padding: 54px 0 60px; }.heroCopy h1 { font-size: clamp(49px, 14vw, 76px); }.heroStamp { min-height: 260px; width: 100%; }.heroStamp > div { gap: 16px; line-height: 1.45; }
-  .aboutBanner { display: flex; flex-direction: column; gap: 18px; margin-top: 16px; padding: 10px 0 14px; }.aboutBannerCopy { padding: 30px 0 8px; }.aboutBannerCopy h1 { font-size: clamp(49px, 14vw, 72px); }.aboutBannerCopy > p { font-size: 13px; margin: 23px 0 21px; max-width: 335px; }.aboutBannerActions { gap: 16px; }.aboutBannerActions a { font-size: 9px; }.aboutBannerVisual { min-height: 315px; padding: 17px; }.aboutBannerImage { min-height: 315px; }.aboutBannerImage img { object-position: center; }.aboutBannerVisualCard { left: 22px; padding: 15px 16px; top: 22px; width: calc(100% - 44px); }.aboutBannerVisualCard strong { font-size: 48px; margin: 34px 0 15px; }.aboutBannerFoot { flex-wrap: wrap; font-size: 7px; gap: 9px; }
+  .aboutBanner { min-height: 0; margin-top: 16px; padding: 30px 20px 15px; }.aboutBannerTop { align-items: flex-start; flex-direction: column; gap: 16px; }.aboutBanner .sectionLabel { font-size: 9px; }.aboutBannerDate { font-size: 7px; }.aboutBannerContent h1 { font-size: clamp(49px, 14vw, 76px); margin-top: 34px; }.aboutBannerContent > p { font-size: 13px; margin: 24px 0 0; max-width: 470px; }.aboutBannerFoot { flex-wrap: wrap; font-size: 7px; gap: 9px 14px; margin-top: 37px; }
   .relationship, .clubHistory, .sources { padding: 78px 0 88px; }.relationshipGrid { gap: 14px; grid-template-columns: 1fr; }.relationshipCard { min-height: 210px; }.localTimeline { display: block; }.localTimeline .timelineItem { min-height: auto; }.timelineSource { font-size: 8px; }.sourceGrid { gap: 0; grid-template-columns: 1fr; }.sourceCard { padding-block: 15px; }.sourceDisclaimer { margin-top: 24px; }
   .history, .structure { padding: 86px 0 92px; }.sectionHeading { align-items: flex-start; flex-direction: column; gap: 21px; margin-bottom: 35px; }.sectionHeading h2 { font-size: 54px; }.sectionHeading > p { max-width: 330px; text-align: left; }.historyLead { display: flex; flex-direction: column; gap: 25px; margin-bottom: 48px; }.historyLead p { font-size: 27px; }.historyLead p + p { font-size: 13px; max-width: 430px; }
   .timeline { display: block; }.timelineItem, .timelineItem + .timelineItem { border-bottom: 1px solid var(--line); border-right: 0; display: grid; gap: 20px; grid-template-columns: 50px 1fr; min-height: auto; padding: 17px 0 25px; }.timelineItem:last-child { border-bottom: 0; }.timelineYear { margin-bottom: 0; }.timelineItem h3 { font-size: 27px; }.timelineItem p { font-size: 12px; }
@@ -114,7 +102,7 @@
 
 @media (orientation: landscape) and (max-height: 520px) and (max-width: 900px) {
   .main { --route-gutter: clamp(16px, 4vw, 28px); width: min(1240px, calc(100% - var(--route-gutter) - var(--route-gutter))); }
-  .aboutBanner { align-items: stretch; display: grid; gap: clamp(18px, 3vw, 30px); grid-template-columns: minmax(0, 1fr) minmax(250px, .86fr); margin-top: 14px; padding: 9px 0 13px; }.aboutBannerCopy { padding: 22px 0 17px; }.aboutBannerCopy h1 { font-size: clamp(37px, 7vw, 58px); }.aboutBannerCopy > p { font-size: 11px; line-height: 1.45; margin: 16px 0 18px; }.aboutBannerActions { gap: 12px; }.aboutBannerActions a { font-size: 8px; gap: 8px; }.aboutBannerVisual { min-height: 252px; padding: 13px; }.aboutBannerImage { min-height: 252px; }.aboutBannerVisualCard { left: 17px; padding: 11px 12px; top: 17px; width: calc(100% - 34px); }.aboutBannerVisualCard strong { font-size: clamp(29px, 5vw, 43px); margin: 25px 0 10px; }.aboutBannerVisualCard p { font-size: 7px; padding-top: 7px; }.aboutBannerFoot { font-size: 6px; gap: 8px; }
+  .aboutBanner { margin-top: 14px; padding: 28px clamp(24px, 5vw, 52px) 13px; }.aboutBannerTop { flex-direction: row; }.aboutBanner .sectionLabel { font-size: 8px; }.aboutBannerDate { font-size: 6px; }.aboutBannerContent h1 { font-size: clamp(36px, 7vw, 64px); margin-top: 25px; }.aboutBannerContent > p { font-size: 11px; line-height: 1.45; margin-top: 16px; max-width: 560px; }.aboutBannerFoot { font-size: 6px; gap: 8px; margin-top: 30px; }
   .relationship, .clubHistory, .sources { padding: 48px 0 58px; }.relationshipGrid { gap: 14px; }.relationshipCard { min-height: 170px; padding: 14px; }.relationshipCard h3 { font-size: 24px; }.relationshipCard p { font-size: 10px; }.localTimeline { grid-template-columns: repeat(2, minmax(0, 1fr)); }.localTimeline .timelineItem { min-height: 220px; }.localTimeline .timelineItem:nth-child(n + 3) { border-top: 1px solid var(--line); padding-top: 15px; }.timelineSource { font-size: 7px; }.sourceGrid { gap: 14px; grid-template-columns: repeat(2, minmax(0, 1fr)); }.sourceCard strong { font-size: 20px; }.sourceCard p { font-size: 9px; }
   .hero { align-items: stretch; display: grid; flex-direction: initial; gap: clamp(18px, 3vw, 30px); grid-template-columns: minmax(0, 1fr) minmax(240px, .86fr); min-height: 0; padding: 24px 0 28px; }
   .heroCopy h1 { font-size: clamp(38px, 7vw, 58px); }

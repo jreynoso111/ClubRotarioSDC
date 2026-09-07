@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import {
   ArrowLink,
   ArrowUpRight,
-  CoverArt,
   PublicShell,
   SectionLabel,
 } from "@/components/public/PublicChrome";
@@ -147,23 +146,13 @@ export default function NosotrosPage() {
     <PublicShell active="nosotros">
       <main className={styles.main}>
         <section className={styles.aboutBanner} aria-labelledby="about-title">
-          <div className={styles.aboutBannerCopy}>
-            <SectionLabel>El club · Historia y relación</SectionLabel>
+          <div className={styles.aboutBannerContent}>
+            <div className={styles.aboutBannerTop}>
+              <SectionLabel>El club · Historia y relación</SectionLabel>
+              <span className={styles.aboutBannerDate}>1969 — HOY</span>
+            </div>
             <h1 id="about-title">Una raíz local. <em>Una red mundial.</em></h1>
             <p>Conoce la historia del Club Rotario Santo Domingo Colonial, su lugar dentro de Rotary International y la estructura que convierte los vínculos en servicio.</p>
-            <div className={styles.aboutBannerActions}>
-              <a className={styles.buttonPrimary} href="#historia-club">Conocer la historia <ArrowUpRight /></a>
-              <a className={styles.textLink} href="#rotary-international">Ver Rotary International <ArrowUpRight /></a>
-            </div>
-          </div>
-          <div className={styles.aboutBannerVisual} role="img" aria-label="Ilustración de la Ciudad Colonial y la relación entre el club local y Rotary International">
-            <CoverArt src="/zona-colonial-illustration.png" alt="Ilustración de la Ciudad Colonial de Santo Domingo" className={styles.aboutBannerImage} priority />
-            <div className={styles.aboutBannerVisualCard}>
-              <div><span>LOCAL / GLOBAL</span><span>ARCHIVO VIVO</span></div>
-              <strong>1969 <em>↔</em> 1905</strong>
-              <p>Santo Domingo Colonial · Rotary International</p>
-            </div>
-            <span className={styles.aboutBannerVisualTag}>Servicio · vínculos · memoria</span>
           </div>
           <div className={styles.aboutBannerFoot}>
             <span>Fundado en 1969 · Santo Domingo</span>
