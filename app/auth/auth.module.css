@@ -150,6 +150,21 @@
   }
 }
 
+@media (orientation: landscape) and (max-height: 520px) and (max-width: 900px) {
+  .shell { align-items: flex-start; overflow: auto; padding: 16px clamp(16px, 4vw, 28px); }
+  .card { max-width: 680px; padding: 24px clamp(24px, 5vw, 42px); }
+  .back { font-size: 9px; margin-bottom: 24px; }
+  .eyebrow { font-size: 8px; margin-bottom: 12px; }
+  .title { font-size: clamp(38px, 8vw, 56px); margin-bottom: 14px; }
+  .copy { font-size: 12px; line-height: 1.45; margin-bottom: 20px; }
+  .form { gap: 12px; }
+  .field { gap: 5px; }
+  .label { font-size: 8px; }
+  .input { min-height: 42px; padding: 10px 12px; }
+  .button { font-size: 9px; min-height: 44px; padding: 11px 14px; }
+  .links { font-size: 11px; margin-top: 20px; padding-top: 16px; }
+}
+
 .link {
   color: var(--rotary-blue);
   font-weight: 750;

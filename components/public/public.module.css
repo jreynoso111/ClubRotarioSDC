@@ -240,3 +240,37 @@
   .footerCopy { text-align: left; }
   .footerArrow { margin-left: auto; }
 }
+
+@media (orientation: landscape) and (max-height: 520px) and (max-width: 900px) {
+  .page { --public-gutter: clamp(16px, 4vw, 28px); }
+  .header { height: 62px; padding-inline: var(--public-gutter); }
+  .signature { gap: 8px; }
+  .signature img { width: 78px; }
+  .signatureName { font-size: 7px; letter-spacing: .08em; padding-left: 8px; }
+  .mobileMenu summary span { margin: 4px 0; width: 21px; }
+  .mobileMenu nav { gap: 12px; padding: 16px; top: 30px; width: 200px; }
+
+  .main { width: min(1240px, calc(100% - var(--public-gutter) - var(--public-gutter))); }
+  .hero { align-items: stretch; display: grid; flex-direction: initial; gap: clamp(18px, 3vw, 30px); grid-template-columns: minmax(0, 1fr) minmax(240px, .86fr); min-height: 0; padding: 24px 0 28px; }
+  .heroCopy { max-width: none; }
+  .hero h1 { font-size: clamp(38px, 7vw, 58px); margin-bottom: 16px; }
+  .heroLead { font-size: 11px; line-height: 1.45; margin-top: 0; }
+  .heroActions { flex-direction: row; gap: 12px; margin-top: 20px; }
+  .heroActions .button { font-size: 9px; gap: 8px; padding: 12px 14px; }
+  .heroStamp { min-height: 250px; padding: 20px; }
+  .heroStampTop, .heroStampBottom { font-size: 7px; }
+  .heroStamp h2 { font-size: clamp(31px, 5vw, 48px); }
+  .heroStamp small { font-size: 9px; }
+
+  .footer { align-items: start; display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr) auto auto; padding-bottom: 16px; padding-top: 16px; }
+  .footerBrand { align-items: flex-start; flex-wrap: nowrap; gap: 12px; }
+  .footerCopy p { font-size: 13px; }
+  .footerCopy small { font-size: 8px; }
+  .footerArrow { margin-left: 0; }
+}
+
+@media (orientation: landscape) and (max-height: 520px) and (max-width: 620px) {
+  .heroActions { gap: 8px; }
+  .heroActions a { font-size: 7px; gap: 5px; letter-spacing: .04em; }
+  .heroActions .button { font-size: 7px; gap: 5px; padding: 8px 6px; }
+}
