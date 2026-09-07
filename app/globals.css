@@ -18,6 +18,8 @@
   --line: rgba(18, 47, 73, .17);
   --line-light: rgba(243, 241, 233, .22);
   --shadow-soft: 0 22px 52px rgba(18, 47, 73, .11);
+  --content-gutter: clamp(20px, 3.125vw, 36px);
+  --public-gutter: clamp(20px, 2.78vw, 32px);
 }
 
 @theme inline {
@@ -66,7 +68,7 @@ a {
 
 .section-shell {
   margin-inline: auto;
-  width: min(1240px, calc(100% - 72px));
+  width: min(1240px, calc(100% - var(--content-gutter) - var(--content-gutter)));
 }
 
 .icon {
@@ -362,11 +364,19 @@ a {
   align-items: center;
   animation: page-reveal .9s .3s ease-out both;
   display: grid;
-  gap: clamp(42px, 6vw, 88px);
-  grid-template-columns: minmax(0, .92fr) minmax(420px, 1.08fr);
+  gap: clamp(32px, 6vw, 88px);
+  grid-template-columns: minmax(0, .92fr) minmax(clamp(320px, 36.5vw, 420px), 1.08fr);
   min-height: 620px;
   padding-bottom: 86px;
   padding-top: 42px;
+}
+
+.hero > *,
+.section-heading-row > *,
+.club-section-inner > *,
+.join-panel > *,
+.site-footer > * {
+  min-width: 0;
 }
 
 .hero-copy {
@@ -410,6 +420,7 @@ h2,
 h3 {
   font-family: Georgia, "Times New Roman", serif;
   font-weight: 400;
+  text-wrap: balance;
 }
 
 h1 {
@@ -501,7 +512,7 @@ h2 em {
 .hero-art {
   background: var(--paper-deep);
   box-shadow: var(--shadow-soft);
-  height: 560px;
+  height: clamp(480px, 48.6vw, 560px);
   margin: 0;
   min-width: 0;
   overflow: hidden;
@@ -970,6 +981,7 @@ h2 span {
 .event-main {
   display: grid;
   gap: 7px;
+  min-width: 0;
 }
 
 .event-main small,
@@ -991,6 +1003,8 @@ h2 span {
   font-size: 30px;
   font-weight: 400;
   letter-spacing: -.04em;
+  line-height: 1.05;
+  overflow-wrap: anywhere;
 }
 
 .event-arrow {
@@ -1019,6 +1033,10 @@ h2 span {
   grid-template-columns: 150px minmax(0, 1fr) auto;
   min-height: 150px;
   padding: 28px 0;
+}
+
+.empty-feed > * {
+  min-width: 0;
 }
 
 .empty-feed-mark {
@@ -1139,6 +1157,7 @@ h2 span {
 .club-path-link > span {
   display: grid;
   gap: 5px;
+  min-width: 0;
 }
 
 .club-path-link strong {
@@ -1147,6 +1166,7 @@ h2 span {
   font-size: 25px;
   font-weight: 400;
   letter-spacing: -.03em;
+  overflow-wrap: anywhere;
 }
 
 .club-path-link small {
@@ -1197,6 +1217,7 @@ h2 span {
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-width: 0;
 }
 
 .story-visual {
@@ -1325,6 +1346,7 @@ h2 span {
   letter-spacing: -.04em;
   line-height: 1;
   margin: 14px 0 12px;
+  overflow-wrap: anywhere;
 }
 
 .story-content p {
@@ -1536,6 +1558,7 @@ h2 span {
 }
 
 .join-copy {
+  min-width: 0;
   position: relative;
   z-index: 1;
 }
@@ -1623,7 +1646,7 @@ h2 span {
   grid-template-columns: 1fr auto auto;
   padding-bottom: 28px;
   padding-top: 27px;
-  width: min(1120px, calc(100% - 72px));
+  width: min(1120px, calc(100% - var(--content-gutter) - var(--content-gutter)));
 }
 
 .footer-brand {
@@ -1658,6 +1681,7 @@ h2 span {
   line-height: 1.35;
   margin-top: 12px;
   max-width: 280px;
+  overflow-wrap: anywhere;
 }
 
 .footer-links {
@@ -1724,15 +1748,6 @@ h2 span {
     gap: 14px;
   }
 
-  .hero {
-    gap: 40px;
-    grid-template-columns: minmax(0, 1fr) minmax(350px, .95fr);
-  }
-
-  .hero-art {
-    height: 520px;
-  }
-
   .club-section-inner {
     gap: 50px;
   }
@@ -1744,6 +1759,42 @@ h2 span {
   .members-rail {
     padding-left: 35px;
     padding-right: 6vw;
+  }
+}
+
+@media (max-width: 900px) {
+  .section-heading-row {
+    gap: 28px;
+  }
+
+  .heading-aside {
+    flex: 0 1 clamp(220px, 32vw, 320px);
+  }
+
+  .event-row {
+    gap: 24px;
+    grid-template-columns: 70px minmax(0, 1fr) 34px;
+  }
+
+  .stories-grid {
+    gap: 16px;
+  }
+
+  .story-card {
+    flex-basis: calc((100% - 16px) / 2);
+  }
+
+  .story-visual {
+    height: clamp(220px, 30vw, 245px);
+  }
+
+  .club-section-inner {
+    gap: 56px;
+  }
+
+  .join-panel {
+    gap: 44px;
+    padding-inline: 6vw;
   }
 }
 
@@ -1769,8 +1820,13 @@ h2 span {
 }
 
 @media (max-width: 760px) {
+  :root {
+    --content-gutter: 20px;
+    --public-gutter: 20px;
+  }
+
   .section-shell {
-    width: min(100% - 40px, 620px);
+    width: min(620px, calc(100% - var(--content-gutter) - var(--content-gutter)));
   }
 
   .site-header {

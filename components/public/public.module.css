@@ -1,4 +1,5 @@
 .page {
+  --public-gutter: clamp(20px, 2.78vw, 32px);
   --public-max: 1240px;
   background: var(--paper);
   color: var(--ink);
@@ -13,7 +14,7 @@
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   margin: 0 auto;
   max-width: 1440px;
-  padding: 0 44px;
+  padding: 0 clamp(28px, 3.82vw, 44px);
 }
 
 .brand { align-items: center; display: inline-flex; justify-self: start; }
@@ -37,7 +38,8 @@
 .signatureCompact img { width: 78px; }
 .signatureCompact .signatureName { font-size: 7px; letter-spacing: .08em; padding-left: 8px; }
 
-.desktopNav { display: flex; gap: 30px; justify-content: center; }
+.desktopNav { display: flex; gap: clamp(20px, 2.6vw, 30px); justify-content: center; }
+.desktopNav a { white-space: nowrap; }
 .desktopNav a {
   color: var(--ink-soft);
   font-size: 11px;
@@ -98,18 +100,19 @@
 }
 .mobileMenu nav a { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 
-.main { margin: 0 auto; max-width: var(--public-max); width: calc(100% - 64px); }
+.main { margin: 0 auto; max-width: var(--public-max); min-width: 0; width: calc(100% - var(--public-gutter) - var(--public-gutter)); }
 .hero {
   align-items: end;
   animation: publicReveal .8s .2s ease-out both;
   border-bottom: 1px solid var(--line);
   display: grid;
-  gap: 70px;
-  grid-template-columns: minmax(0, 1fr) minmax(340px, .8fr);
+  gap: clamp(32px, 5.5vw, 70px);
+  grid-template-columns: minmax(0, 1fr) minmax(clamp(280px, 26.6vw, 340px), .8fr);
   min-height: 470px;
   padding: 70px 0 74px;
 }
-.heroCopy { max-width: 730px; }
+.hero > *, .footer > * { min-width: 0; }
+.heroCopy { max-width: 730px; min-width: 0; }
 .eyebrow, .sectionLabel {
   align-items: center;
   color: var(--teal);
@@ -178,14 +181,15 @@
   margin: 0 auto;
   max-width: var(--public-max);
   padding: 22px 0 28px;
-  width: calc(100% - 64px);
+  min-width: 0;
+  width: min(var(--public-max), calc(100% - var(--public-gutter) - var(--public-gutter)));
 }
-.footerBrand { align-items: center; display: flex; gap: 13px; }
+.footerBrand { align-items: center; display: flex; gap: 13px; min-width: 0; }
 .footerBrand .signature img { width: 86px; }
 .footerBrand .signatureName { font-size: 8px; }
 .footerCopy { color: var(--ink-soft); text-align: center; }
 .footerCopy p { font-family: Georgia, "Times New Roman", serif; font-size: 16px; margin: 0 0 4px; }
-.footerCopy small { display: block; font-family: var(--font-geist-mono); font-size: 9px; letter-spacing: .08em; }
+.footerCopy small { display: block; font-family: var(--font-geist-mono); font-size: 9px; letter-spacing: .08em; overflow-wrap: anywhere; }
 .footerArrow { align-items: center; border: 1px solid var(--line); border-radius: 50%; display: flex; height: 34px; justify-content: center; transform: rotate(-45deg); width: 34px; }
 
 .cover { background: var(--paper-deep); min-height: 180px; overflow: hidden; position: relative; }
@@ -200,22 +204,39 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-@media (max-width: 1000px) {
-  .header { padding-inline: 28px; }
-  .desktopNav { gap: 20px; }
-  .hero { gap: 38px; grid-template-columns: minmax(0, 1fr) minmax(290px, .8fr); }
+@media (max-width: 900px) {
+  .header {
+    display: flex;
+    height: 82px;
+    padding-inline: var(--public-gutter);
+  }
+
+  .desktopNav,
+  .headerCta {
+    display: none;
+  }
+
+  .mobileMenu {
+    display: block;
+    margin-left: auto;
+  }
+
+  .heroStamp {
+    min-width: 0;
+  }
 }
 
 @media (max-width: 760px) {
-  .header { display: flex; height: 76px; padding-inline: 20px; }
+  .page { --public-gutter: 20px; }
+  .header { height: 76px; padding-inline: var(--public-gutter); }
   .desktopNav, .headerCta { display: none; }
   .mobileMenu { display: block; margin-left: auto; }
-  .main { width: min(calc(100% - 40px), 620px); }
+  .main { width: min(620px, calc(100% - var(--public-gutter) - var(--public-gutter))); }
   .hero { display: flex; flex-direction: column; gap: 38px; min-height: auto; padding: 54px 0 60px; }
   .hero h1 { font-size: clamp(49px, 14vw, 75px); }
   .heroLead { font-size: 14px; }
   .heroStamp { min-height: 235px; width: 100%; }
-  .footer { align-items: flex-start; flex-wrap: wrap; gap: 20px; padding-bottom: 24px; padding-top: 24px; width: min(calc(100% - 40px), 620px); }
+  .footer { align-items: flex-start; flex-wrap: wrap; gap: 20px; padding-bottom: 24px; padding-top: 24px; width: min(620px, calc(100% - var(--public-gutter) - var(--public-gutter))); }
   .footerCopy { text-align: left; }
   .footerArrow { margin-left: auto; }
 }

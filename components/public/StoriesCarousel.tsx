@@ -120,7 +120,7 @@ export default function StoriesCarousel({ stories }: { stories: Story[] }) {
                       src={story.image}
                       alt={story.imageAlt ?? ""}
                       fill
-                      sizes="(max-width: 760px) 100vw, 33vw"
+                      sizes="(max-width: 760px) 100vw, (max-width: 900px) 50vw, 33vw"
                     />
                   ) : (
                     <div className="story-visual-shape" />
