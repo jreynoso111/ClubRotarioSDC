@@ -28,7 +28,15 @@ const events = [
   },
 ];
 
-const stories = [
+const stories: Array<{
+  index: string;
+  type: string;
+  title: string;
+  excerpt: string;
+  color: string;
+  image?: string;
+  imageAlt?: string;
+}> = [
   {
     index: "01",
     type: "CRÓNICA",
@@ -36,6 +44,8 @@ const stories = [
     excerpt:
       "La jornada de abril convirtió una calle de la Zona Colonial en una conversación abierta sobre cuidado, memoria y futuro.",
     color: "story-yellow",
+    image: "/colonial-streets.jpg",
+    imageAlt: "Calle de la Ciudad Colonial de Santo Domingo",
   },
   {
     index: "02",
@@ -52,6 +62,8 @@ const stories = [
     excerpt:
       "Un recorrido por las historias que han mantenido viva la vocación del club desde la Ciudad Colonial.",
     color: "story-teal",
+    image: "/zona-colonial-night.jpg",
+    imageAlt: "Escalinata iluminada de la Ciudad Colonial de Santo Domingo",
   },
 ];
 
@@ -89,8 +101,21 @@ function ClubSignature({ compact = false }: { compact?: boolean }) {
   );
 }
 
-function TerritoryMarker() {
-  return <span className="territory-marker" aria-hidden="true" />;
+function CinematicIntro() {
+  return (
+    <div className="cinematic-intro" aria-hidden="true">
+      <div className="cinematic-intro-curtain cinematic-intro-curtain-left" />
+      <div className="cinematic-intro-curtain cinematic-intro-curtain-right" />
+      <div className="cinematic-intro-line" />
+      <div className="cinematic-intro-content">
+        <div className="cinematic-intro-logo-wrap">
+          <Image src="/rotary-masterbrand.png" alt="" width={250} height={94} priority />
+        </div>
+        <span className="cinematic-intro-club">Club Rotario Santo Domingo Colonial</span>
+        <span className="cinematic-intro-caption">Personas de acción · Distrito 4060</span>
+      </div>
+    </div>
+  );
 }
 
 function SectionLabel({ children }: { children: ReactNode }) {
@@ -105,6 +130,7 @@ function SectionLabel({ children }: { children: ReactNode }) {
 export default function Home() {
   return (
     <main>
+      <CinematicIntro />
       <header className="site-header">
         <a className="brand" href="#inicio" aria-label="Club Rotario Santo Domingo Colonial, inicio">
           <ClubSignature compact />
@@ -144,26 +170,23 @@ export default function Home() {
           <div className="hero-footnote"><span>01</span><span className="hero-footnote-rule" /><span>Servicio con evidencia</span></div>
         </div>
 
-        <div className="hero-art" role="img" aria-label="Composición abstracta inspirada en la ciudad, el encuentro y el movimiento">
-          <div className="hero-art-topline"><span>SDQ / ZC</span><span>Año en curso</span></div>
-          <svg className="territory-trace" viewBox="0 0 540 440" aria-hidden="true">
-            <path className="trace-river" d="M-40 365 C80 306 119 405 213 342 S364 261 580 305" />
-            <path className="trace-wall" d="M32 60 186 30 278 76 405 47 512 91 489 196 525 269 454 349 319 378 205 347 105 378 41 310 67 210Z" />
-            <path className="trace-grid" d="M58 113 468 109M47 164 492 160M52 216 485 213M78 266 464 270M112 313 423 319M107 72 116 348M177 54 184 351M248 61 252 367M326 60 318 363M397 64 390 350M460 84 446 330" />
-            <circle className="trace-point trace-point-one" cx="184" cy="164" r="7" />
-            <circle className="trace-point trace-point-two" cx="318" cy="265" r="7" />
-            <circle className="trace-point trace-point-three" cx="390" cy="112" r="7" />
-          </svg>
-          <div className="orbit orbit-one" />
-          <div className="orbit orbit-two" />
-          <div className="orbit orbit-three" />
-          <div className="hero-art-core"><TerritoryMarker /><span>acción<br />con propósito</span></div>
-          <div className="hero-note hero-note-top"><span className="note-number">A</span><span>Escuchar<br />la comunidad</span></div>
-          <div className="hero-note hero-note-bottom"><span className="note-number">B</span><span>Actuar<br />con aliados</span></div>
-          <div className="hero-art-index">2026<br /><span>—</span><br />EN CURSO</div>
-          <div className="hero-art-legend"><span className="legend-dot" /> Trazo urbano <i /> puntos de encuentro</div>
-          <div className="hero-art-label">JUNTOS<br />SERVIMOS</div>
-        </div>
+        <figure className="hero-art">
+          <Image
+            src="/zona-colonial-night.jpg"
+            alt="Escalinata de piedra iluminada en la Ciudad Colonial de Santo Domingo"
+            fill
+            priority
+            sizes="(max-width: 760px) 100vw, 50vw"
+          />
+          <div className="hero-photo-wash" />
+          <div className="hero-photo-sweep" />
+          <div className="hero-photo-frame" />
+          <div className="hero-art-topline"><span>SDQ / ZC</span><span>Servicio en movimiento</span></div>
+          <div className="hero-photo-caption"><span>01</span><span>Una ciudad que se cuida<br />desde sus vínculos.</span></div>
+          <div className="hero-photo-index">2026<br /><span>—</span><br />EN CURSO</div>
+          <div className="hero-photo-label">JUNTOS<br />SERVIMOS</div>
+          <figcaption>Ciudad Colonial de Santo Domingo · fotografía de lui_lui / Wikimedia Commons</figcaption>
+        </figure>
       </section>
 
       <section className="signal-strip" aria-label="Valores del club">
@@ -216,7 +239,12 @@ export default function Home() {
         <div className="stories-grid">
           {stories.map((story, index) => (
             <article className={`story-card ${index === 0 ? "story-card-featured" : ""}`} key={story.index}>
-              <div className={`story-visual ${story.color}`}><span>{story.index}</span><div className="story-visual-shape" /><span className="story-visual-word">ROTARY<br />SDQ</span></div>
+              <div className={`story-visual ${story.color}`}>
+                <span className="story-visual-index">{story.index}</span>
+                {story.image ? <Image src={story.image} alt={story.imageAlt ?? ""} fill sizes="(max-width: 760px) 100vw, 33vw" /> : <div className="story-visual-shape" />}
+                <span className="story-visual-overlay" />
+                <span className="story-visual-word">ROTARY<br />SDQ</span>
+              </div>
               <div className="story-content"><small>{story.type}</small><h3>{story.title}</h3><p>{story.excerpt}</p><a className="story-link" href="#acceso">Leer historia <ArrowUpRight /></a></div>
             </article>
           ))}
@@ -230,7 +258,7 @@ export default function Home() {
         </div>
       </section>
 
-      <footer className="site-footer section-shell"><div className="footer-brand"><ClubSignature /></div><div className="footer-copy"><p>Servicio local. Vínculos que permanecen.</p><small>© {new Date().getFullYear()} Club Rotario Santo Domingo Colonial · Distrito 4060</small></div><a className="footer-arrow" href="#inicio" aria-label="Volver al inicio"><ArrowUpRight /></a></footer>
+      <footer className="site-footer section-shell"><div className="footer-brand"><ClubSignature /></div><div className="footer-copy"><p>Servicio local. Vínculos que permanecen.</p><small>© {new Date().getFullYear()} Club Rotario Santo Domingo Colonial · Distrito 4060</small><small className="media-credit">Fotos: <a href="https://commons.wikimedia.org/wiki/File:Colonial_Santo_Domingo_Streets.jpg" target="_blank" rel="noreferrer">Brent</a> y <a href="https://commons.wikimedia.org/wiki/File:Zona_Colonial_-_Santo_Domingo,_Dominican_Republic.jpg" target="_blank" rel="noreferrer">lui_lui</a> · Wikimedia Commons, CC BY 2.0</small></div><a className="footer-arrow" href="#inicio" aria-label="Volver al inicio"><ArrowUpRight /></a></footer>
     </main>
   );
 }
