@@ -9,9 +9,37 @@ import {
   SectionLabel,
   formatLongDate,
 } from "@/components/public/PublicChrome";
-import { getEditorialGuides, getPublicStories, type PublicStory } from "@/lib/editorial";
+import { getEditorialGuides, getPublicStoriesPage, type PublicStory } from "@/lib/editorial";
 
 import styles from "./magazine.module.css";
+
+const PUBLICATION_PAGE_SIZE = 9;
+
+type RevistaPageProps = {
+  searchParams: Promise<{ pagina?: string }>;
+};
+
+function parsePage(value?: string) {
+  const page = Number.parseInt(value ?? "1", 10);
+  return Number.isFinite(page) && page > 0 ? page : 1;
+}
+
+function getPageHref(page: number) {
+  return page === 1 ? "/revista" : `/revista?pagina=${page}`;
+}
+
+function getPaginationItems(totalPages: number, currentPage: number): Array<number | "ellipsis"> {
+  if (totalPages <= 7) return Array.from({ length: totalPages }, (_, index) => index + 1);
+
+  const visiblePages = Array.from(
+    new Set([1, currentPage - 1, currentPage, currentPage + 1, totalPages].filter((page) => page > 0 && page <= totalPages)),
+  ).sort((left, right) => left - right);
+
+  return visiblePages.flatMap((page, index) => {
+    const previousPage = visiblePages[index - 1];
+    return index > 0 && page - previousPage > 1 ? ["ellipsis", page] : [page];
+  });
+}
 
 export const metadata: Metadata = {
   title: "Revista",
@@ -49,8 +77,8 @@ function StoryCard({
       />
       <div className={styles.storyCardBody}>
         <div className={styles.storyMeta}>
-          <span>{story.storyTypeLabel}</span>
-          {story.publishedAt ? <time dateTime={story.publishedAt}>{formatLongDate(story.publishedAt)}</time> : <span>Lectura de referencia</span>}
+          <span>{story.isExample ? "Ejemplo editorial" : story.storyTypeLabel}</span>
+          {story.publishedAt ? <time dateTime={story.publishedAt}>{formatLongDate(story.publishedAt)}</time> : <span>{story.isExample ? "Texto de muestra" : "Lectura de referencia"}</span>}
         </div>
         <h2>{story.title}</h2>
         <p>{story.excerpt}</p>
@@ -60,11 +88,15 @@ function StoryCard({
   );
 }
 
-export default async function RevistaPage() {
-  const [stories] = await Promise.all([getPublicStories(12)]);
+export default async function RevistaPage({ searchParams }: RevistaPageProps) {
+  const params = await searchParams;
+  const requestedPage = parsePage(params.pagina);
+  const publicationPage = await getPublicStoriesPage(requestedPage, PUBLICATION_PAGE_SIZE);
   const guides = getEditorialGuides();
-  const publications = stories.length > 0 ? stories : guides;
-  const hasClubStories = stories.length > 0;
+  const publications = publicationPage.stories;
+  const hasClubStories = publicationPage.hasClubStories;
+  const totalPages = Math.max(1, Math.ceil(publicationPage.total / publicationPage.pageSize));
+  const paginationItems = getPaginationItems(totalPages, publicationPage.page);
   const currentYear = new Date().getFullYear();
 
   return (
@@ -98,13 +130,13 @@ export default async function RevistaPage() {
         <section className={styles.issue} id="archivo">
           <div className={styles.sectionHeading}>
             <div>
-              <SectionLabel>{hasClubStories ? "Crónicas del club" : "Edición de referencia"}</SectionLabel>
+              <SectionLabel>{hasClubStories ? "Crónicas del club" : "Archivo editorial · Ejemplos"}</SectionLabel>
               <h2>Publicaciones <span>para quedarse.</span></h2>
             </div>
             <p>
               {hasClubStories
                 ? "Crónicas y voces publicadas por el equipo editorial del club."
-                : "Una selección de lecturas para conocer el movimiento y su manera de servir."}
+                : "Lecturas de referencia y ejemplos de formato para preparar el archivo público del club."}
             </p>
           </div>
 
@@ -142,6 +174,48 @@ export default async function RevistaPage() {
               </div>
             </div>
           )}
+
+          {publications.length > 0 && totalPages > 1 ? (
+            <nav className={styles.pagination} aria-label="Paginación de publicaciones">
+              <div className={styles.paginationMeta}>
+                Página {publicationPage.page} de {totalPages}
+              </div>
+              <div className={styles.paginationPages}>
+                {publicationPage.page > 1 ? (
+                  <Link className={styles.paginationButton} href={getPageHref(publicationPage.page - 1)} rel="prev">
+                    <span aria-hidden="true">←</span> Anteriores
+                  </Link>
+                ) : (
+                  <span className={`${styles.paginationButton} ${styles.paginationDisabled}`} aria-hidden="true">
+                    <span aria-hidden="true">←</span> Anteriores
+                  </span>
+                )}
+                <div className={styles.paginationNumbers}>
+                  {paginationItems.map((item, index) => item === "ellipsis" ? (
+                    <span className={styles.paginationEllipsis} key={`ellipsis-${index}`} aria-hidden="true">…</span>
+                  ) : (
+                    <Link
+                      className={`${styles.paginationNumber} ${item === publicationPage.page ? styles.paginationNumberActive : ""}`}
+                      href={getPageHref(item)}
+                      aria-current={item === publicationPage.page ? "page" : undefined}
+                      key={`page-${item}`}
+                    >
+                      {String(item).padStart(2, "0")}
+                    </Link>
+                  ))}
+                </div>
+                {publicationPage.page < totalPages ? (
+                  <Link className={styles.paginationButton} href={getPageHref(publicationPage.page + 1)} rel="next">
+                    Siguientes <span aria-hidden="true">→</span>
+                  </Link>
+                ) : (
+                  <span className={`${styles.paginationButton} ${styles.paginationDisabled}`} aria-hidden="true">
+                    Siguientes <span aria-hidden="true">→</span>
+                  </span>
+                )}
+              </div>
+            </nav>
+          ) : null}
         </section>
 
         {hasClubStories && guides.length > 0 ? (

@@ -56,11 +56,11 @@ export default async function StoryPage({ params }: StoryPageProps) {
         <Link className={styles.backLink} href="/revista"><ArrowLeft /> Volver a la revista</Link>
         <article>
           <header className={styles.articleHeader}>
-            <SectionLabel>{story.isReference ? "Referencia Rotary International" : story.storyTypeLabel}</SectionLabel>
+            <SectionLabel>{story.isExample ? "Ejemplo editorial" : story.isReference ? "Referencia Rotary International" : story.storyTypeLabel}</SectionLabel>
             <h1>{story.title}</h1>
             <p className={styles.articleExcerpt}>{story.excerpt}</p>
             <div className={styles.articleMeta}>
-              <span>{story.isReference ? "Lectura informativa" : "Publicado por el club"}</span>
+              <span>{story.isExample ? "Texto de muestra" : story.isReference ? "Lectura informativa" : "Publicado por el club"}</span>
               {story.publishedAt ? <time dateTime={story.publishedAt}>{formatLongDate(story.publishedAt)}</time> : <span>Contenido editorial</span>}
             </div>
           </header>
@@ -77,8 +77,8 @@ export default async function StoryPage({ params }: StoryPageProps) {
             <aside className={styles.articleAside}>
               <div className={styles.asideCard}>
                 <span className={styles.asideNumber}>01</span>
-                <strong>{story.isReference ? "Referencia" : "En contexto"}</strong>
-                <p>{story.isReference ? "Esta lectura resume información publicada por Rotary International y no sustituye las comunicaciones oficiales." : "Las historias del club pasan por una revisión editorial antes de ser publicadas."}</p>
+                <strong>{story.isExample ? "Maqueta editorial" : story.isReference ? "Referencia" : "En contexto"}</strong>
+                <p>{story.isExample ? "Este contenido de muestra sirve para revisar el formato de la revista antes de publicar historias propias del club." : story.isReference ? "Esta lectura resume información publicada por Rotary International y no sustituye las comunicaciones oficiales." : "Las historias del club pasan por una revisión editorial antes de ser publicadas."}</p>
                 {story.source ? <a className={styles.sourceLink} href={story.source.href} target="_blank" rel="noreferrer">{story.source.label} <ArrowUpRight /></a> : null}
               </div>
               <div className={styles.asideCardMuted}>

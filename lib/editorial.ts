@@ -24,6 +24,7 @@ export type PublicStory = {
   coverImagePath: string | null;
   coverImageUrl?: string;
   isReference: boolean;
+  isExample?: boolean;
   source?: EditorialSource;
 };
 
@@ -141,6 +142,159 @@ const editorialGuides: PublicStory[] = [
     isReference: true,
     source: ROTARY_FOCUS_SOURCE,
   },
+  {
+    id: "sample:cuando-una-reunion-se-convierte-en-un-proyecto",
+    title: "Cuando una reunión se convierte en un proyecto",
+    slug: "cuando-una-reunion-se-convierte-en-un-proyecto",
+    excerpt:
+      "Una guía editorial para contar el paso de la conversación a una acción concreta.",
+    content: [
+      "Toda buena iniciativa empieza con una conversación que ayuda a mirar una necesidad desde varios ángulos. La reunión permite poner sobre la mesa preguntas, capacidades y personas dispuestas a colaborar.",
+      "El proyecto toma forma cuando el equipo acuerda un propósito, una siguiente acción y una manera sencilla de revisar lo aprendido. Esta pieza es un ejemplo de cómo una publicación puede contar ese recorrido sin perder la voz de quienes participaron.",
+    ].join("\n\n"),
+    storyType: "muestra",
+    storyTypeLabel: "Ejemplo editorial",
+    publishedAt: null,
+    coverImagePath: "/zona-colonial-las-damas.png",
+    isReference: true,
+    isExample: true,
+  },
+  {
+    id: "sample:escuchar-primero-el-comienzo-de-todo-servicio",
+    title: "Escuchar primero: el comienzo de todo servicio",
+    slug: "escuchar-primero-el-comienzo-de-todo-servicio",
+    excerpt:
+      "Una crónica de muestra sobre las preguntas que ayudan a elegir una causa con sentido.",
+    content: [
+      "Antes de elegir una solución, un equipo de servicio necesita acercarse a las personas que viven la situación. Escuchar con atención evita suposiciones y abre espacio para reconocer los recursos que ya existen en la comunidad.",
+      "Una historia editorial puede registrar esas voces, las preguntas que cambiaron el rumbo y el acuerdo que permitió avanzar. El resultado es una memoria útil para el club y para quienes quieran sumarse después.",
+    ].join("\n\n"),
+    storyType: "muestra",
+    storyTypeLabel: "Ejemplo editorial",
+    publishedAt: null,
+    coverImagePath: "/zona-colonial-illustration.png",
+    isReference: true,
+    isExample: true,
+  },
+  {
+    id: "sample:alianzas-que-suman-capacidades",
+    title: "Alianzas que suman capacidades",
+    slug: "alianzas-que-suman-capacidades",
+    excerpt:
+      "Un formato de publicación para mostrar cómo varias manos pueden sostener una misma iniciativa.",
+    content: [
+      "Los proyectos que perduran suelen reunir conocimientos distintos. Una organización aporta experiencia, otra conoce el territorio y un grupo de voluntariado convierte el plan en presencia constante.",
+      "Contar la alianza ayuda a reconocer cada aporte y deja una ruta para repetir lo que funcionó. Esta publicación de ejemplo está pensada para documentar acuerdos, aprendizajes y próximos pasos.",
+    ].join("\n\n"),
+    storyType: "muestra",
+    storyTypeLabel: "Ejemplo editorial",
+    publishedAt: null,
+    coverImagePath: "/colonial-streets.jpg",
+    isReference: true,
+    isExample: true,
+  },
+  {
+    id: "sample:la-ciudad-colonial-como-punto-de-encuentro",
+    title: "La Ciudad Colonial como punto de encuentro",
+    slug: "la-ciudad-colonial-como-punto-de-encuentro",
+    excerpt:
+      "Una pieza visual de muestra para conectar la vida del club con el lugar que comparte.",
+    content: [
+      "Los lugares también guardan historias. Una plaza, una calle o una sala de reunión pueden convertirse en el punto donde las personas se reconocen, intercambian ideas y deciden volver a encontrarse.",
+      "La revista puede usar ese paisaje como hilo conductor para presentar actividades, alianzas y recuerdos. Así, cada publicación se siente parte de una misma memoria local.",
+    ].join("\n\n"),
+    storyType: "muestra",
+    storyTypeLabel: "Ejemplo editorial",
+    publishedAt: null,
+    coverImagePath: "/zona-colonial-night.jpg",
+    isReference: true,
+    isExample: true,
+  },
+  {
+    id: "sample:aprender-para-servir-mejor",
+    title: "Aprender para servir mejor",
+    slug: "aprender-para-servir-mejor",
+    excerpt:
+      "Una lectura de muestra sobre el aprendizaje que queda después de cada actividad.",
+    content: [
+      "Cada actividad deja algo más que una fotografía. El equipo descubre qué preguntas conviene hacer antes, qué tarea necesita más tiempo y qué decisión permitió cuidar mejor a las personas participantes.",
+      "Guardar esas conclusiones convierte una experiencia puntual en conocimiento compartido. Este ejemplo muestra cómo una crónica puede cerrar con aprendizajes claros y una invitación a continuar.",
+    ].join("\n\n"),
+    storyType: "muestra",
+    storyTypeLabel: "Ejemplo editorial",
+    publishedAt: null,
+    coverImagePath: "/zona-colonial-dusk.png",
+    isReference: true,
+    isExample: true,
+  },
+  {
+    id: "sample:una-invitacion-abierta-al-companerismo",
+    title: "Una invitación abierta al compañerismo",
+    slug: "una-invitacion-abierta-al-companerismo",
+    excerpt:
+      "Un ejemplo de historia para explicar cómo una persona puede acercarse al club por primera vez.",
+    content: [
+      "El compañerismo se construye cuando hay espacio para llegar con preguntas, conocer a otras personas y encontrar una forma propia de aportar. La invitación no necesita prometer respuestas perfectas: necesita abrir una conversación honesta.",
+      "Una publicación como esta puede presentar el ambiente del club, explicar el próximo paso y mostrar que el servicio también empieza por sentirse parte de una comunidad.",
+    ].join("\n\n"),
+    storyType: "muestra",
+    storyTypeLabel: "Ejemplo editorial",
+    publishedAt: null,
+    coverImagePath: "/zona-colonial-courtyard.png",
+    isReference: true,
+    isExample: true,
+  },
+  {
+    id: "sample:pequenas-acciones-memoria-duradera",
+    title: "Pequeñas acciones, memoria duradera",
+    slug: "pequenas-acciones-memoria-duradera",
+    excerpt:
+      "Una propuesta de crónica para mostrar el valor de los detalles que sostienen un proyecto.",
+    content: [
+      "Hay acciones que parecen pequeñas hasta que se miran juntas: una llamada, una visita, una mesa preparada o una persona que vuelve para ayudar. La memoria del servicio se forma con esos gestos repetidos.",
+      "El archivo editorial puede reunirlos con fotografías, fechas y voces breves. Este texto de muestra sirve como base para futuras historias del Club Rotario Santo Domingo Colonial.",
+    ].join("\n\n"),
+    storyType: "muestra",
+    storyTypeLabel: "Ejemplo editorial",
+    publishedAt: null,
+    coverImagePath: "/zona-colonial-fortaleza.png",
+    isReference: true,
+    isExample: true,
+  },
+  {
+    id: "sample:el-diario-de-un-club-que-escucha",
+    title: "El diario de un club que escucha",
+    slug: "el-diario-de-un-club-que-escucha",
+    excerpt:
+      "Un formato de diario para reunir notas, acuerdos y escenas de la vida rotaria.",
+    content: [
+      "Un diario editorial no tiene que esperar a la gran noticia. Puede comenzar con una escena de reunión, una pregunta que quedó abierta o una idea que necesita más personas alrededor.",
+      "Publicar esas notas con orden ayuda a que el club vea su propio proceso y permite que la comunidad siga el camino desde cerca. Esta pieza está pensada como una plantilla narrativa para ese archivo.",
+    ].join("\n\n"),
+    storyType: "muestra",
+    storyTypeLabel: "Ejemplo editorial",
+    publishedAt: null,
+    coverImagePath: "/zona-colonial-las-damas.png",
+    isReference: true,
+    isExample: true,
+  },
+  {
+    id: "sample:el-archivo-que-construimos-juntos",
+    title: "El archivo que construimos juntos",
+    slug: "el-archivo-que-construimos-juntos",
+    excerpt:
+      "Una publicación de muestra para presentar la revista como memoria viva del club.",
+    content: [
+      "Una revista social se vuelve más valiosa con el tiempo: cada texto suma contexto, cada imagen devuelve una conversación y cada fecha ayuda a entender cómo creció una iniciativa.",
+      "El archivo del club se irá construyendo con publicaciones revisadas por sus miembros. Esta muestra señala el lugar donde caben las próximas voces, proyectos y aprendizajes.",
+    ].join("\n\n"),
+    storyType: "muestra",
+    storyTypeLabel: "Ejemplo editorial",
+    publishedAt: null,
+    coverImagePath: "/zona-colonial-illustration.png",
+    isReference: true,
+    isExample: true,
+  },
 ];
 
 type StoryRecord = {
@@ -153,6 +307,8 @@ type StoryRecord = {
   published_at: string | null;
   cover_image_path: string | null;
 };
+
+const PUBLIC_STORY_SELECT = "id,title,slug,excerpt,content,story_type,published_at,cover_image_path";
 
 type EventRecord = {
   id: string;
@@ -236,7 +392,7 @@ export const getPublicStories = cache(async (limit = 12): Promise<PublicStory[]>
     const supabase = await createClient();
     const { data, error } = await supabase
       .from("stories")
-      .select("id,title,slug,excerpt,content,story_type,published_at,cover_image_path")
+      .select(PUBLIC_STORY_SELECT)
       .eq("status", "published")
       .eq("is_public", true)
       .order("published_at", { ascending: false })
@@ -249,6 +405,86 @@ export const getPublicStories = cache(async (limit = 12): Promise<PublicStory[]>
   }
 });
 
+export type PublicStoriesPage = {
+  stories: PublicStory[];
+  total: number;
+  page: number;
+  pageSize: number;
+  hasClubStories: boolean;
+};
+
+function getGuidePage(page: number, pageSize: number): PublicStoriesPage {
+  const total = editorialGuides.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const resolvedPage = Math.min(page, totalPages);
+  const from = (resolvedPage - 1) * pageSize;
+
+  return {
+    stories: editorialGuides.slice(from, from + pageSize),
+    total,
+    page: resolvedPage,
+    pageSize,
+    hasClubStories: false,
+  };
+}
+
+export const getPublicStoriesPage = cache(async (page = 1, pageSize = 9): Promise<PublicStoriesPage> => {
+  const safePage = Number.isFinite(page) ? Math.max(1, Math.floor(page)) : 1;
+  const safePageSize = Number.isFinite(pageSize) ? Math.max(1, Math.floor(pageSize)) : 9;
+
+  if (!isSupabaseConfigured()) return getGuidePage(safePage, safePageSize);
+
+  try {
+    const supabase = await createClient();
+    const from = (safePage - 1) * safePageSize;
+    const to = from + safePageSize - 1;
+    const { data, error, count } = await supabase
+      .from("stories")
+      .select(PUBLIC_STORY_SELECT, { count: "exact" })
+      .eq("status", "published")
+      .eq("is_public", true)
+      .order("published_at", { ascending: false })
+      .range(from, to);
+
+    if (error) return getGuidePage(safePage, safePageSize);
+
+    const records = (data ?? []) as StoryRecord[];
+    if (records.length === 0 && (count ?? 0) === 0) return getGuidePage(safePage, safePageSize);
+
+    if (records.length === 0 && count && from >= count) {
+      const lastPage = Math.max(1, Math.ceil(count / safePageSize));
+      const lastFrom = (lastPage - 1) * safePageSize;
+      const { data: lastData, error: lastError } = await supabase
+        .from("stories")
+        .select(PUBLIC_STORY_SELECT)
+        .eq("status", "published")
+        .eq("is_public", true)
+        .order("published_at", { ascending: false })
+        .range(lastFrom, count - 1);
+
+      if (lastError) return getGuidePage(safePage, safePageSize);
+
+      return {
+        stories: ((lastData ?? []) as StoryRecord[]).map((record) => mapStory(record, supabase)),
+        total: count,
+        page: lastPage,
+        pageSize: safePageSize,
+        hasClubStories: true,
+      };
+    }
+
+    return {
+      stories: records.map((record) => mapStory(record, supabase)),
+      total: count ?? from + records.length,
+      page: safePage,
+      pageSize: safePageSize,
+      hasClubStories: true,
+    };
+  } catch {
+    return getGuidePage(safePage, safePageSize);
+  }
+});
+
 export const getPublicStory = cache(async (slug: string): Promise<PublicStory | null> => {
   const guide = editorialGuides.find((item) => item.slug === slug);
 
@@ -258,7 +494,7 @@ export const getPublicStory = cache(async (slug: string): Promise<PublicStory | 
     const supabase = await createClient();
     const { data, error } = await supabase
       .from("stories")
-      .select("id,title,slug,excerpt,content,story_type,published_at,cover_image_path")
+      .select(PUBLIC_STORY_SELECT)
       .eq("slug", slug)
       .eq("status", "published")
       .eq("is_public", true)
