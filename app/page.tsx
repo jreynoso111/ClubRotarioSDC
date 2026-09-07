@@ -41,14 +41,6 @@ function ArrowUpRight() {
   );
 }
 
-function ArrowDown() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 16 16" className="icon">
-      <path d="M8 2v11M3.5 8.5 8 13l4.5-4.5" />
-    </svg>
-  );
-}
-
 function ClubSignature({ compact = false }: { compact?: boolean }) {
   return (
     <span className={compact ? "club-signature club-signature-compact" : "club-signature"}>
@@ -130,9 +122,6 @@ export default async function Home() {
           <div className="hero-actions">
             <Link className="button button-primary" href="/auth/sign-up">
               Quiero ser miembro <ArrowUpRight />
-            </Link>
-            <Link className="button button-quiet" href="/eventos">
-              Ver la agenda <ArrowDown />
             </Link>
           </div>
           <div className="hero-meta" aria-label="Secciones de la revista">
