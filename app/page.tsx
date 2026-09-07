@@ -45,16 +45,12 @@ function ClubSignature({ compact = false }: { compact?: boolean }) {
   return (
     <span className={compact ? "club-signature club-signature-compact" : "club-signature"}>
       <Image
-        src="/rotary-masterbrand.png"
-        alt="Rotary"
-        width={116}
-        height={44}
+        src="/club-santo-domingo-colonial-logo.png"
+        alt="Rotary Club Santo Domingo Colonial"
+        width={1401}
+        height={310}
         priority={compact}
       />
-      <span className="club-signature-name">
-        <span>Club Rotario</span>
-        <strong>Santo Domingo<br />Colonial</strong>
-      </span>
     </span>
   );
 }
@@ -67,9 +63,8 @@ function CinematicIntro() {
       <div className="cinematic-intro-line" />
       <div className="cinematic-intro-content">
         <div className="cinematic-intro-logo-wrap">
-          <Image src="/rotary-masterbrand.png" alt="" width={250} height={94} priority />
+          <Image src="/club-santo-domingo-colonial-logo.png" alt="Rotary Club Santo Domingo Colonial" width={1401} height={310} priority />
         </div>
-        <span className="cinematic-intro-club">Club Rotario Santo Domingo Colonial</span>
         <span className="cinematic-intro-caption">Personas de acción · Revista social</span>
       </div>
     </div>

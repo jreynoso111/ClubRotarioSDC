@@ -19,24 +19,9 @@
 
 .brand { align-items: center; display: inline-flex; justify-self: start; }
 .signature { align-items: center; display: inline-flex; gap: 11px; min-width: 0; }
-.signature img { display: block; height: auto; object-fit: contain; width: 98px; }
-.signatureName {
-  border-left: 1px solid var(--rotary-gold);
-  color: var(--ink);
-  display: flex;
-  flex-direction: column;
-  font-size: 9px;
-  font-weight: 700;
-  gap: 2px;
-  letter-spacing: .1em;
-  line-height: 1.04;
-  padding-left: 10px;
-  text-transform: uppercase;
-}
-.signatureName strong { font-weight: 800; }
-.signatureCompact { gap: 8px; }
-.signatureCompact img { width: 78px; }
-.signatureCompact .signatureName { font-size: 7px; letter-spacing: .08em; padding-left: 8px; }
+.signature img { display: block; height: auto; object-fit: contain; width: 190px; }
+.signatureCompact { gap: 0; }
+.signatureCompact img { width: 170px; }
 
 .desktopNav { display: flex; gap: clamp(20px, 2.6vw, 30px); justify-content: center; }
 .desktopNav a { white-space: nowrap; }
@@ -185,8 +170,7 @@
   width: min(var(--public-max), calc(100% - var(--public-gutter) - var(--public-gutter)));
 }
 .footerBrand { align-items: center; display: flex; gap: 11px; min-width: 0; }
-.footerBrand .signature img { width: 78px; }
-.footerBrand .signatureName { font-size: 7px; }
+.footerBrand .signature img { width: 190px; }
 .footerCopy { color: var(--ink-soft); text-align: center; }
 .footerCopy p { font-family: Georgia, "Times New Roman", serif; font-size: 14px; margin: 0 0 3px; }
 .footerCopy small { display: block; font-family: var(--font-geist-mono); font-size: 8px; letter-spacing: .06em; line-height: 1.25; overflow-wrap: anywhere; }
@@ -229,6 +213,7 @@
 @media (max-width: 760px) {
   .page { --public-gutter: 20px; }
   .header { height: 76px; padding-inline: var(--public-gutter); }
+  .signatureCompact img { width: 165px; }
   .desktopNav, .headerCta { display: none; }
   .mobileMenu { display: block; margin-left: auto; }
   .main { width: min(620px, calc(100% - var(--public-gutter) - var(--public-gutter))); }
@@ -245,8 +230,7 @@
   .page { --public-gutter: clamp(16px, 4vw, 28px); }
   .header { height: 62px; padding-inline: var(--public-gutter); }
   .signature { gap: 8px; }
-  .signature img { width: 78px; }
-  .signatureName { font-size: 7px; letter-spacing: .08em; padding-left: 8px; }
+  .signature img { width: 145px; }
   .mobileMenu summary span { margin: 4px 0; width: 21px; }
   .mobileMenu nav { gap: 12px; padding: 16px; top: 30px; width: 200px; }
 
@@ -264,7 +248,7 @@
 
   .footer { align-items: start; display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr) auto auto; padding-bottom: 14px; padding-top: 12px; }
   .footerBrand { align-items: flex-start; flex-wrap: nowrap; gap: 10px; }
-  .footerBrand .signature img { width: 70px; }
+  .footerBrand .signature img { width: 160px; }
   .footerCopy p { font-size: 12px; }
   .footerCopy small { font-size: 7px; }
   .footerArrow { margin-left: 0; }
@@ -296,8 +280,7 @@
     grid-area: brand;
   }
 
-  .footerBrand .signature img { width: 70px; }
-  .footerBrand .signatureName { font-size: 7px; }
+  .footerBrand .signature img { width: 170px; }
   .footerCopy { grid-area: copy; min-width: 0; text-align: left; }
   .footerCopy p { font-size: 13px; margin-bottom: 3px; }
   .footerCopy small { font-size: 8px; line-height: 1.25; }

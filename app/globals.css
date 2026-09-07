@@ -108,7 +108,7 @@ a {
 .club-signature {
   align-items: center;
   display: inline-flex;
-  gap: 11px;
+  gap: 0;
   min-width: 0;
 }
 
@@ -116,39 +116,15 @@ a {
   display: block;
   height: auto;
   object-fit: contain;
-  width: 98px;
-}
-
-.club-signature-name {
-  border-left: 1px solid var(--rotary-gold);
-  color: var(--ink);
-  display: flex;
-  flex-direction: column;
-  font-size: 9px;
-  font-weight: 700;
-  gap: 2px;
-  letter-spacing: .1em;
-  line-height: 1.04;
-  padding-left: 10px;
-  text-transform: uppercase;
-}
-
-.club-signature-name strong {
-  font-weight: 800;
+  width: 190px;
 }
 
 .club-signature-compact {
-  gap: 8px;
+  gap: 0;
 }
 
 .club-signature-compact img {
-  width: 78px;
-}
-
-.club-signature-compact .club-signature-name {
-  font-size: 7px;
-  letter-spacing: .08em;
-  padding-left: 8px;
+  width: 170px;
 }
 
 .desktop-nav {
@@ -320,7 +296,7 @@ a {
 .cinematic-intro-logo-wrap img {
   display: block;
   height: auto;
-  width: min(250px, 55vw);
+  width: min(330px, 70vw);
 }
 
 .cinematic-intro-club {
@@ -1657,11 +1633,7 @@ h2 span {
 }
 
 .footer-brand .club-signature img {
-  width: 78px;
-}
-
-.footer-brand .club-signature-name {
-  font-size: 7px;
+  width: 190px;
 }
 
 .footer-brand > p {
@@ -2199,9 +2171,8 @@ h2 span {
   :root { --content-gutter: clamp(16px, 4vw, 28px); --public-gutter: clamp(16px, 4vw, 28px); }
   .section-shell { width: min(1240px, calc(100% - var(--content-gutter) - var(--content-gutter))); }
   .site-header { height: 62px; padding-inline: var(--content-gutter); }
-  .club-signature { gap: 8px; }
-  .club-signature img { width: 78px; }
-  .club-signature-name { font-size: 7px; letter-spacing: .08em; padding-left: 8px; }
+  .club-signature { gap: 0; }
+  .club-signature img { width: 145px; }
   .mobile-menu summary span { margin: 4px 0; width: 21px; }
 
   .hero {
@@ -2324,8 +2295,7 @@ h2 span {
     width: auto;
   }
 
-  .footer-brand .club-signature img { width: 70px; }
-  .footer-brand .club-signature-name { font-size: 7px; }
+  .footer-brand .club-signature img { width: 160px; }
   .footer-brand > p { font-size: 13px; line-height: 1.05; }
   .footer-brand > p small { font-size: 7px; line-height: 1.25; margin-top: 7px; max-width: 210px; }
 

@@ -33,16 +33,12 @@ export function ClubSignature({ compact = false }: { compact?: boolean }) {
   return (
     <span className={compact ? `${styles.signature} ${styles.signatureCompact}` : styles.signature}>
       <Image
-        src="/rotary-masterbrand.png"
-        alt="Rotary"
-        width={116}
-        height={44}
+        src="/club-santo-domingo-colonial-logo.png"
+        alt="Rotary Club Santo Domingo Colonial"
+        width={1401}
+        height={310}
         priority={compact}
       />
-      <span className={styles.signatureName}>
-        <span>Club Rotario</span>
-        <strong>Santo Domingo<br />Colonial</strong>
-      </span>
     </span>
   );
 }
