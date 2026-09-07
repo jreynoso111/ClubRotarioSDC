@@ -1,0 +1,151 @@
+.shell {
+  align-items: center;
+  background:
+    radial-gradient(circle at 15% 10%, rgba(247, 168, 27, 0.2), transparent 32%),
+    var(--paper);
+  display: flex;
+  min-height: 100vh;
+  padding: 32px 20px;
+}
+
+.card {
+  background: rgba(255, 253, 248, 0.92);
+  border: 1px solid var(--line);
+  box-shadow: 0 24px 80px rgba(18, 47, 73, 0.1);
+  margin: 0 auto;
+  max-width: 480px;
+  padding: clamp(28px, 6vw, 58px);
+  width: 100%;
+}
+
+.back {
+  color: var(--ink-soft);
+  display: inline-flex;
+  font-family: var(--font-geist-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  margin-bottom: 58px;
+  text-transform: uppercase;
+}
+
+.eyebrow {
+  color: var(--teal);
+  font-family: var(--font-geist-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  margin: 0 0 18px;
+  text-transform: uppercase;
+}
+
+.title {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(42px, 8vw, 64px);
+  font-weight: 400;
+  letter-spacing: -0.06em;
+  line-height: 0.95;
+  margin: 0 0 20px;
+}
+
+.copy {
+  color: var(--ink-soft);
+  font-size: 14px;
+  line-height: 1.65;
+  margin: 0 0 32px;
+}
+
+.form {
+  display: grid;
+  gap: 20px;
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+}
+
+.label {
+  color: var(--ink);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.input {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 0;
+  color: var(--ink);
+  font: inherit;
+  min-height: 50px;
+  padding: 13px 14px;
+  width: 100%;
+}
+
+.input:focus {
+  border-color: var(--teal);
+  outline: 2px solid rgba(0, 103, 200, 0.15);
+  outline-offset: 1px;
+}
+
+.button {
+  background: var(--rotary-blue);
+  border: 0;
+  color: var(--paper);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  min-height: 52px;
+  padding: 14px 18px;
+  text-transform: uppercase;
+}
+
+.button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.error,
+.success {
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0;
+  padding: 12px 14px;
+}
+
+.error {
+  background: rgba(181, 46, 46, 0.1);
+  color: #8e2424;
+}
+
+.success {
+  background: rgba(0, 103, 200, 0.1);
+  color: var(--rotary-blue);
+}
+
+.links {
+  border-top: 1px solid var(--line);
+  color: var(--ink-soft);
+  font-size: 13px;
+  line-height: 1.6;
+  margin-top: 30px;
+  padding-top: 22px;
+}
+
+.link {
+  color: var(--rotary-blue);
+  font-weight: 750;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.meta {
+  color: var(--ink-soft);
+  font-family: var(--font-geist-mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  margin: 26px 0 0;
+  text-transform: uppercase;
+}

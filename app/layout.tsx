@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist_Mono, Open_Sans } from "next/font/google";
+import type { ReactNode } from "react";
 import "./globals.css";
 
 const openSans = Open_Sans({
@@ -21,7 +22,7 @@ export const metadata: Metadata = {
     "Personas de acción que conectan experiencia, tiempo y aliados para servir a Santo Domingo Colonial.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
       lang="es"

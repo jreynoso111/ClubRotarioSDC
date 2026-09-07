@@ -1,0 +1,82 @@
+-- Demo events for the public agenda. They are intentionally marked as
+-- "Prueba" so the club can replace or remove them before publishing real dates.
+insert into public.events (
+  title,
+  slug,
+  summary,
+  description,
+  kind,
+  tone,
+  starts_at,
+  ends_at,
+  venue_name,
+  venue_address,
+  location_url,
+  capacity,
+  status,
+  is_public
+)
+values
+  (
+    'Prueba · Café de ideas',
+    'prueba-cafe-de-ideas',
+    'Encuentro de demostración para revisar cómo se publica una actividad abierta.',
+    'Este es un evento de prueba editable. Úsalo para revisar fechas, lugares, descripciones y publicación en la agenda pública antes de registrar una actividad real del club.',
+    'encuentro',
+    'lime',
+    (CURRENT_DATE + 7 + TIME '18:30') AT TIME ZONE 'America/Santo_Domingo',
+    (CURRENT_DATE + 7 + TIME '20:00') AT TIME ZONE 'America/Santo_Domingo',
+    'Casa de Teatro',
+    'Calle Arzobispo Meriño, Ciudad Colonial',
+    null,
+    30,
+    'published',
+    true
+  ),
+  (
+    'Prueba · Jornada Ciudad que cuida',
+    'prueba-jornada-ciudad-que-cuida',
+    'Jornada de demostración para explorar el formato de una actividad de servicio.',
+    'Este es un evento de prueba editable. Sirve para probar una jornada de servicio con lugar, dirección, capacidad y descripción pública.',
+    'servicio',
+    'sun',
+    (CURRENT_DATE + 21 + TIME '08:30') AT TIME ZONE 'America/Santo_Domingo',
+    (CURRENT_DATE + 21 + TIME '12:00') AT TIME ZONE 'America/Santo_Domingo',
+    'Plaza España',
+    'Calle Las Damas, Ciudad Colonial',
+    null,
+    45,
+    'published',
+    true
+  ),
+  (
+    'Prueba · Mesa de propuestas',
+    'prueba-mesa-de-propuestas',
+    'Sesión de demostración para probar un encuentro de coordinación del club.',
+    'Este es un evento de prueba editable. Úsalo para verificar cómo se presenta una reunión de coordinación y cómo se organiza su información.',
+    'reunion',
+    'coral',
+    (CURRENT_DATE + 35 + TIME '19:00') AT TIME ZONE 'America/Santo_Domingo',
+    (CURRENT_DATE + 35 + TIME '20:30') AT TIME ZONE 'America/Santo_Domingo',
+    'Sala de miembros',
+    'Ciudad Colonial · Santo Domingo',
+    null,
+    20,
+    'published',
+    true
+  )
+on conflict (slug) do update set
+  title = excluded.title,
+  summary = excluded.summary,
+  description = excluded.description,
+  kind = excluded.kind,
+  tone = excluded.tone,
+  starts_at = excluded.starts_at,
+  ends_at = excluded.ends_at,
+  venue_name = excluded.venue_name,
+  venue_address = excluded.venue_address,
+  location_url = excluded.location_url,
+  capacity = excluded.capacity,
+  status = excluded.status,
+  is_public = excluded.is_public,
+  updated_at = now();

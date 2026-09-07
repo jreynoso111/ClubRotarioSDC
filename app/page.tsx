@@ -1,69 +1,35 @@
 import Image from "next/image";
+import Link from "next/link";
 import type { ReactNode } from "react";
 
-const events = [
-  {
-    date: "18 SEP",
-    time: "7:00 PM",
-    title: "Noche de ideas",
-    detail: "Casa de Teatro · Ubicación por confirmar",
-    kind: "Encuentro",
-    tone: "lime",
-  },
-  {
-    date: "27 SEP",
-    time: "8:30 AM",
-    title: "Ciudad que cuida",
-    detail: "Zona Colonial · Lugar por confirmar",
-    kind: "Servicio",
-    tone: "sun",
-  },
-  {
-    date: "04 OCT",
-    time: "6:30 PM",
-    title: "Mesa de propuestas",
-    detail: "Virtual · Sala de miembros",
-    kind: "Plataforma",
-    tone: "coral",
-  },
-];
+import { PublicHeader } from "@/components/public/PublicChrome";
+import StoriesCarousel from "@/components/public/StoriesCarousel";
+import { getPublicFeed } from "@/lib/supabase/public-feed";
 
-const stories: Array<{
-  index: string;
-  type: string;
-  title: string;
-  excerpt: string;
-  color: string;
-  image?: string;
-  imageAlt?: string;
-}> = [
+const heroIllustrations = [
   {
-    index: "01",
-    type: "CRÓNICA",
-    title: "Una ciudad se transforma cuando sus personas se encuentran",
-    excerpt:
-      "La jornada de abril convirtió una calle de la Zona Colonial en una conversación abierta sobre cuidado, memoria y futuro.",
-    color: "story-yellow",
-    image: "/colonial-streets.jpg",
-    imageAlt: "Calle de la Ciudad Colonial de Santo Domingo",
+    src: "/zona-colonial-illustration.png",
+    alt: "Ilustración editorial de una calle empedrada de la Ciudad Colonial de Santo Domingo",
   },
   {
-    index: "02",
-    type: "VOCES DEL CLUB",
-    title: "El servicio también se diseña",
-    excerpt:
-      "Tres miembros comparten cómo una buena pregunta puede convertirse en una actividad que mueve a toda la comunidad.",
-    color: "story-coral",
+    src: "/zona-colonial-dusk.png",
+    alt: "Ilustración editorial de las murallas de la Ciudad Colonial al anochecer",
   },
   {
-    index: "03",
-    type: "ARCHIVO",
-    title: "La memoria de servir, año tras año",
-    excerpt:
-      "Un recorrido por las historias que han mantenido viva la vocación del club desde la Ciudad Colonial.",
-    color: "story-teal",
-    image: "/zona-colonial-night.jpg",
-    imageAlt: "Escalinata iluminada de la Ciudad Colonial de Santo Domingo",
+    src: "/zona-colonial-courtyard.png",
+    alt: "Ilustración editorial de un patio colonial con arcos y fuente en Santo Domingo",
+  },
+  {
+    src: "/zona-colonial-las-damas.png",
+    alt: "Ilustración editorial de la calle Las Damas en la Ciudad Colonial de Santo Domingo",
+  },
+  {
+    src: "/zona-colonial-fortaleza.png",
+    alt: "Ilustración editorial de la Fortaleza Ozama junto al río en Santo Domingo",
+  },
+  {
+    src: "/zona-colonial-illustration.png",
+    alt: "",
   },
 ];
 
@@ -112,7 +78,7 @@ function CinematicIntro() {
           <Image src="/rotary-masterbrand.png" alt="" width={250} height={94} priority />
         </div>
         <span className="cinematic-intro-club">Club Rotario Santo Domingo Colonial</span>
-        <span className="cinematic-intro-caption">Personas de acción · Distrito 4060</span>
+        <span className="cinematic-intro-caption">Personas de acción · Revista social</span>
       </div>
     </div>
   );
@@ -127,138 +93,225 @@ function SectionLabel({ children }: { children: ReactNode }) {
   );
 }
 
-export default function Home() {
+function DateBadge({ date, tone }: { date: string; tone: string }) {
+  const [day, month] = date.split(" ");
+
+  return (
+    <span className={["event-date", "event-date-" + tone].join(" ")}>
+      <strong>{day}</strong>
+      <small>{month}</small>
+    </span>
+  );
+}
+
+export default async function Home() {
+  const { events, stories } = await getPublicFeed();
+  const agendaClassName = events.length < 3
+    ? "agenda-section agenda-section-compact section-shell"
+    : "agenda-section section-shell";
+
   return (
     <main>
       <CinematicIntro />
-      <header className="site-header">
-        <a className="brand" href="#inicio" aria-label="Club Rotario Santo Domingo Colonial, inicio">
-          <ClubSignature compact />
-        </a>
 
-        <nav className="desktop-nav" aria-label="Navegación principal">
-          <a href="#agenda">Agenda</a>
-          <a href="#memoria">Historias</a>
-          <a href="#club">El club</a>
-        </nav>
-
-        <a className="header-cta" href="#acceso">
-          Entrar a la plataforma <ArrowUpRight />
-        </a>
-        <details className="mobile-menu">
-          <summary aria-label="Abrir menú"><span /><span /></summary>
-          <nav aria-label="Navegación móvil">
-            <a href="#agenda">Agenda</a>
-            <a href="#memoria">Historias</a>
-            <a href="#club">El club</a>
-            <a href="#acceso">Entrar</a>
-          </nav>
-        </details>
-      </header>
+      <PublicHeader active="home" />
 
       <section className="hero section-shell" id="inicio">
         <div className="hero-copy">
-          <p className="eyebrow"><span className="eyebrow-pulse" /> Club Rotario Santo Domingo Colonial · Distrito 4060</p>
-          <h1>Personas de acción para <em>Santo Domingo Colonial.</em></h1>
+          <p className="eyebrow">
+            <span className="eyebrow-pulse" />
+            Revista social · Club Rotario Santo Domingo Colonial
+          </p>
+          <h1>Servir también es <em>contar lo que hacemos.</em></h1>
           <p className="hero-lede">
-            Conectamos experiencia, tiempo y aliados para convertir necesidades concretas en proyectos de servicio.
+            Historias, encuentros y memoria para mirar de cerca una comunidad que
+            encuentra en el servicio una forma de estar presente.
           </p>
           <div className="hero-actions">
-            <a className="button button-primary" href="#agenda">Ver próximos encuentros <ArrowDown /></a>
-            <a className="text-link" href="#club">Conocer nuestra forma de servir <ArrowUpRight /></a>
+            <Link className="button button-primary" href="/auth/sign-up">
+              Quiero ser miembro <ArrowUpRight />
+            </Link>
+            <Link className="button button-quiet" href="/eventos">
+              Ver la agenda <ArrowDown />
+            </Link>
           </div>
-          <div className="hero-footnote"><span>01</span><span className="hero-footnote-rule" /><span>Servicio con evidencia</span></div>
+          <div className="hero-meta" aria-label="Secciones de la revista">
+            <span>Historias / Agenda / Memoria</span>
+            <span>Ciudad Colonial · Santo Domingo</span>
+          </div>
         </div>
 
         <figure className="hero-art">
-          <Image
-            src="/zona-colonial-night.jpg"
-            alt="Escalinata de piedra iluminada en la Ciudad Colonial de Santo Domingo"
-            fill
-            priority
-            sizes="(max-width: 760px) 100vw, 50vw"
-          />
+          {heroIllustrations.map((illustration, index) => (
+            <Image
+              key={illustration.src + "-" + index}
+              src={illustration.src}
+              alt={index === 0 ? illustration.alt : ""}
+              aria-hidden={index === 0 ? undefined : true}
+              className={"hero-art-image hero-art-image-" + index}
+              fill
+              loading="eager"
+              priority={index === 0}
+              sizes="(max-width: 760px) 100vw, 50vw"
+            />
+          ))}
           <div className="hero-photo-wash" />
           <div className="hero-photo-sweep" />
           <div className="hero-photo-frame" />
           <div className="hero-art-topline"><span>SDQ / ZC</span><span>Servicio en movimiento</span></div>
           <div className="hero-photo-caption"><span>01</span><span>Una ciudad que se cuida<br />desde sus vínculos.</span></div>
-          <div className="hero-photo-index">2026<br /><span>—</span><br />EN CURSO</div>
+          <div className="hero-photo-index">REVISTA<br /><span>—</span><br />EN CURSO</div>
           <div className="hero-photo-label">JUNTOS<br />SERVIMOS</div>
-          <figcaption>Ciudad Colonial de Santo Domingo · fotografía de lui_lui / Wikimedia Commons</figcaption>
+          <figcaption>Ciudad Colonial de Santo Domingo · ilustración editorial</figcaption>
         </figure>
       </section>
 
-      <section className="signal-strip" aria-label="Valores del club">
-        <span>Personas</span><i />
-        <span>Integridad</span><i />
-        <span>Servicio</span><i />
-        <span>Liderazgo</span><i />
-        <span>Personas</span><i />
-        <span>Integridad</span><i />
-        <span>Servicio</span>
+      <section className="signal-strip" aria-label="Temas de la revista">
+        <span>Personas de acción</span><i aria-hidden="true" />
+        <span>Compañerismo</span><i aria-hidden="true" />
+        <span>Integridad</span><i aria-hidden="true" />
+        <span>Diversidad</span><i aria-hidden="true" />
+        <span>Servicio</span><i aria-hidden="true" />
+        <span>Liderazgo</span><i aria-hidden="true" />
+        <span>Comunidad</span><i aria-hidden="true" />
+        <span>Colaboración</span><i aria-hidden="true" />
+        <span>Compromiso</span><i aria-hidden="true" />
+        <span>Cuidado</span><i aria-hidden="true" />
+        <span>Memoria</span><i aria-hidden="true" />
+        <span>Futuro</span>
       </section>
 
-      <section className="agenda-section section-shell" id="agenda">
+      <section className="stories-section section-shell" id="historias">
         <div className="section-heading-row">
           <div>
-            <SectionLabel>Próximos encuentros</SectionLabel>
-            <h2>Lo que <span>sigue.</span></h2>
+            <SectionLabel>Crónicas del servicio</SectionLabel>
+            <h2>Leer para <span>conectar.</span></h2>
           </div>
-          <a className="text-link text-link-dark" href="#agenda">Ver calendario completo <ArrowUpRight /></a>
+          <div className="heading-aside">
+            <p>La memoria del club se construye con voces, aprendizajes y escenas compartidas.</p>
+            <Link className="text-link text-link-dark" href="/revista">
+              Abrir la revista <ArrowUpRight />
+            </Link>
+          </div>
         </div>
-        <div className="events-list">
-          {events.map((event) => (
-            <a className="event-row" href="#acceso" key={event.title}>
-              <span className={`event-date event-date-${event.tone}`}><strong>{event.date.split(" ")[0]}</strong><small>{event.date.split(" ")[1]}</small></span>
-              <span className="event-main"><small>{event.kind} · {event.time}</small><strong>{event.title}</strong><span>{event.detail}</span></span>
-              <span className="event-arrow"><ArrowUpRight /></span>
-            </a>
-          ))}
-        </div>
+
+        {stories.length > 0 ? (
+          <StoriesCarousel stories={stories} />
+        ) : (
+          <div className="empty-feed empty-feed-stories">
+            <span className="empty-feed-mark">Revista</span>
+            <p>Las próximas historias del club aparecerán aquí.</p>
+            <Link className="text-link text-link-dark" href="/revista">Visitar la revista <ArrowUpRight /></Link>
+          </div>
+        )}
       </section>
 
-      <section className="manifesto-section section-shell" id="club">
-        <div className="manifesto-mark"><span className="manifesto-wordmark">ROTARY<br /><strong>SDQ COLONIAL</strong></span><span>01 — 03</span></div>
-        <div className="manifesto-copy">
-          <SectionLabel>Personas de acción</SectionLabel>
-          <h2>Escuchamos la ciudad. <em>Actuamos con propósito.</em></h2>
-          <p>En el club, una necesidad concreta encuentra personas, conocimiento y una ruta para convertirse en acción.</p>
-          <div className="manifesto-stats"><span><strong>01</strong> Escuchar</span><span><strong>02</strong> Conectar</span><span><strong>03</strong> Actuar</span></div>
-        </div>
-      </section>
-
-      <section className="stories-section section-shell" id="memoria">
+      <section className={agendaClassName} id="agenda">
         <div className="section-heading-row">
           <div>
-            <SectionLabel>Historias de acción</SectionLabel>
-            <h2>El servicio deja <span>huella.</span></h2>
+            <SectionLabel>Agenda pública</SectionLabel>
+            <h2>Lo que está <span>pasando.</span></h2>
           </div>
-          <a className="text-link text-link-dark" href="#memoria">Explorar el blog <ArrowUpRight /></a>
+          <div className="heading-aside">
+            <p>Encuentros para acercarse, participar y seguir el pulso del club.</p>
+            <Link className="text-link text-link-dark" href="/eventos">
+              Ver todos los eventos <ArrowUpRight />
+            </Link>
+          </div>
         </div>
-        <div className="stories-grid">
-          {stories.map((story, index) => (
-            <article className={`story-card ${index === 0 ? "story-card-featured" : ""}`} key={story.index}>
-              <div className={`story-visual ${story.color}`}>
-                <span className="story-visual-index">{story.index}</span>
-                {story.image ? <Image src={story.image} alt={story.imageAlt ?? ""} fill sizes="(max-width: 760px) 100vw, 33vw" /> : <div className="story-visual-shape" />}
-                <span className="story-visual-overlay" />
-                <span className="story-visual-word">ROTARY<br />SDQ</span>
-              </div>
-              <div className="story-content"><small>{story.type}</small><h3>{story.title}</h3><p>{story.excerpt}</p><a className="story-link" href="#acceso">Leer historia <ArrowUpRight /></a></div>
-            </article>
-          ))}
+
+        {events.length > 0 ? (
+          <div className="events-list">
+            {events.map((event) => (
+              <Link className="event-row" href={event.href} key={event.title}>
+                <DateBadge date={event.date} tone={event.tone} />
+                <span className="event-main">
+                  <small>{event.kind} · {event.time}</small>
+                  <strong>{event.title}</strong>
+                  <span>{event.detail}</span>
+                </span>
+                <span className="event-arrow"><ArrowUpRight /></span>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <div className="empty-feed">
+            <span className="empty-feed-mark">Agenda</span>
+            <p>La agenda pública se está preparando. Vuelve pronto para encontrar el próximo encuentro.</p>
+            <Link className="text-link text-link-dark" href="/eventos">Explorar eventos <ArrowUpRight /></Link>
+          </div>
+        )}
+      </section>
+
+      <section className="join-section section-shell" id="unete">
+        <div className="join-panel">
+          <div className="join-copy">
+            <SectionLabel>Una invitación abierta</SectionLabel>
+            <h2>Tu experiencia puede convertirse en <em>servicio.</em></h2>
+            <p>
+              Si te mueve tu comunidad, hay una conversación que podemos
+              comenzar. Conoce el club y encuentra tu manera de participar.
+            </p>
+            <div className="join-actions">
+              <Link className="text-link text-link-dark" href="/nosotros">
+                Conocer el club <ArrowUpRight />
+              </Link>
+            </div>
+          </div>
+          <div className="join-note">
+            <span>CLUB ROTARIO<br /><strong>SANTO DOMINGO COLONIAL</strong></span>
+            <p>Personas de acción, reunidas para servir con propósito.</p>
+          </div>
         </div>
       </section>
 
-      <section className="platform-section section-shell" id="acceso">
-        <div className="platform-card">
-          <div className="platform-intro"><SectionLabel>Para quienes hacen que suceda</SectionLabel><h2>La parte del club que <em>no se ve desde la calle.</em></h2><p>Organiza actividades, presenta propuestas y participa en las decisiones desde un mismo lugar.</p><a className="button button-light" href="mailto:club@rotariosantodomingo.org">Solicitar acceso <ArrowUpRight /></a></div>
-          <div className="platform-rail"><div className="platform-rail-head"><span>Dentro de la plataforma</span><span>→</span></div><div className="platform-feature"><strong>01</strong><span>Propuestas</span><small>De la idea al plan</small></div><div className="platform-feature"><strong>02</strong><span>Actividades</span><small>Rifas, sorteos y encuentros</small></div><div className="platform-feature"><strong>03</strong><span>Organización</span><small>Comités, tareas y responsables</small></div></div>
+      <section className="club-section" id="club">
+        <div className="club-section-inner section-shell">
+          <div className="club-masthead">
+            <span className="club-stamp">ROTARY<br /><strong>SDQ COLONIAL</strong></span>
+            <span className="club-index">EL CLUB<br /><b>—</b><br />POR DENTRO</span>
+          </div>
+          <div className="club-copy">
+            <SectionLabel>El club por dentro</SectionLabel>
+            <h2>La historia también <em>se organiza.</em></h2>
+            <p>
+              Conoce las raíces de Rotary International, la historia del Club
+              Rotario Santo Domingo Colonial y la estructura que sostiene el
+              trabajo compartido.
+            </p>
+            <div className="club-path">
+              <Link className="club-path-link" href="/nosotros">
+                <span><strong>Historia, principios y estructura</strong><small>Una guía para entender cómo se organiza el servicio.</small></span>
+                <ArrowUpRight />
+              </Link>
+            </div>
+          </div>
         </div>
       </section>
 
-      <footer className="site-footer section-shell"><div className="footer-brand"><ClubSignature /></div><div className="footer-copy"><p>Servicio local. Vínculos que permanecen.</p><small>© {new Date().getFullYear()} Club Rotario Santo Domingo Colonial · Distrito 4060</small><small className="media-credit">Fotos: <a href="https://commons.wikimedia.org/wiki/File:Colonial_Santo_Domingo_Streets.jpg" target="_blank" rel="noreferrer">Brent</a> y <a href="https://commons.wikimedia.org/wiki/File:Zona_Colonial_-_Santo_Domingo,_Dominican_Republic.jpg" target="_blank" rel="noreferrer">lui_lui</a> · Wikimedia Commons, CC BY 2.0</small></div><a className="footer-arrow" href="#inicio" aria-label="Volver al inicio"><ArrowUpRight /></a></footer>
+      <footer className="site-footer section-shell">
+        <div className="footer-brand">
+          <ClubSignature />
+          <p>
+            Servicio local.<br />Vínculos que permanecen.
+            <small>Todos los derechos reservados · © {new Date().getFullYear()} Club Rotario Santo Domingo Colonial</small>
+          </p>
+        </div>
+        <div className="footer-links" aria-label="Enlaces del sitio">
+          <nav className="footer-link-group" aria-label="Explorar">
+            <small>Explorar</small>
+            <Link href="/revista">Revista</Link>
+            <Link href="/eventos">Agenda</Link>
+            <Link href="/nosotros">El club</Link>
+          </nav>
+          <nav className="footer-link-group" aria-label="Miembros">
+            <small>Miembros</small>
+            <Link href="/auth/sign-in?next=/plataforma">Acceder</Link>
+            <Link href="/auth/sign-up">Ser miembro</Link>
+          </nav>
+        </div>
+        <a className="footer-arrow" href="#inicio" aria-label="Volver al inicio"><ArrowUpRight /></a>
+      </footer>
     </main>
   );
 }
