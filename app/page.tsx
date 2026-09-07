@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { ReactNode } from "react";
 
 const events = [
@@ -70,19 +71,26 @@ function ArrowDown() {
   );
 }
 
-function RotaryMark({ compact = false }: { compact?: boolean }) {
+function ClubSignature({ compact = false }: { compact?: boolean }) {
   return (
-    <span className={compact ? "rotary-mark rotary-mark-compact" : "rotary-mark"} aria-hidden="true">
-      <span className="rotary-mark-center" />
-      {Array.from({ length: 8 }).map((_, index) => (
-        <span
-          className="rotary-mark-dot"
-          key={index}
-          style={{ transform: `rotate(${index * 45}deg) translateY(-14px)` }}
-        />
-      ))}
+    <span className={compact ? "club-signature club-signature-compact" : "club-signature"}>
+      <Image
+        src="/rotary-masterbrand.png"
+        alt="Rotary"
+        width={116}
+        height={44}
+        priority={compact}
+      />
+      <span className="club-signature-name">
+        <span>Club Rotario</span>
+        <strong>Santo Domingo<br />Colonial</strong>
+      </span>
     </span>
   );
+}
+
+function TerritoryMarker() {
+  return <span className="territory-marker" aria-hidden="true" />;
 }
 
 function SectionLabel({ children }: { children: ReactNode }) {
@@ -99,11 +107,7 @@ export default function Home() {
     <main>
       <header className="site-header">
         <a className="brand" href="#inicio" aria-label="Club Rotario Santo Domingo Colonial, inicio">
-          <RotaryMark compact />
-          <span className="brand-copy">
-            <strong>ROTARY</strong>
-            <span>Santo Domingo<br />Colonial</span>
-          </span>
+          <ClubSignature compact />
         </a>
 
         <nav className="desktop-nav" aria-label="Navegación principal">
@@ -128,16 +132,16 @@ export default function Home() {
 
       <section className="hero section-shell" id="inicio">
         <div className="hero-copy">
-          <p className="eyebrow"><span className="eyebrow-pulse" /> Club Rotario · Distrito 4060</p>
-          <h1>Hacer que la ciudad se mueva <em>en la misma dirección.</em></h1>
+          <p className="eyebrow"><span className="eyebrow-pulse" /> Club Rotario Santo Domingo Colonial · Distrito 4060</p>
+          <h1>Personas de acción para <em>Santo Domingo Colonial.</em></h1>
           <p className="hero-lede">
-            Abrimos espacios para que personas, conocimiento y tiempo se conviertan en servicio para Santo Domingo Colonial.
+            Conectamos experiencia, tiempo y aliados para convertir necesidades concretas en proyectos de servicio.
           </p>
           <div className="hero-actions">
             <a className="button button-primary" href="#agenda">Ver próximos encuentros <ArrowDown /></a>
             <a className="text-link" href="#club">Conocer nuestra forma de servir <ArrowUpRight /></a>
           </div>
-          <div className="hero-footnote"><span>01</span><span className="hero-footnote-rule" /><span>Personas antes que protocolos</span></div>
+          <div className="hero-footnote"><span>01</span><span className="hero-footnote-rule" /><span>Servicio con evidencia</span></div>
         </div>
 
         <div className="hero-art" role="img" aria-label="Composición abstracta inspirada en la ciudad, el encuentro y el movimiento">
@@ -153,30 +157,30 @@ export default function Home() {
           <div className="orbit orbit-one" />
           <div className="orbit orbit-two" />
           <div className="orbit orbit-three" />
-          <div className="hero-art-core"><RotaryMark /><span>servicio<br />en movimiento</span></div>
-          <div className="hero-note hero-note-top"><span className="note-number">A</span><span>Una ciudad<br />más atenta</span></div>
-          <div className="hero-note hero-note-bottom"><span className="note-number">B</span><span>Una mesa<br />para todos</span></div>
+          <div className="hero-art-core"><TerritoryMarker /><span>acción<br />con propósito</span></div>
+          <div className="hero-note hero-note-top"><span className="note-number">A</span><span>Escuchar<br />la comunidad</span></div>
+          <div className="hero-note hero-note-bottom"><span className="note-number">B</span><span>Actuar<br />con aliados</span></div>
           <div className="hero-art-index">2026<br /><span>—</span><br />EN CURSO</div>
           <div className="hero-art-legend"><span className="legend-dot" /> Trazo urbano <i /> puntos de encuentro</div>
-          <div className="hero-art-label">MOVER<br />JUNTOS</div>
+          <div className="hero-art-label">JUNTOS<br />SERVIMOS</div>
         </div>
       </section>
 
       <section className="signal-strip" aria-label="Valores del club">
         <span>Personas</span><i />
-        <span>Ideas</span><i />
+        <span>Integridad</span><i />
         <span>Servicio</span><i />
-        <span>Ciudad</span><i />
+        <span>Liderazgo</span><i />
         <span>Personas</span><i />
-        <span>Ideas</span><i />
+        <span>Integridad</span><i />
         <span>Servicio</span>
       </section>
 
       <section className="agenda-section section-shell" id="agenda">
         <div className="section-heading-row">
           <div>
-            <SectionLabel>La agenda viva</SectionLabel>
-            <h2>Lo que está <span>pasando.</span></h2>
+            <SectionLabel>Próximos encuentros</SectionLabel>
+            <h2>Lo que <span>sigue.</span></h2>
           </div>
           <a className="text-link text-link-dark" href="#agenda">Ver calendario completo <ArrowUpRight /></a>
         </div>
@@ -192,20 +196,20 @@ export default function Home() {
       </section>
 
       <section className="manifesto-section section-shell" id="club">
-        <div className="manifesto-mark"><RotaryMark /><span>01 — 03</span></div>
+        <div className="manifesto-mark"><span className="manifesto-wordmark">ROTARY<br /><strong>SDQ COLONIAL</strong></span><span>01 — 03</span></div>
         <div className="manifesto-copy">
-          <SectionLabel>Nuestra manera</SectionLabel>
-          <h2>No venimos a llenar una agenda. <em>Venimos a abrir posibilidades.</em></h2>
-          <p>El club es una mesa donde una inquietud puede encontrar aliados, estructura y el impulso necesario para convertirse en servicio.</p>
-          <div className="manifesto-stats"><span><strong>01</strong> Comunidad</span><span><strong>02</strong> Acción</span><span><strong>03</strong> Legado</span></div>
+          <SectionLabel>Personas de acción</SectionLabel>
+          <h2>Escuchamos la ciudad. <em>Actuamos con propósito.</em></h2>
+          <p>En el club, una necesidad concreta encuentra personas, conocimiento y una ruta para convertirse en acción.</p>
+          <div className="manifesto-stats"><span><strong>01</strong> Escuchar</span><span><strong>02</strong> Conectar</span><span><strong>03</strong> Actuar</span></div>
         </div>
       </section>
 
       <section className="stories-section section-shell" id="memoria">
         <div className="section-heading-row">
           <div>
-            <SectionLabel>Bitácora del club</SectionLabel>
-            <h2>Historias que <span>quedan.</span></h2>
+            <SectionLabel>Historias de acción</SectionLabel>
+            <h2>El servicio deja <span>huella.</span></h2>
           </div>
           <a className="text-link text-link-dark" href="#memoria">Explorar el blog <ArrowUpRight /></a>
         </div>
@@ -226,7 +230,7 @@ export default function Home() {
         </div>
       </section>
 
-      <footer className="site-footer section-shell"><div className="footer-brand"><RotaryMark compact /><strong>ROTARY<br />SANTO DOMINGO<br />COLONIAL</strong></div><div className="footer-copy"><p>Una comunidad para servir mejor, juntos.</p><small>© {new Date().getFullYear()} Club Rotario Santo Domingo Colonial</small></div><a className="footer-arrow" href="#inicio" aria-label="Volver al inicio"><ArrowUpRight /></a></footer>
+      <footer className="site-footer section-shell"><div className="footer-brand"><ClubSignature /></div><div className="footer-copy"><p>Servicio local. Vínculos que permanecen.</p><small>© {new Date().getFullYear()} Club Rotario Santo Domingo Colonial · Distrito 4060</small></div><a className="footer-arrow" href="#inicio" aria-label="Volver al inicio"><ArrowUpRight /></a></footer>
     </main>
   );
 }
