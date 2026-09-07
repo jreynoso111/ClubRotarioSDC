@@ -501,28 +501,32 @@ h2 em {
 }
 
 .hero-art-image-0 {
-  animation: hero-illustration-fade 24s ease-in-out infinite;
+  animation: hero-illustration-fade 32s ease-in-out infinite;
   opacity: 1;
 }
 
 .hero-art-image-1 {
-  animation: hero-illustration-lift 24s cubic-bezier(.2, .65, .2, 1) 4s infinite;
+  animation: hero-illustration-lift 32s cubic-bezier(.2, .65, .2, 1) 8s infinite;
 }
 
 .hero-art-image-2 {
-  animation: hero-illustration-pan 24s cubic-bezier(.2, .65, .2, 1) 8s infinite;
+  animation: hero-illustration-pan 32s cubic-bezier(.2, .65, .2, 1) 12s infinite;
 }
 
 .hero-art-image-3 {
-  animation: hero-illustration-zoom 24s ease-in-out 12s infinite;
+  animation: hero-illustration-zoom 32s ease-in-out 16s infinite;
 }
 
 .hero-art-image-4 {
-  animation: hero-illustration-drift 24s cubic-bezier(.2, .65, .2, 1) 16s infinite;
+  animation: hero-illustration-drift 32s cubic-bezier(.2, .65, .2, 1) 20s infinite;
 }
 
 .hero-art-image-5 {
-  animation: hero-illustration-loop 24s ease-in-out 20s infinite;
+  animation: hero-illustration-loop 32s ease-in-out 24s infinite;
+}
+
+.hero-art-image-6 {
+  animation: hero-illustration-lift 32s cubic-bezier(.2, .65, .2, 1) 28s infinite;
 }
 
 .hero-photo-wash {
@@ -633,43 +637,43 @@ h2 em {
 }
 
 @keyframes hero-illustration-fade {
-  0%, 31% { opacity: 1; transform: scale(1.04); }
-  42%, 100% { opacity: 0; transform: scale(1.09) translate3d(-.8%, -1%, 0); }
+  0%, 27% { opacity: 1; transform: scale(1.04); }
+  34%, 100% { opacity: 0; transform: scale(1.09) translate3d(-.8%, -1%, 0); }
 }
 
 @keyframes hero-illustration-loop {
   0% { opacity: 0; transform: scale(1.09); }
-  10% { opacity: 1; transform: scale(1.06); }
-  31% { opacity: 1; transform: scale(1.04); }
-  42%, 100% { opacity: 0; transform: scale(1.09); }
+  7% { opacity: 1; transform: scale(1.06); }
+  17% { opacity: 1; transform: scale(1.04); }
+  23%, 100% { opacity: 0; transform: scale(1.09); }
 }
 
 @keyframes hero-illustration-lift {
   0% { opacity: 0; transform: translateY(24px) scale(1.09); }
-  10% { opacity: 1; transform: translateY(0) scale(1.06); }
-  31% { opacity: 1; transform: translateY(-4px) scale(1.04); }
-  42%, 100% { opacity: 0; transform: translateY(-20px) scale(1.1); }
+  7% { opacity: 1; transform: translateY(0) scale(1.06); }
+  17% { opacity: 1; transform: translateY(-4px) scale(1.04); }
+  23%, 100% { opacity: 0; transform: translateY(-20px) scale(1.1); }
 }
 
 @keyframes hero-illustration-pan {
   0% { opacity: 0; transform: translateX(28px) scale(1.08); }
-  10% { opacity: 1; transform: translateX(0) scale(1.05); }
-  31% { opacity: 1; transform: translateX(-3px) scale(1.04); }
-  42%, 100% { opacity: 0; transform: translateX(-22px) scale(1.1); }
+  7% { opacity: 1; transform: translateX(0) scale(1.05); }
+  17% { opacity: 1; transform: translateX(-3px) scale(1.04); }
+  23%, 100% { opacity: 0; transform: translateX(-22px) scale(1.1); }
 }
 
 @keyframes hero-illustration-zoom {
   0% { opacity: 0; transform: scale(1.14) rotate(.35deg); }
-  10% { opacity: 1; transform: scale(1.06) rotate(0deg); }
-  31% { opacity: 1; transform: scale(1.04) rotate(-.1deg); }
-  42%, 100% { opacity: 0; transform: scale(1.11) rotate(-.4deg); }
+  7% { opacity: 1; transform: scale(1.06) rotate(0deg); }
+  17% { opacity: 1; transform: scale(1.04) rotate(-.1deg); }
+  23%, 100% { opacity: 0; transform: scale(1.11) rotate(-.4deg); }
 }
 
 @keyframes hero-illustration-drift {
   0% { opacity: 0; transform: translate3d(-18px, 12px, 0) scale(1.08); }
-  10% { opacity: 1; transform: translate3d(0, 0, 0) scale(1.05); }
-  31% { opacity: 1; transform: translate3d(3px, -3px, 0) scale(1.04); }
-  42%, 100% { opacity: 0; transform: translate3d(18px, -10px, 0) scale(1.1); }
+  7% { opacity: 1; transform: translate3d(0, 0, 0) scale(1.05); }
+  17% { opacity: 1; transform: translate3d(3px, -3px, 0) scale(1.04); }
+  23%, 100% { opacity: 0; transform: translate3d(18px, -10px, 0) scale(1.1); }
 }
 
 @keyframes hero-photo-sweep {
@@ -2150,7 +2154,8 @@ h2 span {
   .hero-art-image-2,
   .hero-art-image-3,
   .hero-art-image-4,
-  .hero-art-image-5 {
+  .hero-art-image-5,
+  .hero-art-image-6 {
     opacity: 0;
   }
 

@@ -8,6 +8,10 @@ import { getPublicFeed } from "@/lib/supabase/public-feed";
 
 const heroIllustrations = [
   {
+    src: "/alcazar-colon-illustration.png",
+    alt: "Ilustración editorial del Alcázar de Colón frente a la Plaza de España en Santo Domingo",
+  },
+  {
     src: "/zona-colonial-illustration.png",
     alt: "Ilustración editorial de una calle empedrada de la Ciudad Colonial de Santo Domingo",
   },

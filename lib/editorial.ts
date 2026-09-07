@@ -143,6 +143,40 @@ const editorialGuides: PublicStory[] = [
     source: ROTARY_FOCUS_SOURCE,
   },
   {
+    id: "sample:una-plaza-que-guarda-nuestras-conversaciones",
+    title: "Una plaza que guarda nuestras conversaciones",
+    slug: "una-plaza-que-guarda-nuestras-conversaciones",
+    excerpt:
+      "Una publicación de prueba para contar cómo el Alcázar y su plaza pueden acompañar la memoria del club.",
+    content: [
+      "El Alcázar de Colón mira hacia la Plaza de España, un espacio abierto donde la Ciudad Colonial reúne visitantes, vecinos e historias. Esta escena sirve como referencia visual para narrar el lugar que acompaña nuestras conversaciones.",
+      "Este texto de muestra deja listo el formato para que el club publique después sus propias fotografías, voces y aprendizajes junto a un proyecto de servicio.",
+    ].join("\n\n"),
+    storyType: "muestra",
+    storyTypeLabel: "Ejemplo editorial",
+    publishedAt: null,
+    coverImagePath: "/alcazar-colon-illustration.png",
+    isReference: true,
+    isExample: true,
+  },
+  {
+    id: "sample:el-lugar-tambien-cuenta",
+    title: "El lugar también cuenta",
+    slug: "el-lugar-tambien-cuenta",
+    excerpt:
+      "Otra crónica de prueba para conectar el servicio, el patrimonio y las personas que hacen comunidad.",
+    content: [
+      "Una imagen del Alcázar puede abrir una historia sobre cuidado, patrimonio y participación. La publicación final podrá sumar la fecha de la actividad, las organizaciones aliadas y las voces de quienes estuvieron presentes.",
+      "Mientras se prepara el archivo propio del club, este ejemplo muestra cómo una fotografía realista del entorno puede sostener una narración breve y cercana.",
+    ].join("\n\n"),
+    storyType: "muestra",
+    storyTypeLabel: "Ejemplo editorial",
+    publishedAt: null,
+    coverImagePath: "/alcazar-colon-illustration.png",
+    isReference: true,
+    isExample: true,
+  },
+  {
     id: "sample:cuando-una-reunion-se-convierte-en-un-proyecto",
     title: "Cuando una reunión se convierte en un proyecto",
     slug: "cuando-una-reunion-se-convierte-en-un-proyecto",
@@ -329,6 +363,7 @@ type EventRecord = {
 
 function publicImageUrl(supabase: Awaited<ReturnType<typeof createClient>>, path: string | null) {
   if (!path) return undefined;
+  if (path.startsWith("/")) return undefined;
   if (path.startsWith("https://")) return path;
   if (path.startsWith("http://")) return undefined;
   return supabase.storage.from("club-public").getPublicUrl(path).data.publicUrl;

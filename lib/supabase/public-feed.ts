@@ -35,6 +35,7 @@ const fallbackStories: PublicStory[] = [
   { index: "01", type: "CONOCE ROTARY", title: "Una idea de amistad que se convirtió en servicio", excerpt: "Descubre el origen de Rotary International y cómo comenzó una red de personas comprometidas con sus comunidades.", color: "story-yellow", image: "/zona-colonial-illustration.png", imageAlt: "Ilustración de la Ciudad Colonial", href: "/revista/historia-de-rotary-international" },
   { index: "02", type: "VIDA ROTARIA", title: "Un club, muchas maneras de aportar", excerpt: "Compañerismo, liderazgo y proyectos: conoce cómo se organiza Rotary y dónde puede encajar tu vocación de servicio.", color: "story-coral", href: "/revista/como-funciona-rotary" },
   { index: "03", type: "NUESTRAS CAUSAS", title: "Siete causas para construir un futuro mejor", excerpt: "De la paz al medioambiente: las áreas de interés que orientan el servicio de Rotary en el mundo.", color: "story-teal", image: "/zona-colonial-courtyard.png", imageAlt: "Ilustración de un patio colonial", href: "/revista/areas-de-interes-de-rotary" },
+  { index: "04", type: "CIUDAD COLONIAL", title: "Una plaza que guarda nuestras conversaciones", excerpt: "Una publicación de prueba para contar cómo el lugar que compartimos también puede ser parte de la memoria del club.", color: "story-yellow", image: "/alcazar-colon-illustration.png", imageAlt: "Ilustración del Alcázar de Colón en la Plaza de España", href: "/revista/una-plaza-que-guarda-nuestras-conversaciones" },
 ];
 
 type EventRecord = {

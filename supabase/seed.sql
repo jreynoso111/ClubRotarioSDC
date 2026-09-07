@@ -13,6 +13,7 @@ insert into public.events (
   venue_address,
   location_url,
   capacity,
+  cover_image_path,
   status,
   is_public
 )
@@ -30,6 +31,7 @@ values
     'Calle Arzobispo Meriño, Ciudad Colonial',
     null,
     30,
+    '/alcazar-colon-illustration.png',
     'published',
     true
   ),
@@ -46,6 +48,7 @@ values
     'Calle Las Damas, Ciudad Colonial',
     null,
     45,
+    '/alcazar-colon-illustration.png',
     'published',
     true
   ),
@@ -62,6 +65,7 @@ values
     'Ciudad Colonial · Santo Domingo',
     null,
     20,
+    '/alcazar-colon-illustration.png',
     'published',
     true
   )
@@ -77,6 +81,7 @@ on conflict (slug) do update set
   venue_address = excluded.venue_address,
   location_url = excluded.location_url,
   capacity = excluded.capacity,
+  cover_image_path = excluded.cover_image_path,
   status = excluded.status,
   is_public = excluded.is_public,
   updated_at = now();
