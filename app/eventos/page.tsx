@@ -10,6 +10,7 @@ import {
 } from "@/components/public/PublicChrome";
 import { getPublicEvents, isUpcoming, type PublicEvent } from "@/lib/editorial";
 
+import AgendaCalendar from "./AgendaCalendar";
 import styles from "./events.module.css";
 
 export const metadata: Metadata = {
@@ -34,7 +35,9 @@ function EventCard({ event }: { event: PublicEvent }) {
         <small>{date.month}</small>
       </span>
       <span className={styles.eventCardBody}>
-        <span className={styles.eventMeta}>{event.kindLabel} · {date.time}</span>
+        <span className={styles.eventMeta}>
+          {event.kindLabel} · {date.time} · {isUpcoming(event.startsAt) ? "Próximo" : "Archivo"}
+        </span>
         <strong>{event.title}</strong>
         <span>{event.venueName ?? event.summary}</span>
       </span>
@@ -43,77 +46,68 @@ function EventCard({ event }: { event: PublicEvent }) {
   );
 }
 
-function EventSection({
-  title,
-  label,
-  events,
-  emptyMessage,
-}: {
-  title: string;
-  label: string;
-  events: PublicEvent[];
-  emptyMessage: string;
-}) {
-  return (
-    <section className={styles.eventSection}>
-      <div className={styles.sectionHeading}>
-        <div><SectionLabel>{label}</SectionLabel><h2>{title}</h2></div>
-        <span className={styles.eventCount}>{String(events.length).padStart(2, "0")} publicaciones</span>
-      </div>
-      {events.length > 0 ? (
-        <div className={styles.eventList}>{events.map((event) => <EventCard key={event.id} event={event} />)}</div>
-      ) : (
-        <div className={styles.emptyEvents}><span>—</span><p>{emptyMessage}</p></div>
-      )}
-    </section>
-  );
+function currentMonthKey() {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    month: "2-digit",
+    timeZone: "America/Santo_Domingo",
+    year: "numeric",
+  }).formatToParts(new Date());
+  const year = parts.find((part) => part.type === "year")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  return `${year}-${month}`;
 }
 
 export default async function EventosPage() {
   const events = await getPublicEvents();
-  const upcomingEvents = events.filter((event) => isUpcoming(event.startsAt));
-  const pastEvents = events.filter((event) => !isUpcoming(event.startsAt)).reverse();
 
   return (
     <PublicShell active="eventos">
       <main className={styles.main}>
-        <section className={styles.hero}>
-          <div className={styles.heroCopy}>
+        <section className={styles.agendaBanner} aria-labelledby="agenda-title">
+          <div className={styles.agendaBannerCopy}>
             <SectionLabel>Agenda pública · Ciudad Colonial</SectionLabel>
-            <h1>Encontrarnos también es <em>una forma de servir.</em></h1>
-            <p>La agenda reúne los espacios donde el club conversa, aprende y coordina acciones abiertas a la comunidad.</p>
-            <div className={styles.heroActions}>
-              <a className={styles.buttonPrimary} href="#proximos">Ver próximos encuentros <ArrowUpRight /></a>
-              <Link className={styles.textLink} href="/revista">Leer las historias <ArrowUpRight /></Link>
-            </div>
+            <h1 id="agenda-title">Un calendario para <em>encontrarnos.</em></h1>
+            <p>Reuniones, proyectos y espacios de conversación para participar en la vida del club.</p>
+            <a className={styles.bannerLink} href="#calendario">Ver el calendario <ArrowUpRight /></a>
           </div>
-          <div className={styles.heroStamp}>
-            <div><span>AGENDA / SDQ</span><span>AMERICA / SANTO DOMINGO</span></div>
-            <strong>Tiempo compartido.<br /><em>Acción posible.</em></strong>
-            <small>Los detalles se publican al ser confirmados por el club.</small>
+          <div className={styles.agendaBannerArt} role="img" aria-label="Ilustración editorial de un calendario con fechas del club">
+            <div className={styles.artMasthead}><span>AGENDA / SDQ</span><span>2026 · 01</span></div>
+            <div className={styles.artCalendar}>
+              <div className={styles.artCalendarTitle}><strong>SEPTIEMBRE</strong><span>2026</span></div>
+              <div className={styles.artWeekdays}>{["L", "M", "M", "J", "V", "S", "D"].map((day, index) => <span key={`${day}-${index}`}>{day}</span>)}</div>
+              <div className={styles.artDays}>
+                {["", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30"].map((day, index) => (
+                  <span className={[day === "14" || day === "28" ? styles.artDayMarked : "", day === "" ? styles.artDayBlank : ""].filter(Boolean).join(" ")} key={`${day}-${index}`}>{day}</span>
+                ))}
+              </div>
+            </div>
+            <div className={styles.artFooter}><span>Personas en acción</span><span>●</span></div>
+          </div>
+          <div className={styles.bannerFoot}>
+            <span>Encuentros · servicio · comunidad</span>
+            <span>Todos los horarios · Santo Domingo</span>
+            <span>{String(events.length).padStart(2, "0")} actividades</span>
           </div>
         </section>
 
         <div className={styles.eventIntro}>
           <p>Todos los horarios se muestran en la zona horaria de Santo Domingo.</p>
-          <p>{events.length > 0 ? "Consulta cada actividad para conocer lugar, descripción y forma de participar." : "La agenda pública se activará cuando el equipo del club publique sus próximas fechas."}</p>
+          <p>{events.length > 0 ? "Selecciona una fecha o abre una actividad para conocer lugar, descripción y forma de participar." : "La agenda pública se activará cuando el equipo del club publique sus próximas fechas."}</p>
         </div>
 
-        <div id="proximos">
-          <EventSection
-            label="Lo que sigue"
-            title="Próximos encuentros."
-            events={upcomingEvents}
-            emptyMessage="Todavía no hay actividades públicas con fecha confirmada. Vuelve pronto o escribe al club para recibir novedades."
-          />
-        </div>
+        <AgendaCalendar events={events} initialMonth={currentMonthKey()} />
 
-        <EventSection
-          label="Archivo de agenda"
-          title="Lo que ya pasó."
-          events={pastEvents}
-          emptyMessage="El archivo de actividades se publicará aquí a medida que el club documente sus encuentros y proyectos."
-        />
+        <section className={styles.scheduleSection} id="lista">
+          <div className={styles.sectionHeading}>
+            <div><SectionLabel>Listado de encuentros</SectionLabel><h2>Todo lo que está programado.</h2></div>
+            <span className={styles.eventCount}>{String(events.length).padStart(2, "0")} actividades</span>
+          </div>
+          {events.length > 0 ? (
+            <div className={styles.eventList}>{events.map((event) => <EventCard key={event.id} event={event} />)}</div>
+          ) : (
+            <div className={styles.emptyEvents}><span>—</span><p>No hay encuentros publicados todavía. Cuando el club confirme una fecha, aparecerá aquí y en el calendario.</p></div>
+          )}
+        </section>
 
         <section className={styles.joinBand}>
           <div>
