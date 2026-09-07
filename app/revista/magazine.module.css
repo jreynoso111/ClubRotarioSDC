@@ -88,9 +88,9 @@
   padding: 13px clamp(26px, 6vw, 82px) 18px;
   position: relative;
 }
-.magazineBannerArt { height: 100%; inset: 0; min-height: 410px; position: absolute; width: 100%; z-index: 0; }
-.magazineBannerArt::after { background: linear-gradient(112deg, rgba(0, 64, 122, .86), rgba(0, 64, 122, .55) 56%, rgba(0, 64, 122, .78)); content: ""; inset: 0; position: absolute; }
-.magazineBannerArt img { filter: saturate(.72) contrast(.92); opacity: .78; object-position: center 52%; }
+.magazineBanner > .magazineBannerArt { height: 100%; inset: 0; min-height: 410px; position: absolute; width: 100%; z-index: 0; }
+.magazineBanner > .magazineBannerArt::after { background: linear-gradient(112deg, rgba(0, 64, 122, .86), rgba(0, 64, 122, .55) 56%, rgba(0, 64, 122, .78)); content: ""; inset: 0; position: absolute; }
+.magazineBanner > .magazineBannerArt img { filter: saturate(.72) contrast(.92); opacity: .78; object-position: center 52%; }
 .magazineBanner > .bannerMasthead,
 .magazineBanner > .bannerIntro,
 .magazineBanner > .bannerFoot { position: relative; z-index: 1; }
@@ -299,7 +299,7 @@
   .bannerAside { border-left: 0; border-top: 1px solid rgba(255, 253, 248, .3); padding: 19px 0 0; width: 100%; }
   .bannerAside p { color: rgba(255, 253, 248, .78); font-size: 13px; max-width: 335px; }
   .bannerFoot { font-size: 7px; gap: 9px; flex-wrap: wrap; }
-  .magazineBannerArt { min-height: 380px; }
+  .magazineBanner > .magazineBannerArt { min-height: 380px; }
   .hero { display: flex; flex-direction: column; gap: 38px; padding: 54px 0 60px; }
   .heroCopy h1, .articleHeader h1 { font-size: clamp(49px, 14vw, 76px); }
   .heroStamp { min-height: 260px; width: 100%; }
@@ -359,7 +359,7 @@
   .bannerAside { padding-left: 18px; }
   .bannerAside p { font-size: 10px; line-height: 1.45; max-width: 280px; }
   .bannerFoot { font-size: 6px; gap: 8px; padding-top: 7px; }
-  .magazineBannerArt { min-height: 300px; }
+  .magazineBanner > .magazineBannerArt { min-height: 300px; }
   .issue { padding: 48px 0 56px; }
   .newspaperGrid { display: grid; gap: 18px; grid-template-columns: minmax(0, 1.35fr) minmax(190px, .65fr); padding-top: 18px; }
   .newspaperGrid > .storyCardFeatured { padding-right: 18px; }
@@ -433,7 +433,7 @@
   .bannerTitle h1 { font-size: clamp(32px, 7.5vw, 47px); }
   .bannerAside { padding-left: 12px; }
   .bannerAside p { font-size: 9px; }
-  .magazineBannerArt { min-height: 255px; }
+  .magazineBanner > .magazineBannerArt { min-height: 255px; }
   .bannerFoot { font-size: 6px; gap: 7px; }
   .issue { padding-block: 38px 44px; }
   .newspaperGrid { gap: 12px; grid-template-columns: minmax(0, 1.3fr) minmax(145px, .7fr); }

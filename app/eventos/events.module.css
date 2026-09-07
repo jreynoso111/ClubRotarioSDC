@@ -61,9 +61,9 @@
   padding: 13px clamp(26px, 6vw, 82px) 18px;
   position: relative;
 }
-.agendaBannerArt { height: 100%; inset: 0; min-height: 380px; position: absolute; width: 100%; z-index: 0; }
-.agendaBannerArt::after { background: linear-gradient(112deg, rgba(0, 64, 122, .84), rgba(0, 64, 122, .48) 58%, rgba(0, 64, 122, .75)); content: ""; inset: 0; position: absolute; }
-.agendaBannerArt img { filter: saturate(.72) contrast(.92); opacity: .78; object-position: center 52%; }
+.agendaBanner > .agendaBannerArt { height: 100%; inset: 0; min-height: 380px; position: absolute; width: 100%; z-index: 0; }
+.agendaBanner > .agendaBannerArt::after { background: linear-gradient(112deg, rgba(0, 64, 122, .84), rgba(0, 64, 122, .48) 58%, rgba(0, 64, 122, .75)); content: ""; inset: 0; position: absolute; }
+.agendaBanner > .agendaBannerArt img { filter: saturate(.72) contrast(.92); opacity: .78; object-position: center 52%; }
 .agendaBannerContent { margin: 0 auto; max-width: 980px; position: relative; width: 100%; z-index: 1; }
 .agendaBannerTop { align-items: center; display: flex; gap: 20px; justify-content: space-between; }
 .agendaBanner .sectionLabel { color: var(--lime-light); margin: 0; }
@@ -149,7 +149,7 @@
   .agendaBannerDate { font-size: 7px; }
   .agendaBannerContent h1 { font-size: clamp(49px, 14vw, 76px); margin-top: 34px; }
   .agendaBannerContent > p { font-size: 13px; margin: 24px 0 0; max-width: 470px; }
-  .agendaBannerArt { min-height: 380px; }
+  .agendaBanner > .agendaBannerArt { min-height: 380px; }
   .agendaBanner > .bannerFoot { flex-wrap: wrap; font-size: 7px; gap: 9px 14px; margin-top: 37px; }
   .hero { display: flex; flex-direction: column; gap: 38px; padding: 54px 0 60px; }
   .heroCopy h1, .detailHeader h1 { font-size: clamp(49px, 14vw, 76px); }
@@ -208,7 +208,7 @@
   .agendaBannerDate { font-size: 6px; }
   .agendaBannerContent h1 { font-size: clamp(36px, 7vw, 64px); margin-top: 25px; }
   .agendaBannerContent > p { font-size: 11px; line-height: 1.45; margin-top: 16px; max-width: 560px; }
-  .agendaBannerArt { min-height: 300px; }
+  .agendaBanner > .agendaBannerArt { min-height: 300px; }
   .agendaBanner > .bannerFoot { font-size: 6px; gap: 8px; margin-top: 30px; padding-top: 7px; }
   .calendarSection { padding: 48px 0 54px; }
   .calendarHeading { margin-bottom: 16px; }
@@ -281,7 +281,7 @@
   .agendaBannerDate { font-size: 5px; }
   .agendaBannerContent h1 { font-size: clamp(32px, 7.5vw, 47px); }
   .agendaBannerContent > p { font-size: 9px; margin: 12px 0 0; }
-  .agendaBannerArt { min-height: 255px; }
+  .agendaBanner > .agendaBannerArt { min-height: 255px; }
   .agendaBanner > .bannerFoot { font-size: 5px; gap: 6px; }
   .calendarSection { padding-block: 38px 43px; }
   .calendarHeading h2 { font-size: 34px; }
