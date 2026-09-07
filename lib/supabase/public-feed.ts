@@ -173,11 +173,13 @@ export async function getPublicFeed(): Promise<{
       ...previousEvents.slice(0, Math.max(0, 3 - upcomingEvents.length)),
     ];
     const stories = ((storyData ?? []) as StoryRecord[]).map((story, index) => {
-      const imageUrl = story.cover_image_path?.startsWith("http")
+      const imageUrl = story.cover_image_path?.startsWith("/")
         ? story.cover_image_path
-        : story.cover_image_path
-          ? supabase.storage.from("club-public").getPublicUrl(story.cover_image_path).data.publicUrl
-          : undefined;
+        : story.cover_image_path?.startsWith("http")
+          ? story.cover_image_path
+          : story.cover_image_path
+            ? supabase.storage.from("club-public").getPublicUrl(story.cover_image_path).data.publicUrl
+            : undefined;
       return mapStory(story, index, imageUrl);
     });
 
