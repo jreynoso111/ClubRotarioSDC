@@ -6,7 +6,7 @@
 
 - Web pública en español con estilo de revista social, ilustraciones de la Ciudad Colonial, historias y llamados a integrarse al club. El Alcázar de Colón es el monumento emblema.
 - Mantener el intro azul original con la identidad Rotary (`CinematicIntro` en `app/page.tsx`). El usuario descartó el intro de video y el recorrido 3D del Alcázar; no retomarlos sin una nueva instrucción.
-- Texto del header, a la derecha del logo: **Crear un impacto duradero**.
+- Texto del header, a la derecha del logo: **Generar un impacto duradero** (corrección expresa del usuario, 2026-09-30).
 - Texto grande del hero, tal como fue solicitado y está implementado: **Dar de si antes de pensar en si**.
 - La plataforma privada es un sistema de gestión: eventos, asistencia, propuestas, actividades, tareas, comités, publicaciones, miembros y mensajería.
 - Zona horaria del producto: `America/Santo_Domingo`. La agenda y la auditoría deben mostrar fechas y horas del club.
@@ -61,6 +61,42 @@
 - **Marcar como leído** reutiliza `markNotificationReadAction` y valida la identidad, UUID y propiedad del aviso (`user_id`); no se añadieron tablas ni migraciones.
 - Verificación 2026-09-30: compilación, TypeScript, lint y `git diff --check` satisfactorios. Commit `ebeb897` publicado en producción; despliegue Vercel `dpl_H1EwEpwT5PZXq98RgD7pfFmoNqEJ` `READY`. En `/plataforma` autenticado se comprobó botón, apertura del menú, estado **0 sin leer**, CTA a Mensajes y retorno a Resumen; no se cambió el estado de ningún aviso.
 
+## Presentación de la agenda interna
+
+- Los eventos publicados y futuros resaltan con un fondo suave en dorado Rotary y una guía lateral; cada evento usa una tarjeta compacta con fecha, lugar y controles agrupados. Borradores, eventos cancelados o archivados y eventos pasados conservan el tratamiento neutro. En pantallas estrechas, la información y los controles se apilan para evitar desbordamientos.
+- El modelo de eventos no registra una fecha de creación/publicación para identificar novedad cronológica; se usa el mismo criterio de evento publicado y futuro que abre la confirmación de asistencia, sin etiquetar falsamente como “nuevo” por antigüedad.
+- Verificación local 2026-09-30: `npm test` (33/33), `npm run lint`, `npx tsc --noEmit` y `git diff --check` satisfactorios. No se comprobó visualmente la vista autenticada del navegador ni se publicó el cambio.
+
+## Gestión de comités
+
+- Solo administradores activos pueden crear, editar, asignar o cambiar roles de integrantes, retirarlos y dar por terminado un comité. La pantalla ofrece cuatro roles: integrante, presidencia, secretaría y tesorería. La creación guarda el comité y la lista inicial en una sola función transaccional; solo acepta membresías activas y evita integrantes repetidos.
+- Terminar un comité marca `is_active = false` y conserva el comité, su nómina y el historial de auditoría. Los comités terminados se muestran como archivo a los administradores; sus listas quedan protegidas contra cambios directos. No hay borrado de comités desde la aplicación.
+- Implementación local en la rama `feature/admin-committee-management`: `app/plataforma/CommitteeManager.tsx`, acciones del servidor, permisos RLS y `supabase/migrations/20260930143808_admin_committee_management.sql`. La migración se aplicó el 2026-09-30 en el proyecto de producción `ClubRotarioSDC` (`rjqqqixfsxjfmhtobumu`) mediante el SQL Editor del Dashboard, dentro de una transacción. La verificación de catálogo confirmó las tablas, RLS y políticas esperadas. El acceso de MCP sigue devolviendo `-32600` y el CLI no lista este proyecto. No existe `supabase_migrations.schema_migrations`; no ejecutar un `db push` general ni inventar el historial de migraciones.
+- Verificación local 2026-09-30: 33 pruebas Node, `npm run lint`, `npx tsc --noEmit` y `git diff --check` satisfactorios. La ruta local `/plataforma` responde y redirige a inicio de sesión; el navegador autenticado no se pudo inspeccionar porque la Mac estaba bloqueada. Las pruebas SQL pgTAP quedaron añadidas en `supabase/tests/admin_committee_management_test.sql`, pero no se ejecutaron porque el Docker local no está disponible.
+
+## Propuestas y votación de miembros
+
+- Cada propuesta guarda como autor el UUID de la sesión Supabase autenticada (`created_by`); la acción ignora cualquier identidad enviada desde el formulario. La base impide cambiar el autor luego de crearla y la tarjeta muestra el nombre asociado al perfil.
+- Los miembros activos pueden consultar propuestas enviadas, en revisión y con decisión final. Las propuestas en borrador siguen limitadas a su autor y al equipo de gestión.
+- Coordinadores, administradores y responsables del club pueden activar o cerrar una votación por propuesta mientras esté enviada o en revisión. Cada miembro activo puede votar a favor, en contra o abstenerse, y cambiar su voto mientras esté abierta. El conteo permanece oculto hasta el cierre; después se muestran totales agregados, sin revelar votos individuales. La auditoría registra quién participó, pero excluye la selección secreta.
+- Implementación local en `app/plataforma/ProposalCard.tsx`, `app/plataforma/PlatformWorkspace.tsx`, `app/plataforma/actions.ts`, `lib/platform.ts` y `supabase/migrations/20260930153044_proposal_member_voting.sql`. La migración se aplicó en producción el 2026-09-30; la verificación confirmó `proposal_votes`, RLS, políticas y las columnas de votación. La prueba pgTAP `supabase/tests/proposal_voting_rls_test.sql` sigue pendiente: pgTAP no está instalado en el proyecto y no se instaló para esta activación.
+- Verificación local 2026-09-30: 38 pruebas Node, lint, TypeScript, `git diff --check` y estado de CodeGraph satisfactorios. pgTAP no se ejecutó porque Docker no está disponible y no se verificó el flujo visual autenticado. La migración de producción se aplicó después de esta verificación local.
+
+## Finanzas del club
+
+- Módulo de gestión financiera local en `Plataforma → Finanzas`, con obligaciones mensuales por miembro, registro de pagos parciales, aportes para actividades, donaciones y gastos. Moneda inicial: pesos dominicanos (DOP/RD$). Los administradores y responsables activos del club gestionan los datos; cada miembro activo consulta sus propias obligaciones y aportes.
+- `finance_monthly_dues` mantiene el saldo mensual pendiente y `finance_entries` registra movimientos inmutables. Las funciones RPC guardan el actor autenticado, operaciones transaccionales, referencias y snapshots de miembro/actividad; el trigger existente captura los cambios en la auditoría. Los ajustes se registran como movimientos adicionales. RLS restringe lecturas y la aplicación no concede escritura directa a las tablas.
+- Implementación local en `app/plataforma/FinanceModule.tsx`, `lib/finance.ts`, `app/plataforma/actions.ts`, `app/plataforma/PlatformWorkspace.tsx`, `lib/platform.ts`, `supabase/migrations/20260930160850_club_finance_management.sql` y `supabase/tests/club_finance_management_rls_test.sql`. La migración se aplicó en producción el 2026-09-30; la verificación confirmó ambas tablas, RLS, políticas y las cinco funciones RPC previstas. La prueba pgTAP sigue pendiente porque la extensión no está instalada; no se instaló durante la activación.
+- Verificación local 2026-09-30: 44 pruebas Node, lint, TypeScript, build de Next.js, `git diff --check` y CodeGraph satisfactorios. PgTAP no se pudo ejecutar porque el PostgreSQL local de Supabase no está disponible (conexión rechazada en 54322); la interfaz autenticada tampoco se verificó visualmente. La migración de producción se aplicó después de esta verificación local.
+
+## Solicitudes públicas para ingresar al club
+
+- Los botones **Quiero ser miembro** de la portada y el pie llevan a `/solicitar-membresia`; **Acceso miembros** conserva el inicio de sesión. El formulario solicita nombre, correo, teléfono y motivación; ocupación y referencia son opcionales. La persona debe consentir que sus datos de contacto y solicitud sean visibles para todos los miembros activos y la presidencia.
+- El envío valida y normaliza datos en una Server Action, ignora un campo honeypot y solo inserta los campos permitidos. La pestaña **Solicitudes** carga las solicitudes al abrirse; todos los miembros activos pueden revisarlas y contactar al solicitante. Administradores y responsables del club pueden marcar seguimiento, invitación o rechazo; el servidor fija al revisor desde la sesión autenticada.
+- La migración `supabase/migrations/20260930163901_public_membership_applications.sql` restringe columnas de inserción pública, no concede lectura a visitantes y protege la lectura con RLS. Incluye estados, consentimiento, atribución de revisión y captura en la auditoría. La prueba está en `supabase/tests/club_membership_applications_rls_test.sql`.
+- Implementación local en `app/solicitar-membresia/`, `lib/membership-applications.ts`, `app/plataforma/MembershipApplicationsModule.tsx` y acciones de `app/plataforma/actions.ts`. La migración se aplicó en producción el 2026-09-30; la verificación confirmó RLS y políticas, inserción pública limitada a las columnas del formulario y ausencia de lectura o actualización anónimas. La prueba pgTAP sigue pendiente porque la extensión no está instalada. No existe el historial estándar de Supabase en este proyecto.
+- Verificación local 2026-09-30: 53 pruebas Node, lint, TypeScript, CodeGraph actualizado, `git diff --check` y HTTP 200 para portada y formulario. El navegador local respondió a la ruta, pero el controlador visual no pudo enfocar su pestaña por timeout. La migración de producción se aplicó después; no se insertaron solicitudes de prueba en remoto.
+
 ## Mapa útil del código
 
 | Área | Archivos principales |
@@ -71,7 +107,8 @@
 | Agenda y revista públicas | `app/eventos/`, `app/revista/`, `app/nosotros/` |
 | Sesión y cliente Supabase | `app/auth/`, `utils/supabase/`, `proxy.ts` |
 | Datos y capacidades de gestión | `lib/platform.ts`, `app/plataforma/page.tsx` |
-| Interfaz y acciones de gestión | `app/plataforma/PlatformWorkspace.tsx`, `app/plataforma/actions.ts` |
+| Interfaz y acciones de gestión | `app/plataforma/PlatformWorkspace.tsx`, `app/plataforma/CommitteeManager.tsx`, `app/plataforma/FinanceModule.tsx`, `app/plataforma/actions.ts` |
+| Modelo financiero | `lib/finance.ts`, `supabase/migrations/20260930160850_club_finance_management.sql`, `supabase/tests/club_finance_management_rls_test.sql` |
 | Gestión de eventos y asistencia | `app/plataforma/PlatformEvents.tsx` |
 | Modelo e interfaz de auditoría | `lib/audit.ts`, `lib/audit-table.ts`, `app/plataforma/PlatformAudit.tsx` |
 | Esquema y verificaciones de auditoría | `supabase/migrations/`, `supabase/tests/detailed_admin_audit_test.sql`, `tests/` |
@@ -91,11 +128,15 @@ Las portadas con ruta que comienza por `/` son recursos locales; conservar esa d
 
 | Fecha | Decisión | Motivo y evidencia |
 | --- | --- | --- |
-| 2026-09-30 | Conservar intro azul e ilustraciones del hero | Última preferencia expresa del usuario; `CinematicIntro` y los textos actuales verificados en código. |
+| 2026-09-30 | Conservar intro azul, ajustar el texto de marca y el hero | El usuario corrigió el header a “Generar un impacto duradero”; se conservan también el intro azul y “Dar de si antes de pensar en si”. |
 | 2026-09-30 | Gestión de eventos con confirmación personal de asistencia | Petición del usuario; acciones protegidas, listado de asistentes y flujo verificados durante la sesión. |
 | 2026-09-30 | Auditoría detallada solo para administradores activos | El usuario autorizó la activación; migración aplicada y pruebas de permisos/captura completadas en Supabase y la web local. |
 | 2026-09-30 | Auditoría compacta y fechas DD/MM/AA con hora de 24 horas | Corrección expresa día/mes/año; controles de columnas, ordenación y filtros verificados en la web autenticada. |
 | 2026-09-30 | Botón de notificaciones en la cabecera de gestión | Petición del usuario; publicado con `ebeb897`, Vercel `READY` y menú verificado en el panel autenticado de producción. |
+| 2026-09-30 | Gestión y cierre histórico de comités solo para administradores activos | Petición del usuario; UI, acciones, RLS y migración local preparadas, con 32 pruebas Node, lint y TypeScript satisfactorios. La migración de producción está aplicada y verificada; la inspección visual autenticada no se completó. |
+| 2026-09-30 | Guardar autor inmutable y habilitar votación secreta por propuesta | Petición del usuario; UUID del usuario autenticado, voto único modificable durante apertura, conteo agregado tras cierre y participación auditada sin divulgar selección. UI local y migración de producción aplicadas; pgTAP no ejecutado por falta de la extensión en remoto. |
+| 2026-09-30 | Registrar cuotas, aportes, donaciones y gastos con visibilidad por rol | Petición del usuario; DOP inicial, pagos parciales y bitácora de movimientos para gestores; cada miembro solo ve sus propios datos. UI local y migración de producción aplicadas, con pruebas de aplicación aprobadas; pgTAP no ejecutado por falta de la extensión en remoto. |
+| 2026-09-30 | Recibir y revisar solicitudes de ingreso desde la portada | Botones de ingreso llevan a un formulario público con consentimiento para compartir datos con miembros activos y presidencia; seguimiento limitado a gestores autenticados. Código local y migración de Supabase aplicados; el registro de publicación se actualiza tras completar la integración. |
 | 2026-09-30 | Mantener CodeGraph y memoria en el repositorio | Petición expresa del usuario; MCP e índice existentes verificados, comandos e instrucciones permanentes añadidos. |
 | 2026-09-30 | Descartar JEP | El usuario retiró expresamente esa integración; no añadir dependencias ni llamadas a ese servicio. |
 | 2026-09-30 | Separar publicaciones reales y maquetas en Revista; crear editor modal con tres plantillas fijas | `stories` tenía 0 filas en Supabase. La página pública distingue el archivo del club de referencias y ejemplos; el formulario define posiciones de imagen, titular, cita y texto. Sin cambios de esquema ni filas de prueba. |
@@ -107,3 +148,11 @@ Las portadas con ruta que comienza por `/` son recursos locales; conservar esa d
 - El documento editorial versionado se guarda en la columna `stories.content` ya existente, en JSON validado por `lib/editorial-content.ts`; los registros de texto plano antiguos mantienen el render anterior. No hizo falta migración.
 - Las imágenes opcionales se suben con la sesión del usuario al bucket público existente `club-public`, usando solo JPG/PNG/WebP de hasta 10 MB. La base de datos y el bucket conservan los permisos de edición existentes (`editor`, `club_manager`, `admin`); solo esos roles pueden crear, publicar o cambiar la visibilidad de historias. La publicación pública revalida `/revista` y el detalle correspondiente.
 - Verificación 2026-09-30: consulta administrativa confirmó `public.stories` con 0 filas; el modal y sus tres opciones se inspeccionaron en navegador, también la revista y una maqueta existente. La ruta pública de producción muestra el estado vacío real y las referencias/maquetas aparte. 27 pruebas Node, `npm run lint`, `npx tsc --noEmit` y `git diff --check` satisfactorios. No se enviaron posts ni imágenes a Supabase durante la prueba. Commit `2024e0a` está en `main`; Vercel `dpl_HBLQt9gZPhY86pS6RGJuP8bumM43` quedó `READY` y se verificó `/revista` en producción.
+
+
+## Aplicación de migraciones en Supabase
+
+- 2026-09-30: se aplicaron manualmente, cada una dentro de una transacción, `20260930143808_admin_committee_management.sql`, `20260930153044_proposal_member_voting.sql`, `20260930160850_club_finance_management.sql` y `20260930163901_public_membership_applications.sql` en `ClubRotarioSDC` (`rjqqqixfsxjfmhtobumu`, rama de producción), mediante el SQL Editor autenticado. Cada ejecución terminó con `Success. No rows returned`.
+- Consulta remota de solo lectura confirmó las siete tablas de comités, propuestas, votos, finanzas y solicitudes con RLS activado; las políticas de votación, finanzas y solicitudes; las funciones RPC de votación/finanzas y la función de creación de comités; y privilegios de solicitudes que permiten insertar al rol `anon` solo los datos previstos sin lectura ni revisión anónimas.
+- `supabase_migrations.schema_migrations` no existe en la base y la CLI no tiene enlazado este proyecto. No se ejecutó `db push` ni se fabricó el historial. Las pruebas pgTAP no se ejecutaron porque la extensión no está instalada; no se instaló en producción. Las migraciones quedan aplicadas, pero el historial CLI requiere reconciliación antes de volver a usar `db push`.
+- El código local continúa en `feature/admin-committee-management`; no se hizo commit, push a `main` ni despliegue como parte de esta activación de esquema.

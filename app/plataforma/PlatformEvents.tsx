@@ -167,7 +167,10 @@ export function PlatformEvents({ snapshot, summary = false, onOpenAgenda }: {
     {events.map(event => {
       const rsvp = snapshot.eventRsvps[event.id];
       const openForAttendance = event.status === "published" && !event.isPast;
-      return <section key={event.id} className={styles.eventRow} aria-label={event.title}>
+      const rowClass = openForAttendance
+        ? `${styles.eventRow} ${styles.eventRowUpcoming}`
+        : styles.eventRow;
+      return <section key={event.id} className={rowClass} aria-label={event.title}>
         <div className={styles.eventDetails}>
           <span className={styles.eventMeta}>{event.isPast && event.status === "published" ? "Finalizado" : eventStatusLabels[event.status]} · {kindLabels[event.kind]}</span>
           <h3>{event.title}</h3>

@@ -50,7 +50,7 @@ export function PublicHeader({ active }: { active?: PublicSection }) {
         <Link href="/" aria-label="Club Rotario Santo Domingo Colonial, inicio">
           <ClubSignature compact />
         </Link>
-        <span className={styles.brandTagline}>Crear un impacto duradero</span>
+        <span className={styles.brandTagline}>Generar un impacto duradero</span>
       </div>
 
       <nav className={styles.desktopNav} aria-label="Navegación principal">

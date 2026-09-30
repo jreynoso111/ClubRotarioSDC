@@ -5,37 +5,45 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import type { FormEvent, ReactNode } from "react";
 
-import type { PlatformSnapshot } from "@/lib/platform";
+import type { PlatformSnapshot, ProposalVoteChoice } from "@/lib/platform";
 import { defaultAuditFilters, type AuditPageResult } from "@/lib/audit";
 import { editorialLayouts, parseEditorialContent } from "@/lib/editorial-content";
 
 import {
-  assignCommitteeMemberAction,
   createActivityAction,
-  createCommitteeAction,
   createProposalAction,
+  castProposalVoteAction,
   getAuditPageAction,
+  getMembershipApplicationsAction,
   markMessageReadAction,
   markNotificationReadAction,
   sendInternalMessageAction,
   setStoryPublicationAction,
+  setProposalVotingAction,
   submitProposalAction,
   updateMembershipAction,
+  updateMembershipApplicationStatusAction,
   updateTaskStatusAction,
   type PlatformActionResult,
 } from "./actions";
+import { CommitteeManager } from "./CommitteeManager";
+import { FinanceModule } from "./FinanceModule";
+import { MembershipApplicationsModule } from "./MembershipApplicationsModule";
+import { ProposalCard } from "./ProposalCard";
 import { SignOutButton } from "./SignOutButton";
 import { PlatformEvents } from "./PlatformEvents";
 import { PlatformAudit } from "./PlatformAudit";
 import { StoryComposerDialog } from "./StoryComposerDialog";
 import styles from "./platform.module.css";
 
-type Tab = "resumen" | "propuestas" | "agenda" | "organizacion" | "revista" | "mensajes" | "auditoria";
+type Tab = "resumen" | "propuestas" | "agenda" | "finanzas" | "solicitudes" | "organizacion" | "revista" | "mensajes" | "auditoria";
 
 const tabs: Array<{ id: Tab; label: string }> = [
   { id: "resumen", label: "Resumen" },
   { id: "propuestas", label: "Propuestas" },
   { id: "agenda", label: "Agenda" },
+  { id: "finanzas", label: "Finanzas" },
+  { id: "solicitudes", label: "Solicitudes" },
   { id: "organizacion", label: "Organización" },
   { id: "revista", label: "Revista" },
   { id: "mensajes", label: "Mensajes" },
@@ -221,24 +229,6 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
     event.currentTarget.reset();
   }
 
-  function handleCommittee(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    run(createCommitteeAction({ name: String(data.get("name") ?? ""), description: String(data.get("description") ?? "") }));
-    event.currentTarget.reset();
-  }
-
-  function handleAssignCommittee(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    run(assignCommitteeMemberAction({
-      committeeId: String(data.get("committeeId") ?? ""),
-      userId: String(data.get("userId") ?? ""),
-      committeeRole: String(data.get("committeeRole") ?? "member") as "member" | "chair" | "secretary" | "treasurer",
-    }));
-    event.currentTarget.reset();
-  }
-
   function handleMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
@@ -302,8 +292,29 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
       </section>}
 
       {tab === "propuestas" && <section className={styles.moduleGrid}>
-        <article className={`${styles.card} ${styles.cardWide}`}><p className={styles.cardLabel}>Ideas del club</p><h2 className={styles.cardTitle}>Del deseo al plan.</h2>{snapshot.proposals.map(proposal => <div className={styles.row} key={proposal.id}><div><strong>{proposal.title}</strong><small>{statusLabels[proposal.status] ?? proposal.status} · {formatDate(proposal.createdAt)}</small><span>{proposal.summary}</span></div>{proposal.status === "draft" && proposal.createdBy === user?.id ? <button type="button" className={styles.smallButton} disabled={pending} onClick={() => run(submitProposalAction(proposal.id))}>Enviar a revisión</button> : null}</div>)}{snapshot.proposals.length === 0 && <EmptyState>Todavía no hay propuestas visibles. Puedes abrir la primera conversación en el formulario.</EmptyState>}</article>
-        <form className={styles.formCard} onSubmit={handleProposal}><p className={styles.cardLabel}>Nueva propuesta</p><h2 className={styles.cardTitle}>Una idea concreta.</h2><label>Título<input name="title" required minLength={3} maxLength={180} placeholder="Ej. Recuperar una plaza" /></label><label>Resumen<textarea name="summary" required minLength={10} maxLength={1200} placeholder="¿Qué necesidad atiende y por qué ahora?" /></label><label>Detalles<textarea name="details" maxLength={4000} placeholder="Aliados, pasos iniciales, recursos…" /></label><button className={styles.button} disabled={pending}>{pending ? "Guardando…" : "Guardar borrador"}</button></form>
+        <article className={`${styles.card} ${styles.cardWide}`}>
+          <p className={styles.cardLabel}>Ideas del club</p><h2 className={styles.cardTitle}>Del deseo al plan.</h2>
+          {snapshot.proposalVotingSchema.state !== "ready" && snapshot.proposalVotingSchema.message
+            ? <p className={styles.proposalModuleNotice} role="status">{snapshot.proposalVotingSchema.message}</p>
+            : null}
+          {snapshot.proposals.map(proposal => <ProposalCard key={proposal.id} proposal={proposal}
+            metadata={`${statusLabels[proposal.status] ?? proposal.status} · ${formatDate(proposal.createdAt)} · Autor: ${proposal.authorName}`}
+            currentUserId={user?.id ?? ""}
+            canManageVoting={snapshot.proposalVotingSchema.state === "ready" && (snapshot.capabilities.canCoordinate || snapshot.capabilities.canManageClub)}
+            pending={pending}
+            onSubmit={() => run(submitProposalAction(proposal.id))}
+            onToggleVoting={enabled => run(setProposalVotingAction(proposal.id, enabled))}
+            onVote={(choice: ProposalVoteChoice) => run(castProposalVoteAction(proposal.id, choice))} />)}
+          {snapshot.proposals.length === 0 && <EmptyState>Todavía no hay propuestas visibles. Puedes abrir la primera conversación en el formulario.</EmptyState>}
+        </article>
+        <form className={styles.formCard} onSubmit={handleProposal}>
+          <p className={styles.cardLabel}>Nueva propuesta</p><h2 className={styles.cardTitle}>Una idea concreta.</h2>
+          <p className={styles.empty}>Se guardará tu membresía como autor: {user?.displayName ?? "Miembro del club"}.</p>
+          <label>Título<input name="title" required minLength={3} maxLength={180} placeholder="Ej. Recuperar una plaza" /></label>
+          <label>Resumen<textarea name="summary" required minLength={10} maxLength={1200} placeholder="¿Qué necesidad atiende y por qué ahora?" /></label>
+          <label>Detalles<textarea name="details" maxLength={4000} placeholder="Aliados, pasos iniciales, recursos…" /></label>
+          <button className={styles.button} disabled={pending}>{pending ? "Guardando…" : "Guardar borrador"}</button>
+        </form>
       </section>}
 
       {tab === "agenda" && <section className={styles.moduleGrid}>
@@ -311,10 +322,17 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
         {snapshot.capabilities.canCoordinate ? <form className={styles.formCard} onSubmit={handleActivity}><p className={styles.cardLabel}>Nueva actividad</p><h2 className={styles.cardTitle}>Convierte el plan en movimiento.</h2><label>Nombre<input name="title" required minLength={3} maxLength={180} /></label><label>Inicio<input name="startsAt" type="datetime-local" /></label><label>Fin<input name="endsAt" type="datetime-local" /></label><label>Lugar<input name="location" maxLength={300} /></label><label>Descripción<textarea name="description" maxLength={4000} /></label><button className={styles.button} disabled={pending}>{pending ? "Guardando…" : "Guardar actividad"}</button></form> : <article className={styles.card}><p className={styles.cardLabel}>Coordina con tu equipo</p><h2 className={styles.cardTitle}>La agenda se construye entre todos.</h2><EmptyState>Cuando tengas una fecha o una idea, compártela en Propuestas.</EmptyState></article>}
       </section>}
 
+      {tab === "finanzas" && <FinanceModule canManage={snapshot.capabilities.canManageFinances} />}
+
+      {tab === "solicitudes" && <MembershipApplicationsModule
+        canReview={snapshot.capabilities.canManageMembership}
+        loadApplications={getMembershipApplicationsAction}
+        updateStatus={updateMembershipApplicationStatusAction}
+      />}
+
       {tab === "organizacion" && <section className={styles.moduleGrid}>
-        <article className={`${styles.card} ${styles.cardWide}`}><p className={styles.cardLabel}>Estructura activa</p><h2 className={styles.cardTitle}>Comités, personas y responsabilidades.</h2>{snapshot.committees.map(committee => <div className={styles.committee} key={committee.id}><div className={styles.row}><div><strong>{committee.name}</strong><span>{committee.description ?? "Sin descripción todavía."}</span></div></div>{committee.members.length > 0 ? <ul>{committee.members.map(member => <li key={member.userId}><span>{member.name}</span><small>{member.role}</small></li>)}</ul> : <EmptyState>Aún no tiene integrantes asignados.</EmptyState>}</div>)}{snapshot.committees.length === 0 && <EmptyState>La estructura se mostrará cuando coordinación registre los comités del club.</EmptyState>}</article>
-        {snapshot.capabilities.canCoordinate ? <form className={styles.formCard} onSubmit={handleCommittee}><p className={styles.cardLabel}>Nuevo comité</p><h2 className={styles.cardTitle}>Dale casa a una causa.</h2><label>Nombre<input name="name" required minLength={2} maxLength={140} placeholder="Ej. Servicio a la comunidad" /></label><label>Descripción<textarea name="description" maxLength={2000} /></label><button className={styles.button} disabled={pending}>{pending ? "Creando…" : "Crear comité"}</button></form> : null}
-        {snapshot.capabilities.canCoordinate && snapshot.committees.length > 0 && snapshot.memberDirectory.length > 0 ? <form className={styles.formCard} onSubmit={handleAssignCommittee}><p className={styles.cardLabel}>Asignar responsabilidad</p><h2 className={styles.cardTitle}>Haz visible quién hace qué.</h2><label>Comité<select name="committeeId" defaultValue=""><option value="" disabled>Selecciona un comité</option>{snapshot.committees.map(committee => <option key={committee.id} value={committee.id}>{committee.name}</option>)}</select></label><label>Integrante<select name="userId" defaultValue=""><option value="" disabled>Selecciona una persona</option>{snapshot.memberDirectory.filter(member => member.userId !== user?.id).map(member => <option key={member.userId} value={member.userId}>{member.name}</option>)}</select></label><label>Responsabilidad<select name="committeeRole" defaultValue="member"><option value="member">Integrante</option><option value="chair">Presidencia</option><option value="secretary">Secretaría</option><option value="treasurer">Tesorería</option></select></label><button className={styles.button} disabled={pending}>{pending ? "Guardando…" : "Asignar integrante"}</button></form> : null}
+        <CommitteeManager committees={snapshot.committees} candidates={snapshot.committeeCandidates}
+          canManage={snapshot.capabilities.canManageCommittees} />
         {snapshot.capabilities.canManageMembership ? <article className={`${styles.card} ${styles.cardWide}`}><p className={styles.cardLabel}>Solicitudes de membresía</p><h2 className={styles.cardTitle}>Personas que quieren servir.</h2>{snapshot.pendingMembers.map(member => <div className={styles.row} key={member.userId}><div><strong>{member.name}</strong><small>Solicitud recibida · {formatDate(member.createdAt)}</small></div><div className={styles.rowActions}><button type="button" className={styles.smallButton} disabled={pending} onClick={() => run(updateMembershipAction({ userId: member.userId, status: "active", role: "member" }))}>Activar</button><button type="button" className={styles.smallButtonQuiet} disabled={pending} onClick={() => run(updateMembershipAction({ userId: member.userId, status: "suspended", role: member.role }))}>Rechazar</button></div></div>)}{snapshot.pendingMembers.length === 0 && <EmptyState>No hay solicitudes pendientes.</EmptyState>}</article> : null}
       </section>}
 

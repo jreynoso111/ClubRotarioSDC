@@ -119,7 +119,7 @@ export default async function Home() {
             encuentra en el servicio una forma de estar presente.
           </p>
           <div className="hero-actions">
-            <Link className="button button-primary" href="/auth/sign-up">
+            <Link className="button button-primary" href="/solicitar-membresia">
               Quiero ser miembro <ArrowUpRight />
             </Link>
           </div>
@@ -295,7 +295,7 @@ export default async function Home() {
           <nav className="footer-link-group" aria-label="Miembros">
             <small>Miembros</small>
             <Link href="/auth/sign-in?next=/plataforma">Acceder</Link>
-            <Link href="/auth/sign-up">Ser miembro</Link>
+            <Link href="/solicitar-membresia">Ser miembro</Link>
           </nav>
         </div>
         <a className="footer-arrow" href="#inicio" aria-label="Volver al inicio"><ArrowUpRight /></a>

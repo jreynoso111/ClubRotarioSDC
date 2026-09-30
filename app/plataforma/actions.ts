@@ -2,12 +2,22 @@
 
 import { revalidatePath } from "next/cache";
 
-import { isMissingSchemaError } from "@/lib/platform";
+import { isMissingSchemaError, type ProposalVoteChoice } from "@/lib/platform";
 import { isSupabaseConfigured } from "@/utils/supabase/config";
 import { createClient } from "@/utils/supabase/server";
 import { auditCursorFilter, auditPageCursor, defaultAuditSort, normalizeAuditQuery } from "@/lib/audit";
 import type { AuditCursor, AuditDetail, AuditDetailResult, AuditEntry, AuditFilters, AuditPageResult, AuditSort } from "@/lib/audit";
 import { isStoryAssetPath, parseEditorialContent } from "@/lib/editorial-content";
+import type { MembershipApplication, MembershipApplicationStatus } from "@/lib/membership-applications";
+import type {
+  FinanceCategory,
+  FinanceDashboard,
+  FinanceEntryCategory,
+  FinanceLedgerEntry,
+  FinanceMonthlyDue,
+  FinancePaymentMethod,
+  FinancePeriodSummary,
+} from "@/lib/finance";
 
 type ActionCode =
   | "unauthenticated"
@@ -27,6 +37,7 @@ export type PlatformActionResult = {
 
 type PlatformRole = "member" | "coordinator" | "editor" | "club_manager" | "admin";
 type MembershipStatus = "pending" | "active" | "suspended";
+type CommitteeRole = "member" | "chair" | "secretary" | "treasurer";
 
 type Actor = {
   supabase: Awaited<ReturnType<typeof createClient>>;
@@ -196,6 +207,349 @@ export async function submitProposalAction(proposalId: string): Promise<Platform
 
   revalidatePath("/plataforma");
   return success("La propuesta fue enviada para revisión.");
+}
+
+export async function setProposalVotingAction(
+  proposalId: string,
+  enabled: boolean,
+): Promise<PlatformActionResult> {
+  const { actor, error } = await requireActor(["coordinator", "club_manager", "admin"]);
+  if (error) return error;
+  if (!isUuid(proposalId) || typeof enabled !== "boolean") {
+    return failure("La votación indicada no es válida.", "invalid");
+  }
+
+  const { data: proposal, error: proposalError } = await actor!.supabase
+    .from("proposals")
+    .select("id,status,voting_open")
+    .eq("id", proposalId)
+    .maybeSingle();
+  if (proposalError) return errorFor(proposalError);
+  if (!proposal) return failure("La propuesta ya no está disponible. Actualiza la plataforma.", "invalid");
+  if (enabled && !["submitted", "in_review"].includes(proposal.status)) {
+    return failure("Solo se puede activar la votación mientras la propuesta está en revisión.", "invalid");
+  }
+  if (proposal.voting_open === enabled) {
+    return success(enabled ? "La votación ya está abierta." : "La votación ya está cerrada.");
+  }
+
+  const { data, error: updateError } = await actor!.supabase
+    .from("proposals")
+    .update({ voting_open: enabled })
+    .eq("id", proposalId)
+    .select("id")
+    .maybeSingle();
+  if (updateError) return errorFor(updateError);
+  if (!data) return failure("No se pudo cambiar el estado de la votación. Actualiza la plataforma.", "invalid");
+
+  revalidatePath("/plataforma");
+  return success(
+    enabled
+      ? "La votación quedó abierta para los miembros activos."
+      : "La votación quedó cerrada y sus resultados están disponibles.",
+    proposalId,
+  );
+}
+
+export async function castProposalVoteAction(
+  proposalId: string,
+  voteChoice: ProposalVoteChoice,
+): Promise<PlatformActionResult> {
+  const { actor, error } = await requireActor();
+  if (error) return error;
+  if (!isUuid(proposalId) || !["for", "against", "abstain"].includes(voteChoice)) {
+    return failure("El voto indicado no es válido.", "invalid");
+  }
+
+  const { error: voteError } = await actor!.supabase.from("proposal_votes").upsert(
+    {
+      proposal_id: proposalId,
+      user_id: actor!.userId,
+      vote_choice: voteChoice,
+    },
+    { onConflict: "proposal_id,user_id" },
+  );
+  if (voteError) return errorFor(voteError);
+
+  revalidatePath("/plataforma");
+  return success(
+    voteChoice === "for"
+      ? "Tu voto quedó registrado a favor."
+      : voteChoice === "against"
+        ? "Tu voto quedó registrado en contra."
+        : "Tu abstención quedó registrada.",
+  );
+}
+
+function validFinanceMonth(value: unknown): value is string {
+  if (typeof value !== "string" || !/^\d{4}-(0[1-9]|1[0-2])$/.test(value)) return false;
+  const [year, month] = value.split("-").map(Number);
+  return Number.isInteger(year) && year >= 1900 && year <= 2200 && month >= 1 && month <= 12;
+}
+
+function financeDate(value: unknown): value is string {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+}
+
+function financeAmount(value: unknown): string | null {
+  if (typeof value !== "string" && typeof value !== "number") return null;
+  const normalized = String(value).trim();
+  if (!/^\d{1,10}(?:\.\d{1,2})?$/.test(normalized) || Number(normalized) <= 0) return null;
+  return normalized;
+}
+
+const financeMethods: FinancePaymentMethod[] = ["cash", "bank_transfer", "card", "check", "other"];
+
+export async function getFinanceDashboardAction(
+  month: string,
+): Promise<PlatformActionResult & { dashboard?: FinanceDashboard }> {
+  const { actor, error } = await requireActor();
+  if (error) return error;
+  if (!validFinanceMonth(month)) return failure("Selecciona un mes válido para consultar Finanzas.", "invalid");
+
+  const monthStart = `${month}-01`;
+  const [year, monthNumber] = month.split("-").map(Number);
+  const nextMonthStart = new Date(Date.UTC(year, monthNumber, 1)).toISOString().slice(0, 10);
+  const canManage = actor!.role === "club_manager" || actor!.role === "admin";
+  const supabase = actor!.supabase;
+  const [summaryResult, duesResult, entriesResult, membersResult, activitiesResult] = await Promise.all([
+    supabase.rpc("get_finance_period_summary", { _month_start: monthStart }),
+    supabase.rpc("get_finance_month_dues", { _month_start: monthStart }),
+    supabase
+      .from("finance_entries")
+      .select("id,direction,category,amount,occurred_on,description,member_id,member_name_snapshot,counterparty_name,activity_id,activity_name_snapshot,monthly_due_id,payment_method,receipt_reference")
+      .gte("occurred_on", monthStart)
+      .lt("occurred_on", nextMonthStart)
+      .order("occurred_on", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(100),
+    canManage
+      ? supabase
+          .from("memberships")
+          .select("user_id,profile:profiles!memberships_user_id_fkey(display_name)")
+          .eq("membership_status", "active")
+          .order("user_id", { ascending: true })
+          .limit(200)
+      : Promise.resolve({ data: [], error: null }),
+    canManage
+      ? supabase
+          .from("activities")
+          .select("id,title")
+          .in("activity_status", ["planned", "active", "completed"])
+          .order("starts_at", { ascending: false, nullsFirst: false })
+          .limit(100)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+
+  const queryErrors = [
+    summaryResult.error,
+    duesResult.error,
+    entriesResult.error,
+    membersResult.error,
+    activitiesResult.error,
+  ].filter(Boolean);
+  if (queryErrors.some((queryError) => isMissingSchemaError(queryError))) {
+    return failure(
+      "Finanzas está preparado en la plataforma, pero falta aplicar la migración club_finance_management en Supabase.",
+      "migration_missing",
+    );
+  }
+  if (queryErrors.length > 0) {
+    return failure("No se pudieron cargar los datos financieros. Inténtalo de nuevo.");
+  }
+
+  type SummaryRow = {
+    income_total: string | number;
+    expense_total: string | number;
+    balance: string | number;
+    dues_total: string | number;
+    dues_paid: string | number;
+    dues_outstanding: string | number;
+    dues_count: number;
+  };
+  type DueRow = {
+    due_id: string;
+    member_id: string | null;
+    member_name: string;
+    due_month: string;
+    amount_due: string | number;
+    amount_paid: string | number;
+  };
+  type EntryRow = {
+    id: string;
+    direction: string;
+    category: string;
+    amount: string | number;
+    occurred_on: string;
+    description: string;
+    member_id: string | null;
+    member_name_snapshot: string | null;
+    counterparty_name: string | null;
+    activity_id: string | null;
+    activity_name_snapshot: string | null;
+    monthly_due_id: string | null;
+    payment_method: string;
+    receipt_reference: string | null;
+  };
+  type MemberRow = {
+    user_id: string;
+    profile: { display_name: string | null } | null;
+  };
+  type ActivityOptionRow = { id: string; title: string };
+
+  const summary = ((summaryResult.data ?? []) as unknown as SummaryRow[])[0];
+  if (!summary) return failure("No se pudo calcular el resumen de Finanzas.");
+  const summaryData: FinancePeriodSummary = {
+    incomeTotal: String(summary.income_total),
+    expenseTotal: String(summary.expense_total),
+    balance: String(summary.balance),
+    duesTotal: String(summary.dues_total),
+    duesPaid: String(summary.dues_paid),
+    duesOutstanding: String(summary.dues_outstanding),
+    duesCount: Number(summary.dues_count),
+  };
+  const dues = ((duesResult.data ?? []) as unknown as DueRow[]).map((due): FinanceMonthlyDue => ({
+    id: due.due_id,
+    memberId: due.member_id,
+    memberName: due.member_name,
+    dueMonth: due.due_month,
+    amountDue: String(due.amount_due),
+    amountPaid: String(due.amount_paid),
+  }));
+  const entries = ((entriesResult.data ?? []) as unknown as EntryRow[]).map((entry): FinanceLedgerEntry => ({
+    id: entry.id,
+    direction: entry.direction as "income" | "expense",
+    category: entry.category as FinanceCategory,
+    amount: String(entry.amount),
+    occurredOn: entry.occurred_on,
+    description: entry.description,
+    memberId: entry.member_id,
+    memberName: entry.member_name_snapshot,
+    counterpartyName: entry.counterparty_name,
+    activityId: entry.activity_id,
+    activityName: entry.activity_name_snapshot,
+    monthlyDueId: entry.monthly_due_id,
+    paymentMethod: entry.payment_method as FinancePaymentMethod,
+    receiptReference: entry.receipt_reference,
+  }));
+  const members = ((membersResult.data ?? []) as unknown as MemberRow[]).map((member) => ({
+    id: member.user_id,
+    name: member.profile?.display_name?.trim() || "Miembro del club",
+  }));
+  const activities = ((activitiesResult.data ?? []) as unknown as ActivityOptionRow[]).map((activity) => ({
+    id: activity.id,
+    name: activity.title,
+  }));
+
+  return {
+    ...success("Resumen financiero cargado."),
+    dashboard: { monthStart, summary: summaryData, dues, entries, members, activities },
+  };
+}
+
+export async function createFinanceMonthlyDuesAction(input: {
+  month: string;
+  amountDue: string;
+}): Promise<PlatformActionResult> {
+  const { actor, error } = await requireActor(["club_manager", "admin"]);
+  if (error) return error;
+  if (!validFinanceMonth(input?.month)) return failure("Selecciona un mes válido para generar los aportes.", "invalid");
+  const amountDue = financeAmount(input?.amountDue);
+  if (!amountDue) return failure("Indica un aporte mensual mayor que cero, con hasta dos decimales.", "invalid");
+
+  const { data, error: insertError } = await actor!.supabase.rpc("create_finance_monthly_dues", {
+    _due_month: `${input.month}-01`,
+    _amount_due: amountDue,
+  });
+  if (insertError) return errorFor(insertError);
+  revalidatePath("/plataforma");
+  const count = Number(data ?? 0);
+  return success(count > 0
+    ? `Se generaron ${count} aportes mensuales para ${input.month}.`
+    : `No se generaron aportes: el mes ${input.month} ya tenía cuotas para las membresías activas.`);
+}
+
+export async function createFinanceEntryAction(input: {
+  category: FinanceEntryCategory;
+  amount: string;
+  occurredOn: string;
+  description: string;
+  memberId?: string;
+  counterpartyName?: string;
+  activityId?: string;
+  paymentMethod: FinancePaymentMethod;
+  receiptReference?: string;
+}): Promise<PlatformActionResult> {
+  const { actor, error } = await requireActor(["club_manager", "admin"]);
+  if (error) return error;
+
+  const validCategories: FinanceEntryCategory[] = [
+    "activity_contribution", "donation", "other_income",
+    "activity_expense", "operating_expense", "other_expense",
+  ];
+  const amount = financeAmount(input?.amount);
+  const description = cleanText(input?.description, 500);
+  if (!validCategories.includes(input?.category)
+    || !amount
+    || !financeDate(input?.occurredOn)
+    || !description || description.length < 3
+    || !financeMethods.includes(input?.paymentMethod)
+    || (input?.memberId && !isUuid(input.memberId))
+    || (input?.activityId && !isUuid(input.activityId))
+    || ((input?.category === "activity_contribution" || input?.category === "activity_expense") && !input?.activityId)
+    || (input?.counterpartyName && input.counterpartyName.trim().length > 120)
+    || (input?.receiptReference && input.receiptReference.trim().length > 120)) {
+    return failure("Revisa el tipo, monto, fecha y datos relacionados del movimiento.", "invalid");
+  }
+
+  const direction = input.category.endsWith("expense") ? "expense" : "income";
+  const { data, error: insertError } = await actor!.supabase.rpc("create_finance_entry", {
+    _direction: direction,
+    _category: input.category,
+    _amount: amount,
+    _occurred_on: input.occurredOn,
+    _description: description,
+    _member_id: input.memberId || null,
+    _counterparty_name: input.counterpartyName?.trim() || null,
+    _activity_id: input.activityId || null,
+    _payment_method: input.paymentMethod,
+    _receipt_reference: input.receiptReference?.trim() || null,
+  });
+  if (insertError) return errorFor(insertError);
+  revalidatePath("/plataforma");
+  return success("El movimiento quedó registrado y auditado.", String(data));
+}
+
+export async function recordFinanceMonthlyPaymentAction(input: {
+  dueId: string;
+  amount: string;
+  occurredOn: string;
+  paymentMethod: FinancePaymentMethod;
+  receiptReference?: string;
+}): Promise<PlatformActionResult> {
+  const { actor, error } = await requireActor(["club_manager", "admin"]);
+  if (error) return error;
+  const amount = financeAmount(input?.amount);
+  if (!isUuid(input?.dueId)
+    || !amount
+    || !financeDate(input?.occurredOn)
+    || !financeMethods.includes(input?.paymentMethod)
+    || (input?.receiptReference && input.receiptReference.trim().length > 120)) {
+    return failure("Revisa el monto, fecha y referencia del pago.", "invalid");
+  }
+
+  const { data, error: paymentError } = await actor!.supabase.rpc("record_finance_monthly_payment", {
+    _due_id: input.dueId,
+    _amount: amount,
+    _occurred_on: input.occurredOn,
+    _payment_method: input.paymentMethod,
+    _receipt_reference: input.receiptReference?.trim() || null,
+  });
+  if (paymentError) return errorFor(paymentError);
+  revalidatePath("/plataforma");
+  return success("El pago mensual quedó registrado y auditado.", String(data));
 }
 
 export async function rsvpEventAction(
@@ -511,8 +865,9 @@ export async function updateTaskStatusAction(
 export async function createCommitteeAction(input: {
   name: string;
   description?: string;
+  members?: Array<{ userId: string; committeeRole: CommitteeRole }>;
 }): Promise<PlatformActionResult> {
-  const { actor, error } = await requireActor(["coordinator", "club_manager", "admin"]);
+  const { actor, error } = await requireActor(["admin"]);
   if (error) return error;
 
   const name = cleanText(input?.name, 140);
@@ -521,15 +876,44 @@ export async function createCommitteeAction(input: {
   const slug = slugify(name);
   if (!slug) return failure("El nombre no permite crear un enlace válido.", "invalid");
 
-  const { data, error: insertError } = await actor!.supabase
-    .from("committees")
-    .insert({ name, slug, description, created_by: actor!.userId })
-    .select("id")
-    .maybeSingle();
-  if (insertError || !data) return errorFor(insertError);
+  const membersInput = input?.members ?? [];
+  if (!Array.isArray(membersInput) || membersInput.length > 50) {
+    return failure("El comité puede comenzar con hasta 50 integrantes.", "invalid");
+  }
+  const members: Array<{ userId: string; committeeRole: CommitteeRole }> = [];
+  for (const member of membersInput) {
+    if (!isUuid(member?.userId) || !["member", "chair", "secretary", "treasurer"].includes(member.committeeRole)) {
+      return failure("Revisa los integrantes y sus responsabilidades.", "invalid");
+    }
+    members.push({ userId: member.userId, committeeRole: member.committeeRole });
+  }
+  if (new Set(members.map((member) => member.userId)).size !== members.length) {
+    return failure("Cada integrante solo puede aparecer una vez en el comité.", "invalid");
+  }
+
+  if (members.length > 0) {
+    const activeMembers = await actor!.supabase
+      .from("memberships")
+      .select("user_id")
+      .eq("membership_status", "active")
+      .in("user_id", members.map((member) => member.userId));
+    if (activeMembers.error) return errorFor(activeMembers.error);
+    if ((activeMembers.data ?? []).length !== members.length) {
+      return failure("Solo puedes incluir integrantes con membresía activa.", "invalid");
+    }
+  }
+
+  const { data: committeeId, error: insertError } = await actor!.supabase.rpc("create_committee_with_members", {
+    _name: name,
+    _slug: slug,
+    _description: description,
+    _member_ids: members.map((member) => member.userId),
+    _member_roles: members.map((member) => member.committeeRole),
+  });
+  if (insertError || !committeeId) return errorFor(insertError);
 
   revalidatePath("/plataforma");
-  return success("El comité quedó creado.", data.id);
+  return success(members.length > 0 ? "El comité y sus integrantes iniciales quedaron guardados." : "El comité quedó creado.", committeeId);
 }
 
 export async function assignCommitteeMemberAction(input: {
@@ -537,7 +921,7 @@ export async function assignCommitteeMemberAction(input: {
   userId: string;
   committeeRole: "member" | "chair" | "secretary" | "treasurer";
 }): Promise<PlatformActionResult> {
-  const { actor, error } = await requireActor(["coordinator", "club_manager", "admin"]);
+  const { actor, error } = await requireActor(["admin"]);
   if (error) return error;
   if (!isUuid(input?.committeeId) || !isUuid(input?.userId)) {
     return failure("El comité o el integrante indicado no es válido.", "invalid");
@@ -546,12 +930,23 @@ export async function assignCommitteeMemberAction(input: {
     return failure("El cargo dentro del comité no es válido.", "invalid");
   }
 
-  const { data: member, error: memberError } = await actor!.supabase
-    .from("profiles")
+  const { data: committee, error: committeeError } = await actor!.supabase
+    .from("committees")
     .select("id")
-    .eq("id", input.userId)
+    .eq("id", input.committeeId)
+    .eq("is_active", true)
     .maybeSingle();
-  if (memberError || !member) {
+  if (committeeError) return errorFor(committeeError);
+  if (!committee) return failure("No puedes agregar integrantes a un comité terminado.", "invalid");
+
+  const { data: member, error: memberError } = await actor!.supabase
+    .from("memberships")
+    .select("user_id")
+    .eq("user_id", input.userId)
+    .eq("membership_status", "active")
+    .maybeSingle();
+  if (memberError) return errorFor(memberError);
+  if (!member) {
     return failure("Solo puedes asignar integrantes con membresía activa.", "invalid");
   }
 
@@ -567,6 +962,85 @@ export async function assignCommitteeMemberAction(input: {
 
   revalidatePath("/plataforma");
   return success("La estructura del comité fue actualizada.");
+}
+
+export async function updateCommitteeAction(input: {
+  committeeId: string;
+  name: string;
+  description?: string;
+}): Promise<PlatformActionResult> {
+  const { actor, error } = await requireActor(["admin"]);
+  if (error) return error;
+  if (!isUuid(input?.committeeId)) return failure("El comité indicado no es válido.", "invalid");
+
+  const name = cleanText(input?.name, 140);
+  const description = optionalText(input?.description, 2000);
+  if (!name || name.length < 2) return failure("Escribe un nombre válido para el comité.", "invalid");
+
+  const { data, error: updateError } = await actor!.supabase
+    .from("committees")
+    .update({ name, description, updated_by: actor!.userId })
+    .eq("id", input.committeeId)
+    .eq("is_active", true)
+    .select("id")
+    .maybeSingle();
+  if (updateError) return errorFor(updateError);
+  if (!data) return failure("El comité ya no está disponible. Actualiza la organización.", "invalid");
+
+  revalidatePath("/plataforma");
+  return success("Los datos del comité fueron actualizados.");
+}
+
+export async function completeCommitteeAction(committeeId: string): Promise<PlatformActionResult> {
+  const { actor, error } = await requireActor(["admin"]);
+  if (error) return error;
+  if (!isUuid(committeeId)) return failure("El comité indicado no es válido.", "invalid");
+
+  const { data, error: updateError } = await actor!.supabase
+    .from("committees")
+    .update({ is_active: false, updated_by: actor!.userId })
+    .eq("id", committeeId)
+    .eq("is_active", true)
+    .select("id")
+    .maybeSingle();
+  if (updateError) return errorFor(updateError);
+  if (!data) return failure("El comité ya está terminado o no está disponible.", "invalid");
+
+  revalidatePath("/plataforma");
+  return success("El comité quedó terminado y su historial se conservó.");
+}
+
+export async function removeCommitteeMemberAction(input: {
+  committeeId: string;
+  userId: string;
+}): Promise<PlatformActionResult> {
+  const { actor, error } = await requireActor(["admin"]);
+  if (error) return error;
+  if (!isUuid(input?.committeeId) || !isUuid(input?.userId)) {
+    return failure("El comité o el integrante indicado no es válido.", "invalid");
+  }
+
+  const { data: committee, error: committeeError } = await actor!.supabase
+    .from("committees")
+    .select("id")
+    .eq("id", input.committeeId)
+    .eq("is_active", true)
+    .maybeSingle();
+  if (committeeError) return errorFor(committeeError);
+  if (!committee) return failure("No puedes cambiar la lista de un comité terminado.", "invalid");
+
+  const { data, error: deleteError } = await actor!.supabase
+    .from("committee_members")
+    .delete()
+    .eq("committee_id", input.committeeId)
+    .eq("user_id", input.userId)
+    .select("user_id")
+    .maybeSingle();
+  if (deleteError) return errorFor(deleteError);
+  if (!data) return failure("El integrante ya no está asignado a este comité.", "invalid");
+
+  revalidatePath("/plataforma");
+  return success("El integrante fue retirado del comité.");
 }
 
 export async function createStoryAction(input: {
@@ -693,6 +1167,50 @@ export async function updateMembershipAction(input: {
         ? "La membresía fue suspendida."
         : "La solicitud volvió a pendiente.",
   );
+}
+
+export type MembershipApplicationsActionResult = {
+  ok: boolean;
+  message: string;
+  applications: MembershipApplication[];
+  code?: ActionCode;
+};
+
+export async function getMembershipApplicationsAction(): Promise<MembershipApplicationsActionResult> {
+  const { actor, error } = await requireActor();
+  if (error) return { ok: false, message: error.message, applications: [], code: error.code };
+
+  const { data, error: queryError } = await actor!.supabase
+    .from("membership_applications")
+    .select("id,full_name,email,phone,occupation,motivation,referral_source,status,submitted_at,updated_at")
+    .order("submitted_at", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(100);
+  if (queryError) return { ok: false, message: errorFor(queryError).message, applications: [] };
+
+  return { ok: true, message: "", applications: (data ?? []) as MembershipApplication[] };
+}
+
+export async function updateMembershipApplicationStatusAction(
+  applicationId: string,
+  status: MembershipApplicationStatus,
+): Promise<PlatformActionResult> {
+  const { actor, error } = await requireActor(["club_manager", "admin"]);
+  if (error) return error;
+  if (!isUuid(applicationId) || !["new", "contacted", "invited", "declined"].includes(status)) {
+    return failure("La solicitud indicada o su estado no son válidos.", "invalid");
+  }
+
+  const { data, error: updateError } = await actor!.supabase
+    .from("membership_applications")
+    .update({ status, reviewed_by: actor!.userId })
+    .eq("id", applicationId)
+    .select("id")
+    .maybeSingle();
+  if (updateError || !data) return errorFor(updateError);
+
+  revalidatePath("/plataforma");
+  return success("El seguimiento de la solicitud fue actualizado.");
 }
 
 export async function sendInternalMessageAction(input: {

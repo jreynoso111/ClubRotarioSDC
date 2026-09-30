@@ -39,6 +39,8 @@ export type PlatformSnapshot = {
     canCoordinate: boolean;
     canEdit: boolean;
     canManageClub: boolean;
+    canManageFinances: boolean;
+    canManageCommittees: boolean;
     canManageMembership: boolean;
     canBroadcast: boolean;
     canAudit: boolean;
@@ -46,6 +48,10 @@ export type PlatformSnapshot = {
   events: PlatformEvent[];
   eventRsvps: Record<string, string>;
   proposals: PlatformProposal[];
+  proposalVotingSchema: {
+    state: PlatformSchemaState;
+    message: string | null;
+  };
   activities: PlatformActivity[];
   tasks: PlatformTask[];
   committees: PlatformCommittee[];
@@ -53,6 +59,7 @@ export type PlatformSnapshot = {
   notifications: PlatformNotification[];
   messages: PlatformMessage[];
   memberDirectory: PlatformDirectoryMember[];
+  committeeCandidates: PlatformDirectoryMember[];
   pendingMembers: PlatformPendingMember[];
   messagingSchema: {
     state: PlatformSchemaState;
@@ -79,6 +86,8 @@ export type PlatformEvent = {
   isPast: boolean;
 };
 
+export type ProposalVoteChoice = "for" | "against" | "abstain";
+
 export type PlatformProposal = {
   id: string;
   title: string;
@@ -87,8 +96,17 @@ export type PlatformProposal = {
   status: string;
   reviewNotes: string | null;
   createdBy: string;
+  authorName: string;
   createdAt: string;
   submittedAt: string | null;
+  voting: {
+    isOpen: boolean;
+    startedAt: string | null;
+    votesFor: number | null;
+    votesAgainst: number | null;
+    votesAbstaining: number | null;
+    myVote: ProposalVoteChoice | null;
+  };
 };
 
 export type PlatformActivity = {
@@ -223,6 +241,17 @@ type ProposalRow = {
   submitted_at: string | null;
 };
 
+type ProposalVotingSummaryRow = {
+  proposal_id: string;
+  author_name: string;
+  voting_open: boolean;
+  voting_started_at: string | null;
+  votes_for: number | null;
+  votes_against: number | null;
+  votes_abstaining: number | null;
+  my_vote: ProposalVoteChoice | null;
+};
+
 type ActivityRow = {
   id: string;
   title: string;
@@ -258,6 +287,10 @@ type CommitteeMemberRow = {
   committee_id: string;
   user_id: string;
   committee_role: string;
+};
+
+type ActiveMembershipRow = {
+  user_id: string;
 };
 
 type StoryRow = {
@@ -366,6 +399,8 @@ function emptySnapshot(
       canCoordinate: false,
       canEdit: false,
       canManageClub: false,
+      canManageFinances: false,
+      canManageCommittees: false,
       canManageMembership: false,
       canBroadcast: false,
       canAudit: false,
@@ -373,6 +408,10 @@ function emptySnapshot(
     events: [],
     eventRsvps: {},
     proposals: [],
+    proposalVotingSchema: {
+      state: "unavailable",
+      message: null,
+    },
     activities: [],
     tasks: [],
     committees: [],
@@ -380,6 +419,7 @@ function emptySnapshot(
     notifications: [],
     messages: [],
     memberDirectory: [],
+    committeeCandidates: [],
     pendingMembers: [],
     messagingSchema: {
       state: "unavailable",
@@ -464,6 +504,8 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
     canCoordinate: isActive && ["coordinator", "club_manager", "admin"].includes(role),
     canEdit: isActive && ["editor", "club_manager", "admin"].includes(role),
     canManageClub: isActive && ["club_manager", "admin"].includes(role),
+    canManageFinances: isActive && ["club_manager", "admin"].includes(role),
+    canManageCommittees: isActive && role === "admin",
     canManageMembership: isActive && ["club_manager", "admin"].includes(role),
     canBroadcast: isActive && ["coordinator", "club_manager", "admin"].includes(role),
     canAudit: isActive && role === "admin",
@@ -490,18 +532,11 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
     return baseSnapshot;
   }
 
-  const proposalsQuery = capabilities.canCoordinate
-    ? supabase
-        .from("proposals")
-        .select("id,title,summary,details,status,review_notes,created_by,created_at,submitted_at")
-        .order("created_at", { ascending: false })
-        .limit(30)
-    : supabase
-        .from("proposals")
-        .select("id,title,summary,details,status,review_notes,created_by,created_at,submitted_at")
-        .eq("created_by", user.id)
-        .order("created_at", { ascending: false })
-        .limit(30);
+  const proposalsQuery = supabase
+    .from("proposals")
+    .select("id,title,summary,details,status,review_notes,created_by,created_at,submitted_at")
+    .order("created_at", { ascending: false })
+    .limit(30);
 
   const now = new Date().toISOString();
   const eventsQuery = () => {
@@ -509,6 +544,10 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
       "id,title,summary,description,kind,tone,starts_at,ends_at,venue_name,venue_address,location_url,capacity,status,is_public",
     );
     return capabilities.canCoordinate || capabilities.canEdit ? query : query.eq("status", "published");
+  };
+  const committeesQuery = () => {
+    const query = supabase.from("committees").select("id,name,slug,description,is_active");
+    return capabilities.canManageCommittees ? query : query.eq("is_active", true);
   };
 
   const [
@@ -522,6 +561,7 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
     storiesResult,
     notificationsResult,
     directoryResult,
+    committeeCandidatesResult,
   ] = await Promise.all([
     readQuery<EventRow[]>(
       eventsQuery()
@@ -550,12 +590,7 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
         .limit(30),
     ),
     readQuery<CommitteeRow[]>(
-      supabase
-        .from("committees")
-        .select("id,name,slug,description,is_active")
-        .eq("is_active", true)
-        .order("name", { ascending: true })
-        .limit(30),
+      committeesQuery().order("name", { ascending: true }).limit(60),
     ),
     readQuery<CommitteeMemberRow[]>(
       supabase.from("committee_members").select("committee_id,user_id,committee_role").limit(200),
@@ -577,6 +612,11 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
     readQuery<ProfileRow[]>(
       supabase.from("profiles").select("id,display_name").order("display_name", { ascending: true }).limit(200),
     ),
+    readQuery<ActiveMembershipRow[]>(
+      capabilities.canManageCommittees
+        ? supabase.from("memberships").select("user_id").eq("membership_status", "active").order("user_id").limit(200)
+        : Promise.resolve({ data: [], error: null }),
+    ),
   ]);
 
   const warnings: string[] = [];
@@ -590,6 +630,7 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
     [committeeMembersResult, "integrantes de comités"],
     [storiesResult, "publicaciones"],
     [directoryResult, "directorio"],
+    ...(capabilities.canManageCommittees ? [[committeeCandidatesResult, "integrantes activos"] as const] : []),
   ] as const;
   for (const [result, label] of existingResults) {
     if (result.error && !isMissingSchemaError(result.error)) {
@@ -633,6 +674,10 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
     userId: row.id,
     name: row.display_name?.trim() || "Miembro del club",
   }));
+  const activeCommitteeCandidateIds = new Set(
+    (committeeCandidatesResult.data ?? []).map((row) => row.user_id),
+  );
+  const committeeCandidates = directory.filter((member) => activeCommitteeCandidateIds.has(member.userId));
   const names = new Map(directory.map((member) => [member.userId, member.name]));
   const committeeMembers = (committeeMembersResult.data ?? []) as CommitteeMemberRow[];
   const committees = ((committeesResult.data ?? []) as CommitteeRow[]).map((committee) => ({
@@ -649,6 +694,32 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
         role: member.committee_role,
       })),
   }));
+
+  let proposalVotingState: PlatformSchemaState = "ready";
+  let proposalVotingMessage: string | null = null;
+  let proposalVotingRows: ProposalVotingSummaryRow[] = [];
+  const proposalRows = (proposalsResult.data ?? []) as ProposalRow[];
+  if (proposalRows.length > 0) {
+    const votingResult = await readQuery<ProposalVotingSummaryRow[]>(
+      supabase.rpc("get_proposal_voting_summaries", {
+        _proposal_ids: proposalRows.map((proposal) => proposal.id),
+      }),
+    );
+    if (votingResult.error) {
+      if (isMissingSchemaError(votingResult.error)) {
+        proposalVotingState = "migration_missing";
+        proposalVotingMessage =
+          "La autoría visible y la votación de propuestas están listas en la interfaz, pero requieren aplicar la migración proposal_member_voting en Supabase.";
+      } else {
+        proposalVotingState = "unavailable";
+        proposalVotingMessage = describeError(votingResult.error);
+        warnings.push(`votación de propuestas: ${proposalVotingMessage}`);
+      }
+    } else {
+      proposalVotingRows = (votingResult.data ?? []) as ProposalVotingSummaryRow[];
+    }
+  }
+  const votingByProposal = new Map(proposalVotingRows.map((row) => [row.proposal_id, row]));
 
   const messagingQueryResults: Array<{ error: PlatformError | null }> = [notificationsResult];
   let messagingState: PlatformSchemaState = "ready";
@@ -799,9 +870,24 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
       status: proposal.status,
       reviewNotes: proposal.review_notes,
       createdBy: proposal.created_by,
+      authorName:
+        votingByProposal.get(proposal.id)?.author_name ??
+        (proposal.created_by === user.id ? displayName : names.get(proposal.created_by) ?? "Miembro del club"),
       createdAt: proposal.created_at,
       submittedAt: proposal.submitted_at,
+      voting: {
+        isOpen: votingByProposal.get(proposal.id)?.voting_open ?? false,
+        startedAt: votingByProposal.get(proposal.id)?.voting_started_at ?? null,
+        votesFor: votingByProposal.get(proposal.id)?.votes_for ?? null,
+        votesAgainst: votingByProposal.get(proposal.id)?.votes_against ?? null,
+        votesAbstaining: votingByProposal.get(proposal.id)?.votes_abstaining ?? null,
+        myVote: votingByProposal.get(proposal.id)?.my_vote ?? null,
+      },
     })),
+    proposalVotingSchema: {
+      state: proposalVotingState,
+      message: proposalVotingMessage,
+    },
     activities: ((activitiesResult.data ?? []) as ActivityRow[]).map((activity) => ({
       id: activity.id,
       title: activity.title,
@@ -848,6 +934,7 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
     })),
     messages,
     memberDirectory: directory,
+    committeeCandidates,
     pendingMembers,
     messagingSchema: {
       state: messagingState,

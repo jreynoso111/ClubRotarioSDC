@@ -425,6 +425,75 @@
 .smallButton { background: var(--rotary-blue); color: var(--paper); }
 .smallButtonQuiet { background: transparent; border: 1px solid var(--line); color: var(--ink); }
 .smallButton:disabled, .smallButtonQuiet:disabled { cursor: wait; opacity: .55; }
+.proposalItem { background: rgba(255, 253, 248, .66); border: 1px solid var(--line); margin-top: 12px; padding: 16px; }
+.proposalItemHeader { align-items: flex-start; display: flex; gap: 18px; justify-content: space-between; }
+.proposalMain { display: grid; gap: 7px; min-width: 0; }
+.proposalMain h3 { font-family: Georgia, "Times New Roman", serif; font-size: 22px; font-weight: 400; letter-spacing: -.035em; line-height: 1.05; margin: 0; overflow-wrap: anywhere; }
+.proposalMain p { color: var(--ink-soft); font-size: 11px; line-height: 1.5; margin: 0; overflow-wrap: anywhere; }
+.proposalMain .proposalMeta { color: var(--teal); font-family: var(--font-geist-mono); font-size: 8px; letter-spacing: .06em; text-transform: uppercase; }
+.proposalControls { align-items: flex-end; display: flex; flex: 0 0 auto; flex-direction: column; gap: 7px; }
+.proposalVoting { background: rgba(0, 103, 200, .055); border-left: 3px solid var(--rotary-blue); display: grid; gap: 10px; margin-top: 15px; padding: 13px 15px; }
+.proposalVotingHeader { align-items: center; display: flex; gap: 12px; justify-content: space-between; }
+.proposalVotingHeader .cardLabel { color: var(--rotary-blue); margin: 0; }
+.proposalVoteOpen, .proposalVoteClosed { color: var(--teal); font-family: var(--font-geist-mono); font-size: 8px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.proposalVoteClosed { color: var(--ink-soft); }
+.proposalVotingHelp { color: var(--ink-soft); font-size: 10px; line-height: 1.5; margin: 0; }
+.proposalVoteChoices { display: flex; flex-wrap: wrap; gap: 7px; }
+.proposalVoteChoice { background: var(--paper); border: 1px solid var(--line); color: var(--ink); cursor: pointer; font-size: 9px; font-weight: 800; letter-spacing: .05em; padding: 9px 12px; text-transform: uppercase; }
+.proposalVoteChoiceSelected { background: var(--rotary-blue); border-color: var(--rotary-blue); color: var(--paper); }
+.proposalVoteChoice:disabled { cursor: wait; opacity: .55; }
+.proposalVoteTally { display: grid; gap: 8px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.proposalVoteTally > div { align-items: baseline; background: rgba(255, 253, 248, .76); border: 1px solid var(--line); display: flex; gap: 10px; justify-content: space-between; padding: 9px 11px; }
+.proposalVoteTally span { color: var(--ink-soft); font-size: 9px; }
+.proposalVoteTally strong { color: var(--rotary-blue); font-family: var(--font-geist-mono); font-size: 16px; }
+.proposalModuleNotice { background: rgba(247, 168, 27, .14); border-left: 3px solid var(--rotary-gold); color: var(--ink-soft); font-size: 10px; line-height: 1.5; margin: 12px 0 0; padding: 10px 12px; }
+.financeModule { display: grid; gap: 20px; min-width: 0; }
+.financeHeader, .financeSectionHeader { align-items: flex-end; display: flex; gap: 18px; justify-content: space-between; }
+.financeHeader .cardLabel, .financeHeader .cardTitle { margin-bottom: 9px; }
+.financeHeader .cardTitle { font-size: 38px; }
+.financeMonthLabel, .financeForm label, .financePaymentForm label { color: var(--ink); display: grid; font-size: 9px; font-weight: 800; gap: 6px; letter-spacing: .08em; text-transform: uppercase; }
+.financeMonthLabel { min-width: 170px; }
+.financeMonthLabel input, .financeForm input, .financeForm select, .financePaymentForm input, .financePaymentForm select { background: var(--white); border: 1px solid var(--line); color: var(--ink); font: inherit; font-size: 12px; font-weight: 400; letter-spacing: 0; min-height: 40px; padding: 9px 10px; text-transform: none; width: 100%; }
+.financeMetrics { display: grid; gap: 10px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.financeMetric { background: rgba(255, 253, 248, .78); border: 1px solid var(--line); display: grid; gap: 9px; min-width: 0; padding: 14px 16px; }
+.financeMetric span { color: var(--ink-soft); font-size: 9px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.financeMetric strong { color: var(--rotary-blue); font-family: var(--font-geist-mono); font-size: clamp(15px, 2vw, 22px); font-weight: 600; overflow-wrap: anywhere; }
+.financeSection { background: rgba(255, 253, 248, .72); border: 1px solid var(--line); min-width: 0; padding: 20px; }
+.financeSectionHeader { align-items: baseline; border-bottom: 1px solid var(--line); margin-bottom: 5px; padding-bottom: 12px; }
+.financeSectionHeader .cardLabel { margin: 0 0 5px; }
+.financeSectionHeader h3, .financeForm h3 { font-family: Georgia, "Times New Roman", serif; font-size: 24px; font-weight: 400; letter-spacing: -.035em; margin: 0; }
+.financeCount { color: var(--ink-soft); font-family: var(--font-geist-mono); font-size: 9px; white-space: nowrap; }
+.financeDueRow { align-items: center; border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 12px 20px; justify-content: space-between; padding: 12px 0; }
+.financeDueRow:last-child { border-bottom: 0; }
+.financeDueIdentity { display: grid; gap: 4px; min-width: 170px; }
+.financeDueIdentity strong { font-family: Georgia, "Times New Roman", serif; font-size: 16px; font-weight: 400; }
+.financeDueIdentity span { color: var(--ink-soft); font-size: 10px; }
+.financeDueAmount { color: var(--rotary-blue); font-family: var(--font-geist-mono); font-size: 13px; }
+.financePaymentDetails { flex: 0 1 590px; }
+.financePaymentDetails summary { color: var(--rotary-blue); cursor: pointer; font-size: 9px; font-weight: 800; letter-spacing: .07em; list-style-position: inside; text-transform: uppercase; }
+.financePaymentForm { align-items: end; background: rgba(0, 103, 200, .045); display: grid; gap: 8px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 9px; padding: 12px; }
+.financePaymentForm label { font-size: 8px; }
+.financePaymentForm input, .financePaymentForm select { min-height: 36px; padding: 7px 8px; }
+.financeManagementGrid { display: grid; gap: 14px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.financeForm { align-content: start; background: rgba(255, 253, 248, .92); border: 1px solid var(--line); display: grid; gap: 11px; min-width: 0; padding: 20px; }
+.financeForm .cardLabel { margin: 0; }
+.financeForm h3 { margin: -5px 0 0; }
+.financeForm .empty { font-size: 10px; }
+.financeForm label { min-width: 0; }
+.financeForm .button { justify-self: start; margin-top: 3px; }
+.financeLedger { display: grid; }
+.financeLedgerRow { align-items: center; border-bottom: 1px solid var(--line); display: grid; gap: 10px 16px; grid-template-columns: 68px minmax(0, 1fr) auto; padding: 12px 0; }
+.financeLedgerRow:last-child { border-bottom: 0; }
+.financeLedgerDate { color: var(--ink-soft); font-family: var(--font-geist-mono); font-size: 9px; }
+.financeLedgerDescription { display: grid; gap: 3px; min-width: 0; }
+.financeLedgerDescription strong { font-size: 12px; font-weight: 700; overflow-wrap: anywhere; }
+.financeLedgerDescription > span { color: var(--ink-soft); font-size: 9px; overflow-wrap: anywhere; }
+.financeLedgerDescription small { color: var(--teal); font-size: 9px; }
+.financeCategory { color: var(--teal); font-size: 8px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.financeIncome, .financeExpense { font-family: var(--font-geist-mono); font-size: 12px; font-weight: 600; white-space: nowrap; }
+.financeIncome { color: #176f50; }
+.financeExpense { color: #9a3030; }
+.financeFootnote { color: var(--ink-soft); font-size: 9px; line-height: 1.5; margin: 0; }
 .metric { align-items: baseline; border-top: 1px solid var(--line); display: flex; gap: 10px; padding: 20px 0 0; }
 .metric + .metric { margin-top: 15px; }
 .metric strong { color: var(--rotary-blue); font-family: Georgia, "Times New Roman", serif; font-size: 42px; font-weight: 400; letter-spacing: -.06em; }
@@ -488,6 +557,27 @@
 .storyArchiveHeading .cardLabel { margin-bottom: 8px; }
 .storyArchiveHeading .cardTitle { margin: 0; }
 .storyCount { background: rgba(0, 93, 170, .08); color: var(--rotary-blue); font-family: var(--font-geist-mono); font-size: 9px; letter-spacing: .09em; padding: 8px 10px; text-transform: uppercase; white-space: nowrap; }
+.moduleGrid > .membershipApplicationsCard { grid-column: 1 / -1; }
+.applicationArchiveHeading { align-items: end; display: flex; gap: 16px; justify-content: space-between; margin-bottom: 12px; }
+.applicationArchiveHeading .cardLabel { margin-bottom: 8px; }
+.applicationArchiveHeading .cardTitle { margin: 0; }
+.applicationDisclosure { color: var(--ink-soft); font-size: 11px; line-height: 1.55; margin: 0 0 18px; max-width: 760px; }
+.applicationRecord { border-top: 1px solid var(--line); padding: 19px 0; }
+.applicationRecordHeading { align-items: flex-start; display: flex; gap: 16px; justify-content: space-between; }
+.applicationRecordHeading > div { min-width: 0; }
+.applicationRecordHeading h3 { font-family: Georgia, "Times New Roman", serif; font-size: clamp(23px, 3vw, 31px); font-weight: 400; letter-spacing: -.035em; line-height: 1.05; margin: 7px 0 0; overflow-wrap: anywhere; }
+.applicationRecordHeading time { color: var(--ink-soft); font-family: var(--font-geist-mono); font-size: 9px; font-variant-numeric: tabular-nums; padding-top: 4px; white-space: nowrap; }
+.applicationStatus { background: rgba(247, 168, 27, .2); color: var(--ink); display: inline-block; font-family: var(--font-geist-mono); font-size: 8px; font-weight: 700; letter-spacing: .1em; padding: 5px 7px; text-transform: uppercase; }
+.applicationDetails { display: grid; gap: 14px 24px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 19px 0 0; }
+.applicationDetails > div { min-width: 0; }
+.applicationDetails dt { color: var(--ink-soft); font-family: var(--font-geist-mono); font-size: 8px; letter-spacing: .12em; margin-bottom: 5px; text-transform: uppercase; }
+.applicationDetails dd { color: var(--ink); font-size: 12px; line-height: 1.55; margin: 0; overflow-wrap: anywhere; }
+.applicationDetails dd a { text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; }
+.applicationDetails dd a:hover { color: var(--teal); }
+.applicationDetails .applicationMotivation { grid-column: 1 / -1; }
+.applicationReview { align-items: end; border-top: 1px dashed var(--line); display: flex; flex-wrap: wrap; gap: 12px; justify-content: flex-end; margin-top: 18px; padding-top: 14px; }
+.applicationReview label { color: var(--ink-soft); display: grid; font-size: 9px; font-weight: 700; gap: 5px; letter-spacing: .08em; text-transform: uppercase; }
+.applicationReview select { background: var(--paper); border: 1px solid var(--line); color: var(--ink); font: inherit; font-size: 11px; min-height: 36px; min-width: 145px; padding: 0 9px; }
 .storyAdminRow { border-top: 1px solid var(--line); padding: 17px 0 16px; }
 .storyAdminMeta { align-items: center; color: var(--ink-soft); display: flex; flex-wrap: wrap; font-family: var(--font-geist-mono); font-size: 8px; gap: 8px 13px; letter-spacing: .08em; text-transform: uppercase; }
 .storyAdminMeta > span + span::before, .storyAdminMeta time::before { color: var(--line); content: "·"; margin-right: 10px; }
@@ -503,10 +593,35 @@
 .storyArchiveEmpty > span { color: var(--rotary-gold); font-family: var(--font-geist-mono); font-size: 8px; letter-spacing: .13em; }
 .storyArchiveEmpty h3 { font-family: Georgia, "Times New Roman", serif; font-size: clamp(27px, 3vw, 38px); font-weight: 400; letter-spacing: -.045em; line-height: 1; margin: 13px 0 9px; }
 .storyArchiveEmpty p { color: rgba(255, 253, 248, .74); font-size: 11px; line-height: 1.55; margin: 0; max-width: 560px; }
-.committee { border-top: 1px solid var(--line); padding-top: 2px; }
+.committee { border-top: 1px solid var(--line); display: grid; gap: 13px; padding: 16px 0 4px; }
+.committeeArchived { opacity: .8; }
+.committeeHeading { align-items: flex-start; display: flex; gap: 18px; justify-content: space-between; }
+.committeeTitle { display: grid; gap: 6px; min-width: 0; }
+.committeeTitle h3 { font-family: Georgia, "Times New Roman", serif; font-size: 24px; font-weight: 400; letter-spacing: -.035em; line-height: 1.05; margin: 0; overflow-wrap: anywhere; }
+.committeeTitle p { color: var(--ink-soft); font-size: 11px; line-height: 1.5; margin: 0; }
+.committeeActive, .committeeCompleted { color: var(--teal); font-family: var(--font-geist-mono); font-size: 8px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.committeeCompleted { color: var(--ink-soft); }
+.committeeActions { align-items: flex-start; display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
 .committee ul { border-top: 1px dashed var(--line); display: grid; gap: 9px; list-style: none; margin: 0; padding: 13px 0 4px 15px; }
-.committee li { display: flex; font-size: 12px; justify-content: space-between; }
+.committee li { align-items: center; display: flex; font-size: 12px; gap: 12px; justify-content: space-between; min-width: 0; }
 .committee li small { color: var(--ink-soft); font-family: var(--font-geist-mono); font-size: 9px; text-transform: uppercase; }
+.committeeRosterEditor, .committeeEditor { border-top: 1px dashed var(--line); display: grid; gap: 12px; padding: 13px 0 0; }
+.committeeRosterEditor summary { color: var(--rotary-blue); cursor: pointer; font-size: 9px; font-weight: 800; letter-spacing: .07em; list-style-position: inside; text-transform: uppercase; }
+.committeeRosterEditor form { align-items: end; display: grid; gap: 10px; grid-template-columns: minmax(0, 1fr) minmax(0, .8fr) auto; }
+.committeeRosterEditor label, .committeeEditor label { color: var(--ink); display: grid; font-size: 9px; font-weight: 800; gap: 6px; letter-spacing: .07em; text-transform: uppercase; }
+.committeeRosterEditor select, .committeeEditor input, .committeeEditor textarea { background: var(--white); border: 1px solid var(--line); color: var(--ink); font: inherit; font-size: 12px; font-weight: 400; letter-spacing: 0; min-height: 40px; padding: 9px 10px; text-transform: none; width: 100%; }
+.committeeEditor textarea { min-height: 74px; resize: vertical; }
+.committeeEditor button { justify-self: start; }
+.committeeRemoveMember { background: transparent; border: 0; color: #8e4242; cursor: pointer; font-size: 8px; font-weight: 800; letter-spacing: .06em; padding: 5px; text-transform: uppercase; }
+.committeeRemoveMember:disabled { cursor: wait; opacity: .55; }
+.committeeInitialMembers { border-top: 1px solid var(--line); display: grid; gap: 12px; padding-top: 14px; }
+.committeeInitialMembers > div:first-child { display: grid; gap: 5px; }
+.committeeInitialMembers > div:first-child strong { font-family: Georgia, "Times New Roman", serif; font-size: 17px; font-weight: 400; }
+.committeeInitialMembers > div:first-child span { color: var(--ink-soft); font-size: 10px; line-height: 1.45; }
+.committeeInitialRow { align-items: end; display: grid; gap: 8px; grid-template-columns: minmax(0, 1fr) minmax(0, .8fr) auto; }
+.committeeInitialRow label { min-width: 0; }
+.committeeInitialRow select { background: var(--white); border: 1px solid var(--line); color: var(--ink); font: inherit; font-size: 12px; font-weight: 400; letter-spacing: 0; min-height: 40px; padding: 9px 10px; text-transform: none; width: 100%; }
+.committeeRosterEditor select:focus, .committeeEditor input:focus, .committeeEditor textarea:focus, .committeeInitialRow select:focus { border-color: var(--rotary-blue); outline: 2px solid rgba(23,69,143,.14); }
 .message { border-top: 1px solid var(--line); display: grid; gap: 10px; padding: 17px 0; }
 .message > div { display: grid; gap: 5px; }
 .message strong { font-family: Georgia, "Times New Roman", serif; font-size: 20px; font-weight: 400; }
@@ -519,13 +634,18 @@
 .eventPanelHeader { align-items: flex-start; display: flex; gap: 16px; justify-content: space-between; }
 .eventPanelHeader > div { min-width: 0; }
 .eventPanelHeader > button { flex-shrink: 0; }
-.eventRow { border-top: 1px solid var(--line); display: grid; gap: 15px; padding: 20px 0; }
-.eventDetails { display: grid; gap: 6px; min-width: 0; }
-.eventDetails h3 { font-family: Georgia, "Times New Roman", serif; font-size: 23px; font-weight: 400; letter-spacing: -.03em; margin: 0; overflow-wrap: anywhere; }
-.eventDetails time, .eventDetails p { color: var(--ink-soft); font-size: 12px; line-height: 1.5; margin: 0; overflow-wrap: anywhere; }
-.eventMeta { color: var(--teal); font-family: var(--font-geist-mono); font-size: 9px; letter-spacing: .07em; text-transform: uppercase; }
-.eventAttendanceActions, .eventManageActions { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; }
-.eventManageActions { border-top: 1px dashed var(--line); padding-top: 12px; }
+.eventRow { align-items: center; background: rgba(255, 253, 248, .72); border: 1px solid var(--line); border-left: 3px solid var(--line); display: grid; gap: 9px 16px; grid-template-columns: minmax(0, 1fr) auto; margin-top: 9px; padding: 12px 14px; }
+.eventRowUpcoming { background: rgba(247, 168, 27, .12); border-color: rgba(184, 124, 15, .28); border-left-color: var(--rotary-gold); }
+.eventDetails { align-items: baseline; display: grid; gap: 3px 16px; grid-column: 1 / -1; grid-template-columns: minmax(0, 1.35fr) auto minmax(120px, .9fr); min-width: 0; }
+.eventDetails h3 { font-family: Georgia, "Times New Roman", serif; font-size: 19px; font-weight: 400; grid-column: 1; grid-row: 1; letter-spacing: -.03em; margin: 0; overflow-wrap: anywhere; }
+.eventDetails time, .eventDetails p { color: var(--ink-soft); font-size: 10px; line-height: 1.4; margin: 0; overflow-wrap: anywhere; }
+.eventDetails time { grid-column: 2; grid-row: 1 / span 2; white-space: nowrap; }
+.eventDetails p { grid-column: 3; }
+.eventDetails p:first-of-type { grid-row: 1; }
+.eventDetails p + p { grid-row: 2; }
+.eventMeta { color: var(--teal); font-family: var(--font-geist-mono); font-size: 8px; grid-column: 1; grid-row: 2; letter-spacing: .07em; text-transform: uppercase; }
+.eventAttendanceActions, .eventManageActions { align-items: center; display: flex; flex-wrap: wrap; gap: 7px; }
+.eventManageActions { justify-content: flex-end; }
 .attendanceConfirmed { background: rgba(0, 103, 200, .08); color: var(--rotary-blue); font-size: 11px; font-weight: 700; padding: 8px 10px; }
 .eventDeleteButton { color: #8e2424; }
 .eventAgendaLink { background: transparent; border: 0; color: var(--rotary-blue); cursor: pointer; font-size: 11px; font-weight: 700; margin-top: 12px; padding: 10px 0; }
@@ -626,6 +746,14 @@
   .auditFilters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .auditSearch, .auditFilterActions { grid-column: span 2; }
   .auditColumnPopover { right: -70px; }
+  .eventRow { grid-template-columns: minmax(0, 1fr); padding: 11px 12px; }
+  .eventDetails { grid-template-columns: minmax(0, 1fr); }
+  .eventDetails h3, .eventDetails time, .eventDetails p, .eventDetails p:first-of-type, .eventDetails p + p, .eventMeta { grid-column: 1; grid-row: auto; }
+  .eventDetails time { white-space: normal; }
+  .eventManageActions { justify-content: flex-start; }
+  .proposalItemHeader { flex-direction: column; }
+  .proposalControls { align-items: flex-start; flex-direction: row; flex-wrap: wrap; }
+  .proposalVoteTally { grid-template-columns: minmax(0, 1fr); }
 }
 
 @media (max-width: 480px) {
@@ -644,6 +772,8 @@
   .moduleGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .financeMetrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 760px) {
@@ -671,9 +801,20 @@
   .workspaceIntro { align-items: start; flex-direction: column; gap: 15px; }
   .moduleGrid { grid-template-columns: 1fr; }
   .moduleGrid > .cardWide { grid-column: auto; }
+  .financeHeader { align-items: flex-start; flex-direction: column; }
+  .financeMonthLabel { min-width: 0; width: 100%; }
+  .financeManagementGrid { grid-template-columns: 1fr; }
+  .financeSection { padding: 15px; }
+  .financePaymentForm { grid-template-columns: 1fr; }
+  .financeLedgerRow { align-items: start; grid-template-columns: 62px minmax(0, 1fr); }
+  .financeLedgerRow > :last-child { grid-column: 2; }
   .row { align-items: start; flex-direction: column; }
   .rowActions { width: 100%; }
   .rowActions button { flex: 1; }
+  .committeeHeading { flex-direction: column; }
+  .committeeActions { justify-content: flex-start; }
+  .committeeRosterEditor form, .committeeInitialRow { grid-template-columns: 1fr; }
+  .committeeRoster li { align-items: flex-start; flex-wrap: wrap; }
 }
 
 @media (orientation: landscape) and (max-height: 520px) and (max-width: 900px) {
@@ -712,7 +853,12 @@
   .layoutChoice > strong, .layoutChoice > small { grid-column: 2; }
   .storyFormGrid, .storyPublishRow { grid-template-columns: 1fr; }
   .storyFormWide { grid-column: auto; }
-  .storyArchiveHeading { align-items: flex-start; flex-direction: column; }
+  .storyArchiveHeading, .applicationArchiveHeading { align-items: flex-start; flex-direction: column; }
+  .applicationRecordHeading { flex-direction: column; gap: 7px; }
+  .applicationDetails { gap: 12px; grid-template-columns: minmax(0, 1fr); }
+  .applicationDetails .applicationMotivation { grid-column: auto; }
+  .applicationReview { align-items: stretch; flex-direction: column; }
+  .applicationReview .smallButton { justify-content: center; }
   .storyAdminActions { align-items: flex-start; }
   .storyDialogActions { flex-wrap: wrap-reverse; }
   .storyDialogActions button { flex: 1; }
