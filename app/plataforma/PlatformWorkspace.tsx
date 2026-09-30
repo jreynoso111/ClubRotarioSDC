@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import type { FormEvent, ReactNode } from "react";
 
 import type { PlatformSnapshot } from "@/lib/platform";
@@ -82,6 +82,80 @@ function ActionFeedback({ message, error }: { message: string; error: boolean })
 
 function EmptyState({ children }: { children: ReactNode }) {
   return <p className={styles.empty}>{children}</p>;
+}
+
+function NotificationBell({ notifications, disabled, onMarkRead, onViewAll, messagingSchema }: {
+  notifications: PlatformSnapshot["notifications"];
+  disabled: boolean;
+  onMarkRead: (id: string) => void;
+  onViewAll: () => void;
+  messagingSchema: PlatformSnapshot["messagingSchema"];
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const unreadCount = notifications.filter(notification => !notification.readAt).length;
+  const recentNotifications = notifications.slice(0, 6);
+
+  useEffect(() => {
+    if (!open) return;
+    function handlePointerDown(event: PointerEvent) {
+      if (event.target instanceof Node && !rootRef.current?.contains(event.target)) setOpen(false);
+    }
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      setOpen(false);
+      buttonRef.current?.focus();
+    }
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [open]);
+
+  function viewAll() {
+    setOpen(false);
+    onViewAll();
+    buttonRef.current?.focus();
+  }
+
+  return <div ref={rootRef} className={styles.notificationAnchor}>
+    <button ref={buttonRef} type="button" className={styles.notificationButton} disabled={disabled}
+      aria-expanded={open} aria-controls="platform-notification-panel"
+      aria-label={unreadCount > 0 ? "Notificaciones, " + unreadCount + " sin leer" : "Notificaciones"}
+      onClick={() => setOpen(value => !value)}>
+      <svg viewBox="0 0 24 24" width="17" height="17" fill="none" aria-hidden="true">
+        <path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+      <span>Notificaciones</span>
+      {unreadCount > 0 ? <span className={styles.notificationBadge} aria-live="polite" aria-atomic="true">{unreadCount > 99 ? "99+" : unreadCount}</span> : null}
+    </button>
+    <section id="platform-notification-panel" className={styles.notificationPanel} hidden={!open}
+      aria-label="Notificaciones recientes">
+      <header className={styles.notificationPanelHeader}>
+        <h2>Notificaciones</h2>
+        <span>{unreadCount === 1 ? "1 sin leer" : unreadCount + " sin leer"}</span>
+      </header>
+      {recentNotifications.length > 0 ? <ul className={styles.notificationList}>
+        {recentNotifications.map(notification => <li className={styles.notificationItem}
+          data-unread={notification.readAt ? "false" : "true"} key={notification.id}>
+          <strong>{notification.title}</strong>
+          <time dateTime={notification.createdAt}>{formatDate(notification.createdAt, true)}</time>
+          <p>{notification.body}</p>
+          {!notification.readAt ? <button type="button" className={styles.notificationReadButton}
+            disabled={disabled} onClick={() => onMarkRead(notification.id)}>Marcar como leído</button> : null}
+        </li>)}
+      </ul> : <p className={styles.notificationEmpty}>
+        {messagingSchema.state === "ready" ? "No tienes notificaciones todavía."
+          : messagingSchema.message ?? "Las notificaciones no están disponibles ahora."}
+      </p>}
+      <button type="button" className={styles.notificationAllButton} disabled={disabled} onClick={viewAll}>
+        Ver todos los avisos →
+      </button>
+    </section>
+  </div>;
 }
 
 export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) {
@@ -213,7 +287,15 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
   return <main className={styles.shell}><div className={styles.inner}>
     <header className={styles.header}>
       <div><p className={styles.eyebrow}>Plataforma del club · espacio interno</p><h1 className={styles.title}>Hola, <em>{user?.displayName.split(" ")[0] ?? "miembro"}.</em></h1></div>
-      <div><p className={styles.identity}><strong>{user?.displayName}</strong><span className={styles.role}>{roleLabels[snapshot.membership?.role ?? "member"]}</span><span>Membresía activa</span></p><SignOutButton /></div>
+      <div className={styles.accountHeader}>
+        <p className={styles.identity}><strong>{user?.displayName}</strong><span className={styles.role}>{roleLabels[snapshot.membership?.role ?? "member"]}</span><span>Membresía activa</span></p>
+        <div className={styles.headerActions}>
+          <NotificationBell notifications={snapshot.notifications} messagingSchema={snapshot.messagingSchema} disabled={pending}
+            onMarkRead={id => run(markNotificationReadAction(id))}
+            onViewAll={() => selectTab("mensajes")} />
+          <SignOutButton />
+        </div>
+      </div>
     </header>
 
     <section className={styles.content}>
