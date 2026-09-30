@@ -41,6 +41,7 @@ export type PlatformSnapshot = {
     canManageClub: boolean;
     canManageMembership: boolean;
     canBroadcast: boolean;
+    canAudit: boolean;
   };
   events: PlatformEvent[];
   eventRsvps: Record<string, string>;
@@ -64,6 +65,7 @@ export type PlatformEvent = {
   id: string;
   title: string;
   summary: string | null;
+  description: string | null;
   kind: string;
   tone: string;
   startsAt: string;
@@ -74,6 +76,7 @@ export type PlatformEvent = {
   capacity: number | null;
   status: string;
   isPublic: boolean;
+  isPast: boolean;
 };
 
 export type PlatformProposal = {
@@ -195,6 +198,7 @@ type EventRow = {
   id: string;
   title: string;
   summary: string | null;
+  description: string | null;
   kind: string;
   tone: string;
   starts_at: string;
@@ -364,6 +368,7 @@ function emptySnapshot(
       canManageClub: false,
       canManageMembership: false,
       canBroadcast: false,
+      canAudit: false,
     },
     events: [],
     eventRsvps: {},
@@ -461,6 +466,7 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
     canManageClub: isActive && ["club_manager", "admin"].includes(role),
     canManageMembership: isActive && ["club_manager", "admin"].includes(role),
     canBroadcast: isActive && ["coordinator", "club_manager", "admin"].includes(role),
+    canAudit: isActive && role === "admin",
   };
   const baseSnapshot = emptySnapshot(
     isActive ? "active" : membership.membership_status,
@@ -497,8 +503,17 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
         .order("created_at", { ascending: false })
         .limit(30);
 
+  const now = new Date().toISOString();
+  const eventsQuery = () => {
+    const query = supabase.from("events").select(
+      "id,title,summary,description,kind,tone,starts_at,ends_at,venue_name,venue_address,location_url,capacity,status,is_public",
+    );
+    return capabilities.canCoordinate || capabilities.canEdit ? query : query.eq("status", "published");
+  };
+
   const [
     eventsResult,
+    pastEventsResult,
     proposalsResult,
     activitiesResult,
     tasksResult,
@@ -509,13 +524,14 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
     directoryResult,
   ] = await Promise.all([
     readQuery<EventRow[]>(
-      supabase
-        .from("events")
-        .select(
-          "id,title,summary,kind,tone,starts_at,ends_at,venue_name,venue_address,location_url,capacity,status,is_public",
-        )
+      eventsQuery()
+        .or(`starts_at.gte.${now},ends_at.gte.${now}`)
         .order("starts_at", { ascending: true, nullsFirst: false })
         .limit(30),
+    ),
+    readQuery<EventRow[]>(
+      eventsQuery().lt("starts_at", now).or(`ends_at.is.null,ends_at.lt.${now}`)
+        .order("starts_at", { ascending: false }).limit(30),
     ),
     readQuery<ProposalRow[]>(proposalsQuery),
     readQuery<ActivityRow[]>(
@@ -566,6 +582,7 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
   const warnings: string[] = [];
   const existingResults = [
     [eventsResult, "agenda"],
+    [pastEventsResult, "eventos anteriores"],
     [proposalsResult, "propuestas"],
     [activitiesResult, "actividades"],
     [tasksResult, "tareas"],
@@ -580,10 +597,11 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
     }
   }
 
-  const events = ((eventsResult.data ?? []) as EventRow[]).map((event) => ({
+  const events = [...(eventsResult.data ?? []), ...(pastEventsResult.data ?? [])].map((event) => ({
     id: event.id,
     title: event.title,
     summary: event.summary,
+    description: event.description,
     kind: event.kind,
     tone: event.tone,
     startsAt: event.starts_at,
@@ -594,6 +612,7 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
     capacity: event.capacity,
     status: event.status,
     isPublic: event.is_public,
+    isPast: new Date(event.ends_at ?? event.starts_at).getTime() <= new Date(now).getTime(),
   }));
   const eventRsvps: Record<string, string> = {};
   if (events.length > 0) {

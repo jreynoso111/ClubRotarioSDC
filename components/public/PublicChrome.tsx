@@ -46,9 +46,12 @@ export function ClubSignature({ compact = false }: { compact?: boolean }) {
 export function PublicHeader({ active }: { active?: PublicSection }) {
   return (
     <header className={styles.header}>
-      <Link className={styles.brand} href="/" aria-label="Club Rotario Santo Domingo Colonial, inicio">
-        <ClubSignature compact />
-      </Link>
+      <div className={styles.brand}>
+        <Link href="/" aria-label="Club Rotario Santo Domingo Colonial, inicio">
+          <ClubSignature compact />
+        </Link>
+        <span className={styles.brandTagline}>Crear un impacto duradero</span>
+      </div>
 
       <nav className={styles.desktopNav} aria-label="Navegación principal">
         {navigation.map((item) => (

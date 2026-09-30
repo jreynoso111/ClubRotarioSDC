@@ -5,6 +5,8 @@ import { cache } from "react";
 import { isSupabaseConfigured } from "@/utils/supabase/config";
 import { createClient } from "@/utils/supabase/server";
 
+import { withPublicContentTimeout } from "@/lib/supabase/timeout";
+
 const CLUB_TIMEZONE = "America/Santo_Domingo";
 
 export type EditorialSource = {
@@ -425,13 +427,19 @@ export const getPublicStories = cache(async (limit = 12): Promise<PublicStory[]>
 
   try {
     const supabase = await createClient();
-    const { data, error } = await supabase
-      .from("stories")
-      .select(PUBLIC_STORY_SELECT)
-      .eq("status", "published")
-      .eq("is_public", true)
-      .order("published_at", { ascending: false })
-      .limit(limit);
+    const result = await withPublicContentTimeout(
+      supabase
+        .from("stories")
+        .select(PUBLIC_STORY_SELECT)
+        .eq("status", "published")
+        .eq("is_public", true)
+        .order("published_at", { ascending: false })
+        .limit(limit),
+      null,
+    );
+
+    if (!result) return [];
+    const { data, error } = result;
 
     if (error) return [];
     return ((data ?? []) as StoryRecord[]).map((record) => mapStory(record, supabase));
@@ -473,13 +481,19 @@ export const getPublicStoriesPage = cache(async (page = 1, pageSize = 9): Promis
     const supabase = await createClient();
     const from = (safePage - 1) * safePageSize;
     const to = from + safePageSize - 1;
-    const { data, error, count } = await supabase
-      .from("stories")
-      .select(PUBLIC_STORY_SELECT, { count: "exact" })
-      .eq("status", "published")
-      .eq("is_public", true)
-      .order("published_at", { ascending: false })
-      .range(from, to);
+    const result = await withPublicContentTimeout(
+      supabase
+        .from("stories")
+        .select(PUBLIC_STORY_SELECT, { count: "exact" })
+        .eq("status", "published")
+        .eq("is_public", true)
+        .order("published_at", { ascending: false })
+        .range(from, to),
+      null,
+    );
+
+    if (!result) return getGuidePage(safePage, safePageSize);
+    const { data, error, count } = result;
 
     if (error) return getGuidePage(safePage, safePageSize);
 
@@ -489,13 +503,19 @@ export const getPublicStoriesPage = cache(async (page = 1, pageSize = 9): Promis
     if (records.length === 0 && count && from >= count) {
       const lastPage = Math.max(1, Math.ceil(count / safePageSize));
       const lastFrom = (lastPage - 1) * safePageSize;
-      const { data: lastData, error: lastError } = await supabase
-        .from("stories")
-        .select(PUBLIC_STORY_SELECT)
-        .eq("status", "published")
-        .eq("is_public", true)
-        .order("published_at", { ascending: false })
-        .range(lastFrom, count - 1);
+      const lastResult = await withPublicContentTimeout(
+        supabase
+          .from("stories")
+          .select(PUBLIC_STORY_SELECT)
+          .eq("status", "published")
+          .eq("is_public", true)
+          .order("published_at", { ascending: false })
+          .range(lastFrom, count - 1),
+        null,
+      );
+
+      if (!lastResult) return getGuidePage(safePage, safePageSize);
+      const { data: lastData, error: lastError } = lastResult;
 
       if (lastError) return getGuidePage(safePage, safePageSize);
 
@@ -527,15 +547,18 @@ export const getPublicStory = cache(async (slug: string): Promise<PublicStory | 
 
   try {
     const supabase = await createClient();
-    const { data, error } = await supabase
-      .from("stories")
-      .select(PUBLIC_STORY_SELECT)
-      .eq("slug", slug)
-      .eq("status", "published")
-      .eq("is_public", true)
-      .maybeSingle();
+    const result = await withPublicContentTimeout(
+      supabase
+        .from("stories")
+        .select(PUBLIC_STORY_SELECT)
+        .eq("slug", slug)
+        .eq("status", "published")
+        .eq("is_public", true)
+        .maybeSingle(),
+      null,
+    );
 
-    if (!error && data) return mapStory(data as StoryRecord, supabase);
+    if (result && !result.error && result.data) return mapStory(result.data as StoryRecord, supabase);
   } catch {
     // The reference guide remains available if the public content store is unavailable.
   }
@@ -548,15 +571,21 @@ export const getPublicEvents = cache(async (): Promise<PublicEvent[]> => {
 
   try {
     const supabase = await createClient();
-    const { data, error } = await supabase
-      .from("events")
-      .select(
-        "id,title,slug,summary,description,kind,tone,starts_at,ends_at,venue_name,venue_address,location_url,capacity,cover_image_path",
-      )
-      .eq("status", "published")
-      .eq("is_public", true)
-      .order("starts_at", { ascending: true })
-      .limit(40);
+    const result = await withPublicContentTimeout(
+      supabase
+        .from("events")
+        .select(
+          "id,title,slug,summary,description,kind,tone,starts_at,ends_at,venue_name,venue_address,location_url,capacity,cover_image_path",
+        )
+        .eq("status", "published")
+        .eq("is_public", true)
+        .order("starts_at", { ascending: true })
+        .limit(40),
+      null,
+    );
+
+    if (!result) return [];
+    const { data, error } = result;
 
     if (error) return [];
     return ((data ?? []) as EventRecord[]).map((record) => mapEvent(record, supabase));
@@ -570,18 +599,21 @@ export const getPublicEvent = cache(async (slug: string): Promise<PublicEvent | 
 
   try {
     const supabase = await createClient();
-    const { data, error } = await supabase
-      .from("events")
-      .select(
-        "id,title,slug,summary,description,kind,tone,starts_at,ends_at,venue_name,venue_address,location_url,capacity,cover_image_path",
-      )
-      .eq("slug", slug)
-      .eq("status", "published")
-      .eq("is_public", true)
-      .maybeSingle();
+    const result = await withPublicContentTimeout(
+      supabase
+        .from("events")
+        .select(
+          "id,title,slug,summary,description,kind,tone,starts_at,ends_at,venue_name,venue_address,location_url,capacity,cover_image_path",
+        )
+        .eq("slug", slug)
+        .eq("status", "published")
+        .eq("is_public", true)
+        .maybeSingle(),
+      null,
+    );
 
-    if (error || !data) return null;
-    return mapEvent(data as EventRecord, supabase);
+    if (!result || result.error || !result.data) return null;
+    return mapEvent(result.data as EventRecord, supabase);
   } catch {
     return null;
   }

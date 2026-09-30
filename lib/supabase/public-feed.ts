@@ -3,6 +3,8 @@ import "server-only";
 import { isSupabaseConfigured } from "@/utils/supabase/config";
 import { createClient } from "@/utils/supabase/server";
 
+import { withPublicContentTimeout } from "./timeout";
+
 const CLUB_TIMEZONE = "America/Santo_Domingo";
 
 export type PublicEvent = {
@@ -140,31 +142,38 @@ export async function getPublicFeed(): Promise<{
   try {
     const supabase = await createClient();
     const now = new Date().toISOString();
-    const [{ data: upcomingEventData }, { data: previousEventData }, { data: storyData }] = await Promise.all([
-      supabase
-        .from("events")
-        .select("slug,starts_at,title,summary,kind,tone,venue_name,venue_address")
-        .eq("status", "published")
-        .eq("is_public", true)
-        .gte("starts_at", now)
-        .order("starts_at", { ascending: true })
-        .limit(3),
-      supabase
-        .from("events")
-        .select("slug,starts_at,title,summary,kind,tone,venue_name,venue_address")
-        .eq("status", "published")
-        .eq("is_public", true)
-        .lt("starts_at", now)
-        .order("starts_at", { ascending: false })
-        .limit(3),
-      supabase
-        .from("stories")
-        .select("title,slug,excerpt,story_type,cover_image_path")
-        .eq("status", "published")
-        .eq("is_public", true)
-        .order("published_at", { ascending: false })
-        .limit(12),
-    ]);
+    const queryResult = await withPublicContentTimeout(
+      Promise.all([
+        supabase
+          .from("events")
+          .select("slug,starts_at,title,summary,kind,tone,venue_name,venue_address")
+          .eq("status", "published")
+          .eq("is_public", true)
+          .gte("starts_at", now)
+          .order("starts_at", { ascending: true })
+          .limit(3),
+        supabase
+          .from("events")
+          .select("slug,starts_at,title,summary,kind,tone,venue_name,venue_address")
+          .eq("status", "published")
+          .eq("is_public", true)
+          .lt("starts_at", now)
+          .order("starts_at", { ascending: false })
+          .limit(3),
+        supabase
+          .from("stories")
+          .select("title,slug,excerpt,story_type,cover_image_path")
+          .eq("status", "published")
+          .eq("is_public", true)
+          .order("published_at", { ascending: false })
+          .limit(12),
+      ]),
+      null,
+    );
+
+    if (!queryResult) return { events: fallbackEvents, stories: fallbackStories };
+
+    const [{ data: upcomingEventData }, { data: previousEventData }, { data: storyData }] = queryResult;
 
     const upcomingEvents = ((upcomingEventData ?? []) as EventRecord[]).map(mapEvent);
     const previousEvents = ((previousEventData ?? []) as EventRecord[]).map(mapEvent);

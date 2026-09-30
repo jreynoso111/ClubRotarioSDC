@@ -2,21 +2,21 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import type { FormEvent, ReactNode } from "react";
 
 import type { PlatformSnapshot } from "@/lib/platform";
+import { defaultAuditFilters, type AuditPageResult } from "@/lib/audit";
 
 import {
   assignCommitteeMemberAction,
   createActivityAction,
   createCommitteeAction,
-  createEventAction,
   createProposalAction,
   createStoryAction,
+  getAuditPageAction,
   markMessageReadAction,
   markNotificationReadAction,
-  rsvpEventAction,
   sendInternalMessageAction,
   setStoryPublicationAction,
   submitProposalAction,
@@ -25,9 +25,11 @@ import {
   type PlatformActionResult,
 } from "./actions";
 import { SignOutButton } from "./SignOutButton";
+import { PlatformEvents } from "./PlatformEvents";
+import { PlatformAudit } from "./PlatformAudit";
 import styles from "./platform.module.css";
 
-type Tab = "resumen" | "propuestas" | "agenda" | "organizacion" | "revista" | "mensajes";
+type Tab = "resumen" | "propuestas" | "agenda" | "organizacion" | "revista" | "mensajes" | "auditoria";
 
 const tabs: Array<{ id: Tab; label: string }> = [
   { id: "resumen", label: "Resumen" },
@@ -36,6 +38,7 @@ const tabs: Array<{ id: Tab; label: string }> = [
   { id: "organizacion", label: "Organización" },
   { id: "revista", label: "Revista" },
   { id: "mensajes", label: "Mensajes" },
+  { id: "auditoria", label: "Auditoría" },
 ];
 
 const roleLabels: Record<string, string> = {
@@ -87,7 +90,27 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
   const [feedback, setFeedback] = useState("");
   const [feedbackError, setFeedbackError] = useState(false);
   const [pending, startTransition] = useTransition();
+  const [auditResult, setAuditResult] = useState<AuditPageResult | null>(null);
+  const auditRequest = useRef(0);
   const user = snapshot.user;
+
+  function selectTab(next: Tab) {
+    if (next === tab) return;
+    setTab(next);
+    setFeedback("");
+    if (next === "auditoria" && snapshot.capabilities.canAudit) {
+      const request = ++auditRequest.current;
+      setAuditResult(null);
+      startTransition(async () => {
+        try {
+          const result = await getAuditPageAction(defaultAuditFilters);
+          if (request === auditRequest.current) setAuditResult(result);
+        } catch {
+          if (request === auditRequest.current) setAuditResult({ ok: false, message: "No se pudo consultar la auditoría. Inténtalo de nuevo." });
+        }
+      });
+    }
+  }
 
   function run(action: Promise<PlatformActionResult>) {
     startTransition(async () => {
@@ -105,26 +128,6 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
       title: String(data.get("title") ?? ""),
       summary: String(data.get("summary") ?? ""),
       details: String(data.get("details") ?? ""),
-    }));
-    event.currentTarget.reset();
-  }
-
-  function handleEvent(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    run(createEventAction({
-      title: String(data.get("title") ?? ""),
-      summary: String(data.get("summary") ?? ""),
-      description: String(data.get("description") ?? ""),
-      kind: String(data.get("kind") ?? "encuentro"),
-      startsAt: String(data.get("startsAt") ?? ""),
-      endsAt: String(data.get("endsAt") ?? ""),
-      venueName: String(data.get("venueName") ?? ""),
-      venueAddress: String(data.get("venueAddress") ?? ""),
-      locationUrl: String(data.get("locationUrl") ?? ""),
-      capacity: String(data.get("capacity") ?? ""),
-      status: data.get("status") === "published" ? "published" : "draft",
-      isPublic: data.get("isPublic") === "on",
     }));
     event.currentTarget.reset();
   }
@@ -216,12 +219,14 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
     <section className={styles.content}>
       <div className={styles.workspaceIntro}><div><p className={styles.cardLabel}>Centro de coordinación</p><h2>Ideas, personas y servicio en un mismo lugar.</h2></div><p>{snapshot.accessMessage} Los módulos se muestran según tu rol y tus permisos.</p></div>
       <nav className={styles.tabs} aria-label="Módulos de la plataforma">
-        {tabs.map((item) => <button type="button" key={item.id} className={tab === item.id ? styles.tabActive : styles.tab} onClick={() => { setTab(item.id); setFeedback(""); }}>{item.label}{item.id === "mensajes" && (unreadNotifications + unreadMessages > 0) ? <span className={styles.tabBadge}>{unreadNotifications + unreadMessages}</span> : null}</button>)}
+        {tabs.filter(item => item.id !== "auditoria" || snapshot.capabilities.canAudit).map((item) => <button type="button" key={item.id} className={tab === item.id ? styles.tabActive : styles.tab} onClick={() => selectTab(item.id)}>{item.label}{item.id === "mensajes" && (unreadNotifications + unreadMessages > 0) ? <span className={styles.tabBadge}>{unreadNotifications + unreadMessages}</span> : null}</button>)}
       </nav>
       <ActionFeedback message={feedback} error={feedbackError} />
 
+      {tab === "auditoria" && snapshot.capabilities.canAudit && <PlatformAudit initialResult={auditResult} initialLoading={pending && !auditResult} />}
+
       {tab === "resumen" && <section className={styles.moduleGrid}>
-        <article className={`${styles.card} ${styles.cardWide}`}><p className={styles.cardLabel}>Próximos encuentros</p><h2 className={styles.cardTitle}>La agenda del club.</h2>{snapshot.events.filter(event => event.status !== "archived").slice(0, 4).map(event => <div className={styles.row} key={event.id}><div><strong>{event.title}</strong><small>{formatDate(event.startsAt, true)} · {event.venueName ?? "Lugar por confirmar"}</small></div><button type="button" className={styles.smallButton} disabled={pending} onClick={() => run(rsvpEventAction(event.id, "going"))}>{snapshot.eventRsvps[event.id] === "going" ? "Confirmado" : "Confirmar"}</button></div>)}{snapshot.events.length === 0 && <EmptyState>Aún no hay eventos internos cargados. Coordinación podrá añadir el próximo encuentro desde Agenda.</EmptyState>}</article>
+        <PlatformEvents snapshot={snapshot} summary onOpenAgenda={() => setTab("agenda")} />
         <article className={styles.card}><p className={styles.cardLabel}>Tu pulso</p><div className={styles.metric}><strong>{snapshot.proposals.length}</strong><span>propuestas visibles</span></div><div className={styles.metric}><strong>{snapshot.tasks.filter(task => task.status !== "done").length}</strong><span>tareas abiertas</span></div></article>
         <article className={styles.card}><p className={styles.cardLabel}>Avisos</p><h2 className={styles.cardTitle}>{unreadNotifications || "Sin"} {unreadNotifications === 1 ? "aviso nuevo" : "avisos nuevos"}.</h2><p className={styles.empty}>Revisa Mensajes para leer las novedades del club.</p></article>
         <article className={`${styles.card} ${styles.cardWide}`}><p className={styles.cardLabel}>Actividad reciente</p><h2 className={styles.cardTitle}>Lo que se está moviendo.</h2>{snapshot.activities.slice(0, 4).map(activity => <div className={styles.row} key={activity.id}><div><strong>{activity.title}</strong><small>{statusLabels[activity.status] ?? activity.status} · {activity.location ?? "Ubicación por confirmar"}</small></div></div>)}{snapshot.activities.length === 0 && <EmptyState>Las actividades aparecerán cuando coordinación las registre.</EmptyState>}</article>
@@ -234,8 +239,8 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
       </section>}
 
       {tab === "agenda" && <section className={styles.moduleGrid}>
-        <article className={`${styles.card} ${styles.cardWide}`}><p className={styles.cardLabel}>Agenda interna</p><h2 className={styles.cardTitle}>Tiempo compartido, acción posible.</h2>{snapshot.events.map(event => <div className={styles.row} key={event.id}><div><strong>{event.title}</strong><small>{formatDate(event.startsAt, true)} · {event.kind} · {event.status}</small><span>{[event.venueName, event.venueAddress].filter(Boolean).join(" · ") || "Lugar por confirmar"}</span></div><div className={styles.rowActions}><button type="button" className={styles.smallButton} disabled={pending} onClick={() => run(rsvpEventAction(event.id, "going"))}>{snapshot.eventRsvps[event.id] === "going" ? "Voy" : "Voy"}</button><button type="button" className={styles.smallButtonQuiet} disabled={pending} onClick={() => run(rsvpEventAction(event.id, "maybe"))}>Quizá</button></div></div>)}{snapshot.events.length === 0 && <EmptyState>No hay eventos internos todavía.</EmptyState>}</article>
-        {snapshot.capabilities.canCoordinate ? <><form className={styles.formCard} onSubmit={handleEvent}><p className={styles.cardLabel}>Crear encuentro</p><h2 className={styles.cardTitle}>Pon una fecha en el mapa.</h2><label>Título<input name="title" required minLength={3} maxLength={160} /></label><label>Tipo<select name="kind" defaultValue="encuentro"><option value="encuentro">Encuentro</option><option value="servicio">Servicio</option><option value="plataforma">Plataforma</option><option value="reunion">Reunión</option><option value="otro">Otra actividad</option></select></label><label>Inicio<input name="startsAt" type="datetime-local" required /></label><label>Fin<input name="endsAt" type="datetime-local" /></label><label>Lugar<input name="venueName" maxLength={180} /></label><label>Dirección<input name="venueAddress" maxLength={300} /></label><label>Descripción<textarea name="description" maxLength={8000} /></label><label className={styles.check}><input name="isPublic" type="checkbox" /> Hacerlo visible en la agenda pública</label><label>Publicación<select name="status" defaultValue="draft"><option value="draft">Guardar como borrador</option>{canPublish && <option value="published">Publicar ahora</option>}</select></label><button className={styles.button} disabled={pending}>{pending ? "Guardando…" : "Guardar encuentro"}</button></form><form className={styles.formCard} onSubmit={handleActivity}><p className={styles.cardLabel}>Nueva actividad</p><h2 className={styles.cardTitle}>Convierte el plan en movimiento.</h2><label>Nombre<input name="title" required minLength={3} maxLength={180} /></label><label>Inicio<input name="startsAt" type="datetime-local" /></label><label>Fin<input name="endsAt" type="datetime-local" /></label><label>Lugar<input name="location" maxLength={300} /></label><label>Descripción<textarea name="description" maxLength={4000} /></label><button className={styles.button} disabled={pending}>{pending ? "Guardando…" : "Guardar actividad"}</button></form></> : <article className={styles.card}><p className={styles.cardLabel}>Coordina con tu equipo</p><h2 className={styles.cardTitle}>La agenda se construye entre todos.</h2><EmptyState>Cuando tengas una fecha o una idea, compártela en Propuestas.</EmptyState></article>}
+        <PlatformEvents snapshot={snapshot} />
+        {snapshot.capabilities.canCoordinate ? <form className={styles.formCard} onSubmit={handleActivity}><p className={styles.cardLabel}>Nueva actividad</p><h2 className={styles.cardTitle}>Convierte el plan en movimiento.</h2><label>Nombre<input name="title" required minLength={3} maxLength={180} /></label><label>Inicio<input name="startsAt" type="datetime-local" /></label><label>Fin<input name="endsAt" type="datetime-local" /></label><label>Lugar<input name="location" maxLength={300} /></label><label>Descripción<textarea name="description" maxLength={4000} /></label><button className={styles.button} disabled={pending}>{pending ? "Guardando…" : "Guardar actividad"}</button></form> : <article className={styles.card}><p className={styles.cardLabel}>Coordina con tu equipo</p><h2 className={styles.cardTitle}>La agenda se construye entre todos.</h2><EmptyState>Cuando tengas una fecha o una idea, compártela en Propuestas.</EmptyState></article>}
       </section>}
 
       {tab === "organizacion" && <section className={styles.moduleGrid}>

@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache";
 import { isMissingSchemaError } from "@/lib/platform";
 import { isSupabaseConfigured } from "@/utils/supabase/config";
 import { createClient } from "@/utils/supabase/server";
+import { auditCursorFilter, auditPageCursor, defaultAuditSort, normalizeAuditQuery } from "@/lib/audit";
+import type { AuditCursor, AuditDetail, AuditDetailResult, AuditEntry, AuditFilters, AuditPageResult, AuditSort } from "@/lib/audit";
 
 type ActionCode =
   | "unauthenticated"
@@ -205,6 +207,19 @@ export async function rsvpEventAction(
     return failure("La asistencia indicada no es válida.", "invalid");
   }
 
+  const { data: event, error: eventError } = await actor!.supabase
+    .from("events")
+    .select("id,status,starts_at,ends_at")
+    .eq("id", eventId)
+    .maybeSingle();
+  if (eventError) return errorFor(eventError);
+  if (!event || event.status !== "published") {
+    return failure("Este evento no está abierto para confirmar asistencia.", "invalid");
+  }
+  if (new Date(event.ends_at ?? event.starts_at).getTime() <= Date.now()) {
+    return failure("Este evento ya finalizó y no admite nuevas confirmaciones.", "invalid");
+  }
+
   const { error: upsertError } = await actor!.supabase.from("event_rsvps").upsert(
     {
       event_id: eventId,
@@ -225,7 +240,7 @@ export async function rsvpEventAction(
   );
 }
 
-export async function createEventAction(input: {
+export type EventInput = {
   title: string;
   summary?: string;
   description?: string;
@@ -236,12 +251,11 @@ export async function createEventAction(input: {
   venueAddress?: string;
   locationUrl?: string;
   capacity?: string | number;
-  status?: "draft" | "published";
+  status?: "draft" | "published" | "cancelled" | "archived";
   isPublic?: boolean;
-}): Promise<PlatformActionResult> {
-  const { actor, error } = await requireActor(["coordinator", "editor", "club_manager", "admin"]);
-  if (error) return error;
+};
 
+function eventFields(input: EventInput) {
   const title = cleanText(input?.title, 160);
   const summary = optionalText(input?.summary, 600);
   const description = optionalText(input?.description, 8000);
@@ -253,56 +267,179 @@ export async function createEventAction(input: {
   const kind = ["encuentro", "servicio", "plataforma", "reunion", "otro"].includes(input?.kind)
     ? input.kind
     : "encuentro";
-  const status = input?.status === "published" ? "published" : "draft";
+  const status = input?.status ?? "draft";
   const isPublic = Boolean(input?.isPublic);
 
-  if (!title || !startsAt || (input?.endsAt && !endsAt)) {
-    return failure("Completa el título y una fecha válida para el evento.", "invalid");
+  if (!title || title.length < 3 || !startsAt || (input?.endsAt && !endsAt)) {
+    return { error: failure("Completa el título y una fecha válida para el evento.", "invalid") };
   }
   if (endsAt && new Date(endsAt) <= new Date(startsAt)) {
-    return failure("La fecha de cierre debe ser posterior al inicio.", "invalid");
+    return { error: failure("La fecha de cierre debe ser posterior al inicio.", "invalid") };
   }
   if (locationUrl && !/^https?:\/\//i.test(locationUrl)) {
-    return failure("El enlace de ubicación debe comenzar con https:// o http://.", "invalid");
+    return { error: failure("El enlace de ubicación debe comenzar con https:// o http://.", "invalid") };
   }
   const numericCapacity =
     input?.capacity === undefined || input.capacity === "" ? null : Number(input.capacity);
   if (numericCapacity !== null && (!Number.isInteger(numericCapacity) || numericCapacity < 0)) {
-    return failure("La capacidad debe ser un número entero positivo.", "invalid");
+    return { error: failure("La capacidad debe ser un número entero igual o mayor que cero.", "invalid") };
   }
-  if (status === "published" && !canPublish(actor!.role)) {
+  if (!["draft", "published", "cancelled", "archived"].includes(status)) {
+    return { error: failure("El estado del evento no es válido.", "invalid") };
+  }
+
+  return { data: {
+    title, summary, description, kind,
+    tone: kind === "servicio" ? "sun" : kind === "reunion" ? "coral" : "lime",
+    starts_at: startsAt, ends_at: endsAt,
+    venue_name: venueName, venue_address: venueAddress, location_url: locationUrl,
+    capacity: numericCapacity, status, is_public: status === "published" && isPublic,
+  } };
+}
+
+function revalidateEvents() {
+  revalidatePath("/plataforma");
+  revalidatePath("/");
+  revalidatePath("/eventos");
+  revalidatePath("/eventos/[slug]", "page");
+}
+
+export async function createEventAction(input: EventInput): Promise<PlatformActionResult> {
+  const { actor, error } = await requireActor(["coordinator", "editor", "club_manager", "admin"]);
+  if (error) return error;
+  const fields = eventFields(input);
+  if (fields.error) return fields.error;
+  if (!["draft", "published"].includes(fields.data.status)) {
+    return failure("Crea el evento como borrador o publicado.", "invalid");
+  }
+  if (fields.data.status === "published" && !canPublish(actor!.role)) {
     return failure("Tu rol puede preparar el evento, pero un editor o gestor debe publicarlo.", "forbidden");
   }
 
-  const slug = slugify(title);
+  const slug = slugify(fields.data.title);
   if (!slug) return failure("El título no permite crear un enlace válido.", "invalid");
 
   const { data, error: insertError } = await actor!.supabase
     .from("events")
     .insert({
-      title,
+      ...fields.data,
       slug,
-      summary,
-      description,
-      kind,
-      tone: kind === "servicio" ? "sun" : kind === "reunion" ? "coral" : "lime",
-      starts_at: startsAt,
-      ends_at: endsAt,
-      venue_name: venueName,
-      venue_address: venueAddress,
-      location_url: locationUrl,
-      capacity: numericCapacity,
-      status,
-      is_public: status === "published" && isPublic,
       created_by: actor!.userId,
     })
     .select("id")
     .maybeSingle();
   if (insertError || !data) return errorFor(insertError);
 
-  revalidatePath("/plataforma");
-  revalidatePath("/");
-  return success(status === "published" ? "El evento fue publicado." : "El evento quedó guardado como borrador.", data.id);
+  revalidateEvents();
+  return success(fields.data.status === "published" ? "El evento fue publicado." : "El evento quedó guardado como borrador.", data.id);
+}
+
+export async function updateEventAction(eventId: string, input: EventInput): Promise<PlatformActionResult> {
+  const { actor, error } = await requireActor(["coordinator", "editor", "club_manager", "admin"]);
+  if (error) return error;
+  if (!isUuid(eventId)) return failure("El evento indicado no es válido.", "invalid");
+  const fields = eventFields(input);
+  if (fields.error) return fields.error;
+
+  const existing = await actor!.supabase.from("events").select("id,status").eq("id", eventId).maybeSingle();
+  if (existing.error) return errorFor(existing.error);
+  if (!existing.data) return failure("El evento ya no está disponible. Actualiza la agenda.", "invalid");
+  if (fields.data.status === "published" && existing.data.status !== "published" && !canPublish(actor!.role)) {
+    return failure("Un editor o gestor debe publicar este evento.", "forbidden");
+  }
+
+  // Keep the slug so shared event links remain valid after editing its title.
+  const result = await actor!.supabase.from("events").update(fields.data).eq("id", eventId).select("id").maybeSingle();
+  if (result.error) return errorFor(result.error);
+  if (!result.data) return failure("No se pudo modificar el evento. Actualiza la agenda.", "invalid");
+  revalidateEvents();
+  return success("Los cambios del evento quedaron guardados.", result.data.id);
+}
+
+export async function deleteEventAction(eventId: string): Promise<PlatformActionResult> {
+  const { actor, error } = await requireActor(["club_manager", "admin"]);
+  if (error) return error;
+  if (!isUuid(eventId)) return failure("El evento indicado no es válido.", "invalid");
+  const result = await actor!.supabase.from("events").delete().eq("id", eventId).select("id").maybeSingle();
+  if (result.error) return errorFor(result.error);
+  if (!result.data) return failure("El evento ya no está disponible. Actualiza la agenda.", "invalid");
+  revalidateEvents();
+  return success("El evento y su lista de asistencia fueron eliminados.");
+}
+
+export type EventAttendee = {
+  userId: string;
+  name: string;
+  status: "going" | "maybe" | "declined";
+};
+
+export async function getEventAttendeesAction(eventId: string): Promise<PlatformActionResult & { attendees?: EventAttendee[] }> {
+  const { actor, error } = await requireActor(["coordinator", "club_manager", "admin"]);
+  if (error) return error;
+  if (!isUuid(eventId)) return failure("El evento indicado no es válido.", "invalid");
+  const existing = await actor!.supabase.from("events").select("id").eq("id", eventId).maybeSingle();
+  if (existing.error) return errorFor(existing.error);
+  if (!existing.data) return failure("El evento ya no está disponible.", "invalid");
+  const attendees: EventAttendee[] = [];
+  for (let offset = 0; ; offset += 500) {
+    const result = await actor!.supabase.from("event_rsvps")
+      .select("user_id,rsvp_status,profile:profiles!event_rsvps_user_id_fkey(display_name)")
+      .eq("event_id", eventId).order("user_id").range(offset, offset + 499);
+    if (result.error) return errorFor(result.error);
+    const rows = (result.data ?? []) as unknown as Array<{
+      user_id: string; rsvp_status: EventAttendee["status"];
+      profile: { display_name: string | null } | null;
+    }>;
+    attendees.push(...rows.map(row => ({
+      userId: row.user_id, name: row.profile?.display_name?.trim() || "Miembro del club", status: row.rsvp_status,
+    })));
+    if (rows.length < 500) break;
+  }
+  attendees.sort((a, b) => a.name.localeCompare(b.name, "es"));
+  return { ...success("Lista de asistencia cargada."), attendees };
+}
+
+const auditSummaryColumns = "id,occurred_at,actor_id,actor_name,actor_role,source,schema_name,table_name,operation,record_id,entity_label,changed_fields";
+
+export async function getAuditPageAction(input: AuditFilters, cursor?: AuditCursor | null, sort: AuditSort = defaultAuditSort): Promise<AuditPageResult> {
+  const { actor, error } = await requireActor(["admin"]);
+  if (error) return error;
+  const normalized = normalizeAuditQuery(input, cursor, sort);
+  if ("error" in normalized) return failure(normalized.error, "invalid");
+  const { filters, tables, fromIso, untilIso } = normalized;
+  let query = actor!.supabase.from("audit_log").select(auditSummaryColumns)
+    .order(normalized.sort.column, { ascending: normalized.sort.direction === "asc" });
+  if (normalized.sort.column !== "occurred_at") query = query.order("occurred_at", { ascending: false });
+  query = query.order("id", { ascending: false }).limit(51);
+  if (tables.length) query = query.in("table_name", [...tables]);
+  if (filters.operation !== "all") query = query.eq("operation", filters.operation);
+  if (filters.search) query = query.textSearch("search_document", filters.search, { type: "websearch", config: "simple" });
+  if (fromIso) query = query.gte("occurred_at", fromIso);
+  if (untilIso) query = query.lt("occurred_at", untilIso);
+  if (normalized.cursor) query = query.or(auditCursorFilter(normalized.cursor, normalized.sort));
+  const result = await query;
+  if (result.error) return isMissingSchemaError(result.error)
+    ? failure("La auditoría está preparada, pero falta activar su registro en Supabase.", "migration_missing")
+    : failure("No se pudo consultar la auditoría. Inténtalo de nuevo.");
+  const rows = (result.data ?? []) as AuditEntry[];
+  const entries = rows.slice(0, 50);
+  const last = entries.at(-1);
+  return {
+    ok: true, message: "Registro de auditoría cargado.",
+    page: { entries, nextCursor: rows.length > 50 && last ? auditPageCursor(last, normalized.sort) : null },
+  };
+}
+
+export async function getAuditDetailAction(auditId: string): Promise<AuditDetailResult> {
+  const { actor, error } = await requireActor(["admin"]);
+  if (error) return error;
+  if (!isUuid(auditId)) return failure("El registro indicado no es válido.", "invalid");
+  const result = await actor!.supabase.from("audit_log")
+    .select(`${auditSummaryColumns},record_key,before_data,after_data,context,transaction_id`)
+    .eq("id", auditId).maybeSingle();
+  if (result.error) return errorFor(result.error);
+  if (!result.data) return failure("No se encontró este registro de auditoría.", "invalid");
+  return { ok: true, message: "Detalle de auditoría cargado.", detail: result.data as AuditDetail };
 }
 
 export async function createActivityAction(input: {

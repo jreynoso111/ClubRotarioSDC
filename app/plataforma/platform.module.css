@@ -263,6 +263,129 @@
 .warnings summary { cursor: pointer; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 .warnings ul { line-height: 1.6; padding-left: 20px; }
 
+.eventPanelHeader { align-items: flex-start; display: flex; gap: 16px; justify-content: space-between; }
+.eventPanelHeader > div { min-width: 0; }
+.eventPanelHeader > button { flex-shrink: 0; }
+.eventRow { border-top: 1px solid var(--line); display: grid; gap: 15px; padding: 20px 0; }
+.eventDetails { display: grid; gap: 6px; min-width: 0; }
+.eventDetails h3 { font-family: Georgia, "Times New Roman", serif; font-size: 23px; font-weight: 400; letter-spacing: -.03em; margin: 0; overflow-wrap: anywhere; }
+.eventDetails time, .eventDetails p { color: var(--ink-soft); font-size: 12px; line-height: 1.5; margin: 0; overflow-wrap: anywhere; }
+.eventMeta { color: var(--teal); font-family: var(--font-geist-mono); font-size: 9px; letter-spacing: .07em; text-transform: uppercase; }
+.eventAttendanceActions, .eventManageActions { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; }
+.eventManageActions { border-top: 1px dashed var(--line); padding-top: 12px; }
+.attendanceConfirmed { background: rgba(0, 103, 200, .08); color: var(--rotary-blue); font-size: 11px; font-weight: 700; padding: 8px 10px; }
+.eventDeleteButton { color: #8e2424; }
+.eventAgendaLink { background: transparent; border: 0; color: var(--rotary-blue); cursor: pointer; font-size: 11px; font-weight: 700; margin-top: 12px; padding: 10px 0; }
+.eventDialog { background: var(--paper); border: 1px solid var(--line); box-shadow: 0 24px 100px rgba(11, 34, 67, .3); color: var(--ink); margin: auto; max-height: calc(100dvh - 48px); overflow-y: auto; padding: 0; width: min(640px, calc(100vw - 32px)); }
+.eventDialog::backdrop { background: rgba(11, 34, 67, .58); }
+.eventDialogHeader { align-items: center; background: var(--paper); border-bottom: 1px solid var(--line); display: flex; gap: 20px; justify-content: space-between; padding: 22px 25px; }
+.eventDialogHeader h2 { font-family: Georgia, "Times New Roman", serif; font-size: 31px; font-weight: 400; letter-spacing: -.04em; margin: 0; }
+.eventDialogBody { display: grid; font-size: 13px; gap: 18px; line-height: 1.6; padding: 25px; }
+.eventDialogBody > p { margin: 0; }
+.eventForm { border: 0; }
+.eventFormDates { display: grid; gap: 14px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.eventDialogActions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; margin-top: 10px; }
+.eventDeleteConfirm { background: #8e2424; }
+.attendanceEventTitle { color: var(--ink-soft); }
+.attendanceHeader { align-items: flex-start; display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; }
+.attendanceHeader p { flex: 1 1 220px; margin: 0; }
+.attendanceTotal { color: var(--rotary-blue); font-family: Georgia, "Times New Roman", serif; font-size: 28px; letter-spacing: -.03em; }
+.attendanceGroup { border-top: 1px solid var(--line); padding-top: 16px; }
+.attendanceGroup h3 { display: flex; font-size: 13px; gap: 8px; margin: 0 0 12px; }
+.attendanceGroup h3 span { color: var(--ink-soft); font-weight: 400; }
+.attendanceGroup ul { display: grid; gap: 9px; list-style: none; margin: 0; padding: 0; }
+.attendanceGroup li { background: rgba(255, 253, 248, .82); border: 1px solid var(--line); padding: 10px 12px; }
+
+.auditPanel { background: var(--paper-light, #fbf9f5); border: 1px solid var(--line); min-width: 0; padding: 18px; }
+.auditHeader { align-items: center; display: flex; gap: 12px; justify-content: space-between; }
+.auditHeader .cardLabel { font-size: 9px; margin-bottom: 5px; }
+.auditHeader .cardTitle { font-size: 24px; margin: 0; }
+.auditToolbar { align-items: center; display: flex; flex-shrink: 0; gap: 6px; }
+.auditPanel .smallButton, .auditPanel .smallButtonQuiet { font-size: 9px; padding: 7px 9px; }
+.auditFilters { border-bottom: 1px solid var(--line); border-top: 1px solid var(--line); display: grid; gap: 8px; grid-template-columns: minmax(160px, 1.7fr) minmax(140px, 1.4fr) minmax(120px, 1fr) 100px 100px auto; margin-top: 14px; padding: 12px 0; }
+.auditFilters label { color: var(--ink-soft); display: flex; flex-direction: column; font-family: var(--font-geist-mono); font-size: 9px; font-weight: 600; gap: 4px; letter-spacing: .03em; min-width: 0; text-transform: uppercase; }
+.auditFilters input, .auditFilters select { background: var(--paper); border: 1px solid var(--line); border-radius: 2px; color: var(--ink); font-family: var(--font-geist-sans); font-size: 11px; height: 31px; min-width: 0; padding: 5px 7px; width: 100%; }
+.auditFilters input:focus-visible, .auditFilters select:focus-visible, .auditSortButton:focus-visible, .auditColumnMenu summary:focus-visible { outline: 2px solid var(--rotary-blue); outline-offset: 2px; }
+.auditFilterActions { align-items: flex-end; display: flex; gap: 5px; }
+.auditFilterActions button { min-height: 31px; }
+.auditStatus { align-items: center; color: var(--ink-soft); display: flex; font-size: 10px; gap: 12px; justify-content: space-between; margin: 7px 0; min-height: 16px; }
+.auditNote, .auditCount { color: var(--ink-soft); font-size: 10px; line-height: 1.5; margin: 0; }
+.auditCount { margin: 5px 0 8px; }
+.auditTableScroll { max-width: 100%; overflow-x: auto; }
+.auditTable, .auditChanges { border-collapse: collapse; font-size: 11px; line-height: 1.5; text-align: left; width: 100%; }
+.auditTable { table-layout: fixed; }
+.auditTable caption { clip-path: inset(50%); height: 1px; overflow: hidden; position: absolute; white-space: nowrap; width: 1px; }
+.auditChanges caption { color: var(--ink-soft); font-size: 11px; padding: 0 0 12px; text-align: left; }
+.auditTable th, .auditChanges thead th { border-bottom: 2px solid var(--line); color: var(--rotary-blue); font-family: var(--font-geist-mono); font-size: 9px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; }
+.auditTable th { background: rgba(0, 93, 170, .035); padding: 0 8px; }
+.auditSortButton { align-items: center; background: none; border: 0; color: inherit; cursor: pointer; display: flex; font: inherit; gap: 6px; justify-content: space-between; letter-spacing: inherit; padding: 9px 0; text-align: left; text-transform: inherit; width: 100%; }
+.auditSortButton span { opacity: .45; }
+.auditTable th[aria-sort="ascending"] .auditSortButton span, .auditTable th[aria-sort="descending"] .auditSortButton span { opacity: 1; }
+.auditTable td { border-bottom: 1px solid var(--line); height: 36px; overflow: hidden; padding: 6px 8px; text-overflow: ellipsis; vertical-align: middle; white-space: nowrap; }
+.auditTable tr:hover td { background: rgba(0, 93, 170, .03); }
+.auditTable td[data-column="occurred_at"] { font-variant-numeric: tabular-nums; font-size: 10px; }
+.auditTable td[data-column="changed_fields"] { color: var(--ink-soft); }
+.auditTable .auditDetailColumn { padding: 5px 6px; text-align: center; }
+.auditTable .auditDetailColumn button { padding: 4px 6px; }
+.auditChanges thead th { padding: 8px 10px; }
+.auditChanges td, .auditChanges tbody th { border-bottom: 1px solid var(--line); padding: 10px; vertical-align: top; }
+.auditOperation { background: rgba(0, 93, 170, .07); border: 1px solid rgba(0, 93, 170, .18); border-radius: 2px; color: var(--rotary-blue); display: inline-block; font-size: 10px; max-width: 100%; overflow: hidden; padding: 1px 5px; text-overflow: ellipsis; vertical-align: middle; }
+.auditOperation[data-operation="DELETE"] { background: rgba(155, 45, 35, .06); border-color: rgba(155, 45, 35, .2); color: #8c3028; }
+.auditMore { padding-top: 12px; text-align: center; }
+.auditColumnMenu { position: relative; }
+.auditColumnMenu > summary { cursor: pointer; list-style: none; }
+.auditColumnMenu > summary::-webkit-details-marker { display: none; }
+.auditColumnMenu[open] > summary { background: rgba(0, 93, 170, .07); }
+.auditColumnPopover { background: var(--paper-light, #fbf9f5); border: 1px solid var(--line); box-shadow: 0 8px 24px rgba(14, 34, 54, .14); padding: 12px; position: absolute; right: 0; top: calc(100% + 6px); width: 264px; z-index: 20; }
+.auditColumnPopover > p { color: var(--ink); font-size: 11px; font-weight: 600; margin: 0 0 8px; }
+.auditColumnPopover ul { list-style: none; margin: 0 0 10px; padding: 0; }
+.auditColumnPopover li { align-items: center; display: flex; gap: 8px; justify-content: space-between; padding: 4px 0; }
+.auditColumnPopover label { align-items: center; cursor: pointer; display: flex; font-size: 11px; gap: 7px; }
+.auditColumnPopover input { accent-color: var(--rotary-blue); height: 13px; margin: 0; width: 13px; }
+.auditColumnPopover li > div { display: flex; gap: 3px; }
+.auditColumnPopover li button { background: var(--paper); border: 1px solid var(--line); color: var(--rotary-blue); cursor: pointer; font-size: 12px; height: 24px; width: 26px; }
+.auditColumnPopover button:disabled { cursor: default; opacity: .3; }
+.auditColumnPopover > small { color: var(--ink-soft); display: block; font-size: 9px; margin-top: 8px; }
+.auditDialog { width: min(1000px, calc(100vw - 32px)); }
+.auditDialog .eventDialogHeader { position: sticky; top: 0; z-index: 1; }
+.auditDetailBody { padding: 25px; }
+.auditDetailBody > h3 { font-family: Georgia, "Times New Roman", serif; font-size: 26px; font-weight: 400; margin: 0 0 10px; }
+.auditDetailIntro { color: var(--ink-soft); font-size: 12px; line-height: 1.6; margin: 0 0 24px; }
+.auditChanges { table-layout: fixed; }
+.auditChanges th:first-child { width: 22%; }
+.auditChanges pre { font: inherit; margin: 0; max-height: 300px; overflow: auto; overflow-wrap: anywhere; white-space: pre-wrap; }
+.auditContext { display: grid; font-size: 12px; gap: 16px; grid-template-columns: repeat(2, minmax(0, 1fr)); line-height: 1.6; margin: 28px 0; }
+.auditContext dt { color: var(--ink-soft); font-size: 10px; margin-bottom: 4px; text-transform: uppercase; }
+.auditContext dd { margin: 0; overflow-wrap: anywhere; }
+.auditSnapshots { border-top: 1px solid var(--line); font-size: 12px; padding-top: 20px; }
+.auditSnapshots summary { color: var(--rotary-blue); cursor: pointer; font-weight: 700; }
+.auditSnapshots pre { background: rgba(0, 93, 170, .04); font-size: 11px; line-height: 1.6; max-height: 400px; overflow: auto; overflow-wrap: anywhere; padding: 12px; white-space: pre-wrap; }
+
+@media (max-width: 1100px) {
+  .auditFilters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 760px) {
+  .auditHeader { align-items: flex-start; }
+  .auditHeader .cardTitle { font-size: 21px; }
+  .auditHeader .cardLabel { font-size: 8px; }
+  .auditPanel { padding: 12px; }
+  .auditFilters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .auditSearch, .auditFilterActions { grid-column: span 2; }
+  .auditColumnPopover { right: -70px; }
+}
+
+@media (max-width: 480px) {
+  .auditHeader { flex-wrap: wrap; gap: 10px; }
+  .auditToolbar { margin-left: auto; }
+  .auditContext { grid-template-columns: minmax(0, 1fr); }
+  .auditDetailBody { padding: 18px; }
+  .eventPanelHeader { flex-direction: column; margin-bottom: 18px; }
+  .eventFormDates { grid-template-columns: 1fr; }
+  .eventDialogHeader { padding: 18px; }
+  .eventDialogBody, .eventForm { padding: 18px; }
+}
+
 @media (max-width: 960px) {
   .grid,
   .moduleGrid {

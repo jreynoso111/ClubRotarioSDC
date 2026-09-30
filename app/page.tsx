@@ -113,7 +113,7 @@ export default async function Home() {
             <span className="eyebrow-pulse" />
             Revista social · Club Rotario Santo Domingo Colonial
           </p>
-          <h1>Servir también es <em>contar lo que hacemos.</em></h1>
+          <h1>Dar de si antes de <em>pensar en si</em></h1>
           <p className="hero-lede">
             Historias, encuentros y memoria para mirar de cerca una comunidad que
             encuentra en el servicio una forma de estar presente.

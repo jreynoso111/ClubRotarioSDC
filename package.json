@@ -6,7 +6,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "node --test tests/*.test.mjs",
+    "codegraph:init": "codegraph init .",
+    "codegraph:status": "codegraph status",
+    "codegraph:sync": "codegraph sync .",
+    "codegraph:explore": "codegraph explore"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.6",

@@ -17,7 +17,9 @@
   padding: 0 clamp(28px, 3.82vw, 44px);
 }
 
-.brand { align-items: center; display: inline-flex; justify-self: start; }
+.brand { align-items: center; display: inline-flex; gap: 14px; justify-self: start; min-width: 0; }
+.brand > a { display: inline-flex; flex-shrink: 0; }
+.brandTagline { color: var(--rotary-blue); font-size: 12px; font-weight: 650; line-height: 1.35; max-width: 140px; text-wrap: balance; }
 .signature { align-items: center; display: inline-flex; gap: 11px; min-width: 0; }
 .signature img { display: block; height: auto; object-fit: contain; width: 190px; }
 .signatureCompact { gap: 0; }
@@ -213,6 +215,8 @@
 @media (max-width: 760px) {
   .page { --public-gutter: 20px; }
   .header { height: 64px; padding-inline: var(--public-gutter); }
+  .brand { gap: 10px; max-width: calc(100% - 41px); }
+  .brandTagline { font-size: 10.5px; max-width: 112px; }
   .signatureCompact img { width: 165px; }
   .desktopNav, .headerCta { display: none; }
   .mobileMenu { display: block; margin-left: auto; }
