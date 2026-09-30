@@ -1,0 +1,37 @@
+.manager { display: grid; gap: 22px; grid-column: 1 / -1; }
+.header { align-items: end; display: flex; flex-wrap: wrap; gap: 18px 32px; justify-content: space-between; }
+.header h2 { color: var(--ink); font-family: Georgia, "Times New Roman", serif; font-size: clamp(30px, 4vw, 44px); font-weight: 400; letter-spacing: -.05em; margin: 0; }
+.header > div > p:last-child { color: var(--ink-soft); font-size: 12px; line-height: 1.6; margin: 9px 0 0; }
+.eyebrow { color: var(--teal); font-family: var(--font-geist-mono); font-size: 9px; letter-spacing: .13em; margin: 0 0 10px; text-transform: uppercase; }
+.privacyNote { background: #f3eddf; border-left: 3px solid var(--rotary-gold); color: var(--ink-soft); font-size: 11px; line-height: 1.6; margin: 0; max-width: 360px; padding: 11px 14px; }
+.grid { display: grid; gap: 16px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.card { background: var(--white); border: 1px solid var(--line); min-width: 0; }
+.preview { aspect-ratio: 1.34; background: #12364a; overflow: hidden; position: relative; }
+.preview :global(img) { object-fit: cover; }
+.emptyPreview { align-items: center; color: rgba(255,255,255,.72); display: flex; flex-direction: column; font-size: 10px; gap: 7px; height: 100%; justify-content: center; letter-spacing: .04em; }
+.emptyPreview span { align-items: center; border: 1px solid rgba(255,255,255,.62); border-radius: 50%; color: var(--lime-light); display: flex; font: 24px/1 Georgia, serif; height: 38px; justify-content: center; width: 38px; }
+.published, .draft { font-family: var(--font-geist-mono); font-size: 8px; letter-spacing: .1em; padding: 7px 9px; position: absolute; right: 9px; text-transform: uppercase; top: 9px; }
+.published { background: var(--lime-light); color: var(--rotary-blue); }
+.draft { background: rgba(255,253,248,.92); color: var(--ink); }
+.form { display: grid; gap: 13px; padding: 17px; }
+.titleRow { align-items: start; display: flex; gap: 8px; justify-content: space-between; }
+.number { color: var(--teal); font-family: var(--font-geist-mono); font-size: 8px; letter-spacing: .12em; }
+.titleRow h3 { color: var(--ink); font-family: Georgia, "Times New Roman", serif; font-size: 22px; font-weight: 400; letter-spacing: -.035em; margin: 4px 0 0; }
+.updated { color: var(--ink-soft); font-size: 9px; line-height: 1.4; text-align: right; }
+.description { color: var(--ink-soft); font-size: 11px; line-height: 1.55; margin: -5px 0 2px; }
+.field { color: var(--ink); display: grid; font-size: 10px; font-weight: 700; gap: 6px; }
+.field input:not([type="file"]) { background: var(--paper); border: 1px solid var(--line); color: var(--ink); font: inherit; font-size: 11px; font-weight: 450; min-height: 38px; min-width: 0; padding: 8px 10px; width: 100%; }
+.field input[type="file"] { background: var(--paper); border: 1px solid var(--line); color: var(--ink-soft); font: inherit; font-size: 10px; min-height: 38px; padding: 8px; width: 100%; }
+.field small { color: var(--ink-soft); font-size: 9px; font-weight: 450; }
+.remove, .publish { align-items: flex-start; color: var(--ink-soft); display: flex; font-size: 10px; gap: 8px; line-height: 1.45; }
+.remove input, .publish input { accent-color: var(--rotary-blue); flex: 0 0 auto; margin: 1px 0 0; }
+.remove { color: #8b5148; }
+.save { background: var(--rotary-blue); border: 0; color: var(--white); cursor: pointer; font-size: 10px; font-weight: 800; letter-spacing: .08em; min-height: 40px; padding: 0 12px; text-transform: uppercase; }
+.save:hover { background: var(--teal); }
+.save:disabled { cursor: wait; opacity: .64; }
+.error, .success, .loading { font-size: 11px; line-height: 1.5; margin: 0; padding: 11px 13px; }
+.error { background: #f8e9e5; color: #71392f; }
+.success { background: #e9f2e7; color: #28553b; }
+.loading { background: #f3eddf; color: var(--ink-soft); }
+@media (max-width: 1050px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 680px) { .grid { grid-template-columns: minmax(0, 1fr); } .header { align-items: stretch; display: grid; } .privacyNote { max-width: none; } }

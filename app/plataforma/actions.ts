@@ -37,6 +37,7 @@ export type PlatformActionResult = {
 
 type PlatformRole = "member" | "coordinator" | "editor" | "club_manager" | "admin";
 type MembershipStatus = "pending" | "active" | "suspended";
+type MembershipPhotoSlotKey = "membership-community" | "membership-service" | "membership-fellowship";
 type CommitteeRole = "member" | "chair" | "secretary" | "treasurer";
 
 type Actor = {
@@ -167,6 +168,23 @@ async function requireActor(requiredRoles: PlatformRole[] = []):
 
 function canPublish(role: PlatformRole) {
   return role === "editor" || role === "club_manager" || role === "admin";
+}
+
+const membershipPhotoSlotKeys = [
+  "membership-community",
+  "membership-service",
+  "membership-fellowship",
+] as const;
+
+function isMembershipPhotoSlotKey(value: unknown): value is MembershipPhotoSlotKey {
+  return membershipPhotoSlotKeys.includes(value as MembershipPhotoSlotKey);
+}
+
+function isMembershipPhotoAssetPath(value: unknown, slotKey: MembershipPhotoSlotKey) {
+  if (typeof value !== "string") return false;
+  const prefix = `site-photos/membership-application/${slotKey}/`;
+  return value.startsWith(prefix) &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(jpg|png|webp)$/i.test(value.slice(prefix.length));
 }
 
 export async function createProposalAction(input: {
@@ -1125,6 +1143,137 @@ export async function setStoryPublicationAction(
   revalidatePath("/revista");
   revalidatePath(`/revista/${data.slug}`);
   return success(published ? "La historia ya es visible en el sitio." : "La historia volvió a borrador.");
+}
+
+export type MembershipPhotoSlotsActionResult = {
+  ok: boolean;
+  message: string;
+  slots: MembershipPhotoSlotRecord[];
+  code?: ActionCode;
+};
+
+export type MembershipPhotoSlotRecord = {
+  key: MembershipPhotoSlotKey;
+  order: number;
+  imagePath: string | null;
+  imageUrl: string | null;
+  altText: string;
+  caption: string | null;
+  isPublished: boolean;
+  updatedAt: string | null;
+};
+
+type MembershipPhotoSlotRow = {
+  slot_key: MembershipPhotoSlotKey;
+  image_path: string | null;
+  alt_text: string;
+  caption: string | null;
+  is_published: boolean;
+  updated_at: string;
+  display_order: number;
+};
+
+export async function getMembershipPhotoSlotsAction(): Promise<MembershipPhotoSlotsActionResult> {
+  const { actor, error } = await requireActor(["editor", "club_manager", "admin"]);
+  if (error) return { ok: false, message: error.message, slots: [], code: error.code };
+
+  const { data, error: queryError } = await actor!.supabase
+    .from("site_photo_slots")
+    .select("slot_key,display_order,image_path,alt_text,caption,is_published,updated_at")
+    .order("display_order", { ascending: true });
+  if (queryError) {
+    const result = errorFor(queryError);
+    return { ok: false, message: result.message, slots: [], code: result.code };
+  }
+
+  const rows = (data ?? []) as MembershipPhotoSlotRow[];
+  const slots = rows.map((row) => ({
+      key: row.slot_key,
+      order: row.display_order,
+      imagePath: row.image_path,
+      imageUrl: row.image_path
+        ? actor!.supabase.storage.from("club-public").getPublicUrl(row.image_path).data.publicUrl
+        : null,
+      altText: row.alt_text,
+      caption: row.caption,
+      isPublished: row.is_published,
+      updatedAt: row.updated_at,
+    } satisfies MembershipPhotoSlotRecord));
+
+  return { ok: true, message: "", slots };
+}
+
+export async function updateMembershipPhotoSlotAction(input: {
+  slotKey: unknown;
+  imagePath: unknown;
+  altText: unknown;
+  caption: unknown;
+  isPublished: unknown;
+}): Promise<PlatformActionResult> {
+  const { actor, error } = await requireActor(["editor", "club_manager", "admin"]);
+  if (error) return error;
+  if (!isMembershipPhotoSlotKey(input?.slotKey) || typeof input?.isPublished !== "boolean") {
+    return failure("El espacio fotográfico indicado no es válido.", "invalid");
+  }
+
+  const slotKey = input.slotKey;
+  const imagePath = typeof input.imagePath === "string" && input.imagePath.trim()
+    ? input.imagePath.trim()
+    : null;
+  const altText = typeof input.altText === "string" ? input.altText.trim() : "";
+  const caption = input.caption === null || input.caption === ""
+    ? null
+    : typeof input.caption === "string"
+      ? input.caption.trim() || null
+      : undefined;
+
+  if (
+    caption === undefined ||
+    altText.length > 250 ||
+    (caption !== null && caption.length > 300) ||
+    (imagePath !== null && (!isMembershipPhotoAssetPath(imagePath, slotKey) || altText.length === 0)) ||
+    (input.isPublished && imagePath === null)
+  ) {
+    return failure("Revisa la foto, su descripción accesible y el pie de foto.", "invalid");
+  }
+
+  const { data: current, error: currentError } = await actor!.supabase
+    .from("site_photo_slots")
+    .select("image_path")
+    .eq("slot_key", slotKey)
+    .maybeSingle();
+  if (currentError) return errorFor(currentError);
+  if (!current) return failure("El espacio fotográfico ya no existe. Actualiza la plataforma.", "invalid");
+
+  const { data: updated, error: updateError } = await actor!.supabase
+    .from("site_photo_slots")
+    .update({
+      image_path: imagePath,
+      alt_text: altText,
+      caption,
+      is_published: input.isPublished,
+      updated_by: actor!.userId,
+    })
+    .eq("slot_key", slotKey)
+    .select("slot_key")
+    .maybeSingle();
+  if (updateError || !updated) return errorFor(updateError);
+
+  let message = input.isPublished ? "La foto ya está publicada." : "Se guardaron los cambios de la foto.";
+  if (
+    typeof current.image_path === "string" &&
+    current.image_path !== imagePath &&
+    isMembershipPhotoAssetPath(current.image_path, slotKey)
+  ) {
+    const { error: removeError } = await actor!.supabase.storage
+      .from("club-public")
+      .remove([current.image_path]);
+    if (removeError) message = "La foto se actualizó, pero no se pudo retirar el archivo anterior.";
+  }
+
+  revalidatePath("/plataforma");
+  revalidatePath("/solicitar-membresia");
+  return success(message);
 }
 
 export async function updateMembershipAction(input: {

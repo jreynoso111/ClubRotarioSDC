@@ -34,9 +34,10 @@ import { SignOutButton } from "./SignOutButton";
 import { PlatformEvents } from "./PlatformEvents";
 import { PlatformAudit } from "./PlatformAudit";
 import { StoryComposerDialog } from "./StoryComposerDialog";
+import { MembershipPhotoManager } from "./MembershipPhotoManager";
 import styles from "./platform.module.css";
 
-type Tab = "resumen" | "propuestas" | "agenda" | "finanzas" | "solicitudes" | "organizacion" | "revista" | "mensajes" | "auditoria";
+type Tab = "resumen" | "propuestas" | "agenda" | "finanzas" | "solicitudes" | "organizacion" | "revista" | "fotografias" | "mensajes" | "auditoria";
 
 const tabs: Array<{ id: Tab; label: string }> = [
   { id: "resumen", label: "Resumen" },
@@ -46,6 +47,7 @@ const tabs: Array<{ id: Tab; label: string }> = [
   { id: "solicitudes", label: "Solicitudes" },
   { id: "organizacion", label: "Organización" },
   { id: "revista", label: "Revista" },
+  { id: "fotografias", label: "Fotografías" },
   { id: "mensajes", label: "Mensajes" },
   { id: "auditoria", label: "Auditoría" },
 ];
@@ -277,7 +279,10 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
     <section className={styles.content}>
       <div className={styles.workspaceIntro}><div><p className={styles.cardLabel}>Centro de coordinación</p><h2>Ideas, personas y servicio en un mismo lugar.</h2></div><p>{snapshot.accessMessage} Los módulos se muestran según tu rol y tus permisos.</p></div>
       <nav className={styles.tabs} aria-label="Módulos de la plataforma">
-        {tabs.filter(item => item.id !== "auditoria" || snapshot.capabilities.canAudit).map((item) => <button type="button" key={item.id} className={tab === item.id ? styles.tabActive : styles.tab} onClick={() => selectTab(item.id)}>{item.label}{item.id === "mensajes" && (unreadNotifications + unreadMessages > 0) ? <span className={styles.tabBadge}>{unreadNotifications + unreadMessages}</span> : null}</button>)}
+        {tabs.filter(item =>
+          (item.id !== "auditoria" || snapshot.capabilities.canAudit) &&
+          (item.id !== "fotografias" || snapshot.capabilities.canEdit)
+        ).map((item) => <button type="button" key={item.id} className={tab === item.id ? styles.tabActive : styles.tab} onClick={() => selectTab(item.id)}>{item.label}{item.id === "mensajes" && (unreadNotifications + unreadMessages > 0) ? <span className={styles.tabBadge}>{unreadNotifications + unreadMessages}</span> : null}</button>)}
       </nav>
       <ActionFeedback message={feedback} error={feedbackError} />
 
@@ -323,6 +328,8 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
       </section>}
 
       {tab === "finanzas" && <FinanceModule canManage={snapshot.capabilities.canManageFinances} />}
+
+      {tab === "fotografias" && snapshot.capabilities.canEdit && <MembershipPhotoManager />}
 
       {tab === "solicitudes" && <MembershipApplicationsModule
         canReview={snapshot.capabilities.canManageMembership}

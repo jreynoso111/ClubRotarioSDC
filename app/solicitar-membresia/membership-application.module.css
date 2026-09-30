@@ -1,13 +1,23 @@
 .main { margin: 0 auto; max-width: 1240px; padding: 28px clamp(20px, 4vw, 54px) 96px; }
-.intro { background: var(--rotary-blue); color: var(--paper); min-height: 390px; padding: clamp(28px, 6vw, 76px); position: relative; overflow: hidden; }
+.intro { background: var(--rotary-blue); color: var(--paper); display: grid; gap: clamp(30px, 5vw, 72px); grid-template-columns: minmax(0, 1.3fr) minmax(280px, .7fr); min-height: 430px; padding: clamp(28px, 6vw, 76px); position: relative; overflow: hidden; }
 .intro::after { border: 1px solid rgba(255,255,255,.2); border-radius: 50%; content: ""; height: 500px; position: absolute; right: -90px; top: -160px; width: 500px; }
+.introCopy { align-self: center; min-width: 0; position: relative; z-index: 1; }
 .backLink { color: rgba(255,253,248,.76); display: inline-block; font-size: 11px; margin-bottom: 46px; position: relative; z-index: 1; }
 .intro :global(.sectionLabel) { color: var(--lime-light); position: relative; z-index: 1; }
 .intro :global(.sectionLabelLine) { background: var(--rotary-gold); }
 .intro h1, .sectionHeading h2, .successPanel h2 { font-family: Georgia, "Times New Roman", serif; font-size: clamp(44px, 7vw, 82px); font-weight: 400; letter-spacing: -.065em; line-height: .95; margin: 0; max-width: 800px; position: relative; z-index: 1; }
 .intro h1 em, .sectionHeading h2 em { color: var(--lime-light); font-style: italic; }
-.intro > p { color: rgba(255,253,248,.78); font-size: 15px; line-height: 1.7; margin: 24px 0 0; max-width: 540px; position: relative; z-index: 1; }
+.introCopy > p { color: rgba(255,253,248,.78); font-size: 15px; line-height: 1.7; margin: 24px 0 0; max-width: 540px; position: relative; z-index: 1; }
 .introFoot { border-top: 1px solid rgba(255,253,248,.23); color: var(--lime-light); display: flex; flex-wrap: wrap; font-family: var(--font-geist-mono); font-size: 9px; gap: 14px 32px; letter-spacing: .12em; margin-top: 42px; padding-top: 17px; position: relative; text-transform: uppercase; z-index: 1; }
+.photoGallery { align-self: center; display: grid; gap: 12px; grid-template-columns: 1fr 1fr; grid-template-rows: repeat(2, minmax(122px, 1fr)); min-height: 285px; position: relative; z-index: 1; }
+.photoSlot { display: flex; flex-direction: column; gap: 8px; margin: 0; min-width: 0; }
+.photoSlot[data-featured="true"] { grid-row: span 2; }
+.photoFrame { background: rgba(255,255,255,.075); border: 1px solid rgba(255,255,255,.24); flex: 1; min-height: 0; overflow: hidden; position: relative; }
+.photoFrame :global(img) { object-fit: cover; }
+.photoPlaceholder { align-items: center; color: rgba(255,253,248,.67); display: flex; flex-direction: column; font-family: var(--font-geist-mono); font-size: 8px; gap: 9px; height: 100%; justify-content: center; letter-spacing: .12em; min-height: 95px; text-align: center; text-transform: uppercase; }
+.photoPlaceholderMark { align-items: center; border: 1px solid rgba(255,253,248,.5); border-radius: 50%; color: var(--lime-light); display: flex; font: 22px/1 Georgia, serif; height: 34px; justify-content: center; width: 34px; }
+.photoSlot figcaption { color: rgba(255,253,248,.86); display: grid; font-size: 9px; gap: 4px; line-height: 1.4; }
+.photoSlot figcaption small { color: rgba(255,253,248,.62); font-size: 8px; line-height: 1.45; }
 .applicationSection { display: grid; gap: 42px; grid-template-columns: minmax(0, .82fr) minmax(0, 1fr); margin: 0 auto; max-width: 1060px; padding-top: 86px; }
 .sectionHeading { align-self: start; position: sticky; top: 32px; }
 .sectionHeading :global(.sectionLabel) { margin-bottom: 20px; }
@@ -40,11 +50,15 @@
 
 @media (max-width: 760px) {
   .main { padding: 14px 14px 58px; }
-  .intro { min-height: 0; padding: 27px 23px 22px; }
+  .intro { grid-template-columns: minmax(0, 1fr); min-height: 0; padding: 27px 23px 22px; }
   .backLink { margin-bottom: 38px; }
   .intro h1 { font-size: clamp(42px, 12vw, 62px); }
-  .intro > p { font-size: 13px; margin-top: 18px; }
+  .introCopy > p { font-size: 13px; margin-top: 18px; }
   .introFoot { font-size: 8px; margin-top: 32px; }
+  .photoGallery { gap: 8px; grid-template-rows: 180px 105px; margin-top: 22px; min-height: 0; }
+  .photoSlot { gap: 6px; }
+  .photoSlot figcaption { font-size: 8px; }
+  .photoSlot figcaption small { display: none; }
   .applicationSection { gap: 26px; grid-template-columns: minmax(0, 1fr); padding-top: 53px; }
   .sectionHeading { position: static; }
   .sectionHeading h2 { font-size: clamp(38px, 10vw, 52px); }
