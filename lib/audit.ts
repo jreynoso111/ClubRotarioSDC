@@ -2,13 +2,14 @@ export const auditModules = {
   all: { label: "Todos los módulos", tables: [] },
   events: { label: "Eventos y asistencia", tables: ["events", "event_rsvps"] },
   stories: { label: "Revista", tables: ["stories"] },
-  membership: { label: "Miembros y solicitudes", tables: ["profiles", "memberships", "access_requests"] },
-  proposals: { label: "Propuestas", tables: ["proposals"] },
+  membership: { label: "Miembros y solicitudes", tables: ["profiles", "memberships", "access_requests", "membership_applications"] },
+  proposals: { label: "Propuestas", tables: ["proposals", "proposal_votes"] },
+  finance: { label: "Finanzas", tables: ["finance_monthly_dues", "finance_entries"] },
   organization: { label: "Comités", tables: ["committees", "committee_members"] },
   activities: { label: "Actividades y tareas", tables: ["activities", "tasks"] },
   messaging: { label: "Mensajes y avisos", tables: ["internal_messages", "internal_message_recipients", "notifications"] },
   settings: { label: "Configuración de la web", tables: ["site_settings"] },
-  media: { label: "Archivos", tables: ["media_assets", "objects"] },
+  media: { label: "Archivos y fotografías", tables: ["media_assets", "objects", "site_photo_slots"] },
   authentication: { label: "Cuentas y sesiones", tables: ["users", "sessions"] },
   system: { label: "Sistema de auditoría", tables: ["audit_log"] },
 } as const;
@@ -67,6 +68,8 @@ export const auditTableLabels: Record<string, string> = {
   committees: "Comité", committee_members: "Integrante de comité", activities: "Actividad", tasks: "Tarea",
   internal_messages: "Mensaje", internal_message_recipients: "Entrega de mensaje", notifications: "Aviso",
   media_assets: "Archivo", objects: "Archivo almacenado", users: "Cuenta", sessions: "Sesión", audit_log: "Auditoría",
+  membership_applications: "Solicitud de ingreso", proposal_votes: "Participación en votación",
+  finance_monthly_dues: "Cuota mensual", finance_entries: "Movimiento financiero", site_photo_slots: "Fotografía",
 };
 export const auditFieldLabels: Record<string, string> = {
   id: "Identificador", title: "Título", slug: "Enlace", summary: "Resumen", description: "Descripción",
@@ -94,6 +97,15 @@ export const auditFieldLabels: Record<string, string> = {
   email_confirmed_at: "Correo confirmado", banned_until: "Cuenta bloqueada hasta", deleted_at: "Fecha de eliminación",
   is_anonymous: "Cuenta anónima", providers: "Métodos de acceso", not_after: "Caducidad de sesión",
   aal: "Nivel de autenticación", user_agent: "Navegador", ip: "Dirección IP", enabled_at: "Fecha de activación",
+  voting_open: "Votación abierta", voting_started_at: "Inicio de votación",
+  participation: "Participación", phone: "Teléfono", occupation: "Ocupación", referral: "Referencia del club",
+  motivation: "Motivación", consented_to_member_sharing: "Autorización para compartir con el club",
+  slot_key: "Espacio fotográfico", display_order: "Orden", image_path: "Fotografía", caption: "Pie de foto", is_published: "Publicado",
+  due_month: "Mes de la cuota", amount_due: "Monto de la cuota", member_id: "Miembro",
+  member_name_snapshot: "Nombre del miembro", direction: "Ingreso o egreso", category: "Categoría",
+  amount: "Monto", currency: "Moneda", occurred_on: "Fecha del movimiento", counterparty_name: "Persona o entidad",
+  activity_name_snapshot: "Nombre de la actividad", monthly_due_id: "Cuota asociada", payment_method: "Medio de pago",
+  receipt_reference: "Referencia del comprobante",
 };
 
 export function auditActionLabel(entry: Pick<AuditEntry, "table_name" | "operation">) {

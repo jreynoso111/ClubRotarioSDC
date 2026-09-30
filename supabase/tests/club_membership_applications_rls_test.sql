@@ -116,16 +116,17 @@ select is(
   1,
   'an active member can see the submitted application'
 );
+with updated as (
+  update public.membership_applications
+  set status = 'contacted', reviewed_by = auth.uid()
+  where id = (select application_id from application_fixture)
+  returning id
+)
 select is(
-  (with updated as (
-    update public.membership_applications
-    set status = 'contacted', reviewed_by = auth.uid()
-    where id = (select application_id from application_fixture)
-    returning id
-  ) select count(*)::integer from updated),
+  count(*)::integer,
   0,
   'a regular member can see an application but cannot change its review status'
-);
+) from updated;
 select set_config('request.jwt.claim.sub', (select manager_id::text from application_fixture), true);
 select lives_ok($$
   update public.membership_applications

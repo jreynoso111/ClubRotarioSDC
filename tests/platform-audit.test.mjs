@@ -94,6 +94,21 @@ test("invalid filter or cursor input never reaches the audit query", async () =>
   }
 });
 
+test("new club modules query all of their audit tables without exposing other modules", async () => {
+  const cases = [
+    ["finance", ["finance_monthly_dues", "finance_entries"]],
+    ["membership", ["profiles", "memberships", "access_requests", "membership_applications"]],
+    ["proposals", ["proposals", "proposal_votes"]],
+    ["media", ["media_assets", "objects", "site_photo_slots"]],
+  ];
+  for (const [module, tables] of cases) {
+    const { actions, calls } = setup();
+    assert.equal((await actions.getAuditPageAction({ ...audit.defaultAuditFilters, module })).ok, true);
+    assert.deepEqual(calls.find(call => call.table === "audit_log" && call.method === "in").args,
+      ["table_name", tables]);
+  }
+});
+
 test("details require an explicit valid record id and have separate snapshot loading", async () => {
   const { actions, calls } = setup({ rows: [{ id, before_data: { title: "Before" }, after_data: { title: "After" } }] });
   assert.equal((await actions.getAuditDetailAction("not-a-uuid")).ok, false);
