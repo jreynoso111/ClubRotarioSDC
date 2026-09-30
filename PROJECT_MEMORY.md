@@ -20,7 +20,7 @@
 - Desarrollo local utilizado en esta sesión: `http://127.0.0.1:3001/`; gestión: `/plataforma`. Antes de iniciar o detener un servidor, comprobar quién es dueño del puerto y del proceso.
 - Backend de este proyecto: **ClubRotarioSDC**, ref **rjqqqixfsxjfmhtobumu**. No utilizar proyectos de otras aplicaciones. El usuario reactivó este proyecto después de encontrarlo pausado.
 - Los secretos se mantienen fuera del código y de esta memoria. Las credenciales de servicio solo pueden usarse en el servidor, dentro de la autorización vigente.
-- Los cambios recientes de esta sesión son locales; no se ha publicado este conjunto de cambios. No inferir el estado de producción a partir del servidor local ni de una compilación.
+- Producción: `https://clubrotariosdc.vercel.app`, proyecto Vercel `clubrotariosdc`, despliegue automático desde `main`. Última verificación de producción: commit `ebeb897` en estado `READY` el 2026-09-30. Confirmar el commit y estado actual antes de próximas publicaciones.
 - No ejecutar `next build` sobre el mismo directorio de salida mientras el servidor de desarrollo esté activo: verificar primero para evitar interferencia con sus artefactos.
 
 ## Permisos y comportamiento de eventos
@@ -32,9 +32,9 @@
 - La migración `supabase/migrations/20260930042056_published_member_events_access.sql` **se aplicó en Supabase**: miembros activos pueden ver eventos internos publicados, manteniendo RLS y controles de gestión.
 - Las pruebas de la sesión anterior verificaron gestión de eventos, confirmación/cancelación y listado de asistentes. Se eliminaron los registros temporales de prueba y se conservaron los tres eventos originales.
 
-## Auditoría activada en Supabase
+## Auditoría activada en Supabase y publicada
 
-- Implementada localmente una pestaña **Auditoría**, visible solo para administradores activos. Consultas paginadas de 50 registros, filtros, búsqueda y detalle de campos antes/después; se consulta al abrir la pestaña para evitar cargarla durante el inicio de sesión.
+- Pestaña **Auditoría** publicada en producción, visible solo para administradores activos. Consultas paginadas de 50 registros, filtros, búsqueda y detalle de campos antes/después; se consulta al abrir la pestaña para evitar cargarla durante el inicio de sesión.
 - Migración `supabase/migrations/20260930050755_detailed_admin_audit_trail.sql` **aplicada en Supabase `rjqqqixfsxjfmhtobumu` el 2026-09-30**, después de la autorización expresa del usuario para terminar de activarla. Registra cambios en 16 tablas públicas, archivos de los buckets del club y cambios seguros en cuentas/sesiones de Auth. El registro es inmutable para la aplicación y su lectura exige administrador activo.
 - Contraseñas, hashes y tokens quedan fuera del registro; un cambio de contraseña se representa como una indicación del cambio. No confundir datos de sesión con una atribución comprobada de quién causó su eliminación.
 - Aplicación realizada desde el SQL Editor del Dashboard del proyecto, en una transacción. El conector MCP devolvió falta de permisos; no se utilizó otro proyecto ni se ejecutó un `db push` general. Antes de aplicar se confirmó que no existía `audit_log` y que las 16 tablas públicas estaban presentes.
@@ -53,7 +53,13 @@
 - Encabezados con orden ascendente/descendente aplicado en Supabase sobre todo el historial. La paginación de 50 registros conserva el orden seleccionado, desempates por fecha/ID y microsegundos; valida columnas y escapa valores del cursor.
 - Fechas numéricas día/mes/año y hora de 24 horas en la tabla y el detalle. Los filtros Desde/Hasta usan DD/MM/AA, validan fechas del calendario y consultan el intervalo inclusivo en Santo Domingo.
 - Verificación local 2026-09-30: 21 pruebas Node, lint y TypeScript satisfactorios; web autenticada comprobada con los cuatro registros reales, orden por fecha/persona, mover/ocultar/mostrar y persistir columnas, búsqueda, fechas válidas/inválidas y detalle antes/después. Vista de 375 px sin desbordamiento de página; la tabla tiene desplazamiento horizontal propio.
-- Estos cambios de interfaz siguen siendo locales; no requirieron cambios en el esquema ni en los permisos remotos de Supabase.
+- Publicada con el commit `2dfc5f7`; Vercel quedó `READY`. En la UI autenticada de producción se confirmó la tabla compacta con cinco registros y fechas DD/MM/AA en hora de 24 horas. No requirió cambios adicionales en el esquema ni en los permisos remotos de Supabase.
+
+## Notificaciones de la plataforma
+
+- Botón **Notificaciones** en la cabecera del panel para membresías activas. Muestra el total sin leer y un menú con los seis avisos recientes, estado vacío/error, fechas locales y acceso a **Mensajes**.
+- **Marcar como leído** reutiliza `markNotificationReadAction` y valida la identidad, UUID y propiedad del aviso (`user_id`); no se añadieron tablas ni migraciones.
+- Verificación 2026-09-30: compilación, TypeScript, lint y `git diff --check` satisfactorios. Commit `ebeb897` publicado en producción; despliegue Vercel `dpl_H1EwEpwT5PZXq98RgD7pfFmoNqEJ` `READY`. En `/plataforma` autenticado se comprobó botón, apertura del menú, estado **0 sin leer**, CTA a Mensajes y retorno a Resumen; no se cambió el estado de ningún aviso.
 
 ## Mapa útil del código
 
@@ -89,5 +95,6 @@ Las portadas con ruta que comienza por `/` son recursos locales; conservar esa d
 | 2026-09-30 | Gestión de eventos con confirmación personal de asistencia | Petición del usuario; acciones protegidas, listado de asistentes y flujo verificados durante la sesión. |
 | 2026-09-30 | Auditoría detallada solo para administradores activos | El usuario autorizó la activación; migración aplicada y pruebas de permisos/captura completadas en Supabase y la web local. |
 | 2026-09-30 | Auditoría compacta y fechas DD/MM/AA con hora de 24 horas | Corrección expresa día/mes/año; controles de columnas, ordenación y filtros verificados en la web autenticada. |
+| 2026-09-30 | Botón de notificaciones en la cabecera de gestión | Petición del usuario; publicado con `ebeb897`, Vercel `READY` y menú verificado en el panel autenticado de producción. |
 | 2026-09-30 | Mantener CodeGraph y memoria en el repositorio | Petición expresa del usuario; MCP e índice existentes verificados, comandos e instrucciones permanentes añadidos. |
 | 2026-09-30 | Descartar JEP | El usuario retiró expresamente esa integración; no añadir dependencias ni llamadas a ese servicio. |
