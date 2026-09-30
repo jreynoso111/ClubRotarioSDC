@@ -82,7 +82,7 @@ function StoryCard({
         </div>
         <h2>{story.title}</h2>
         <p>{story.excerpt}</p>
-        <span className={styles.readMore}>Abrir publicación <ArrowUpRight /></span>
+        <span className={styles.readMore}>{story.isExample ? "Ver ejemplo editorial" : story.isReference ? "Abrir referencia" : "Leer publicación"} <ArrowUpRight /></span>
       </div>
     </Link>
   );
@@ -93,9 +93,9 @@ export default async function RevistaPage({ searchParams }: RevistaPageProps) {
   const requestedPage = parsePage(params.pagina);
   const publicationPage = await getPublicStoriesPage(requestedPage, PUBLICATION_PAGE_SIZE);
   const guides = getEditorialGuides();
-  const publications = publicationPage.stories;
+  const publications = publicationPage.hasClubStories ? publicationPage.stories : [];
   const hasClubStories = publicationPage.hasClubStories;
-  const totalPages = Math.max(1, Math.ceil(publicationPage.total / publicationPage.pageSize));
+  const totalPages = hasClubStories ? Math.max(1, Math.ceil(publicationPage.total / publicationPage.pageSize)) : 1;
   const paginationItems = getPaginationItems(totalPages, publicationPage.page);
   const currentYear = new Date().getFullYear();
 
@@ -130,13 +130,13 @@ export default async function RevistaPage({ searchParams }: RevistaPageProps) {
         <section className={styles.issue} id="archivo">
           <div className={styles.sectionHeading}>
             <div>
-              <SectionLabel>{hasClubStories ? "Crónicas del club" : "Archivo editorial · Ejemplos"}</SectionLabel>
-              <h2>Publicaciones <span>para quedarse.</span></h2>
+              <SectionLabel>Historias publicadas por el club</SectionLabel>
+              <h2>El archivo <span>del club.</span></h2>
             </div>
             <p>
               {hasClubStories
                 ? "Crónicas y voces publicadas por el equipo editorial del club."
-                : "Lecturas de referencia y ejemplos de formato para preparar el archivo público del club."}
+                : "Aquí verás las crónicas aprobadas. Las lecturas de muestra aparecen aparte para que se distingan de las publicaciones reales."}
             </p>
           </div>
 
@@ -164,11 +164,11 @@ export default async function RevistaPage({ searchParams }: RevistaPageProps) {
             <div className={styles.emptyArchive}>
               <div>
                 <span className={styles.emptyIndex}>01</span>
-                <h3>El archivo está listo para recibir la primera crónica.</h3>
+                <h3>La primera historia del club está por escribirse.</h3>
               </div>
               <div>
                 <p>
-                  Todavía no hay historias propias publicadas. Cuando la directiva y el equipo editorial validen una actividad, aparecerá aquí con su contexto, sus voces y sus aprendizajes.
+                  Aún no hay publicaciones propias. Cuando el equipo editorial publique una historia, aparecerá aquí con su contexto, sus voces y sus aprendizajes.
                 </p>
                 <a className={styles.readMore} href="mailto:club@rotariosantodomingo.org?subject=Historia%20para%20la%20revista">Compartir una historia <ArrowUpRight /></a>
               </div>
@@ -218,14 +218,14 @@ export default async function RevistaPage({ searchParams }: RevistaPageProps) {
           ) : null}
         </section>
 
-        {hasClubStories && guides.length > 0 ? (
+        {guides.length > 0 ? (
           <section className={styles.guides}>
             <div className={styles.sectionHeading}>
               <div>
-                <SectionLabel>Lecturas de referencia</SectionLabel>
-                <h2>Para entender el movimiento.</h2>
+                <SectionLabel>Lecturas y maquetas editoriales</SectionLabel>
+                <h2>Referencias para <span>empezar.</span></h2>
               </div>
-              <p>Material informativo basado en fuentes oficiales de Rotary International.</p>
+              <p>Las tarjetas indican si son ejemplos de diseño o información de Rotary International. No son historias publicadas por el club.</p>
             </div>
             <div className={styles.guideGrid}>
               {guides.map((guide, index) => (

@@ -11,6 +11,10 @@ const auditModel = {};
 new Function("exports", ts.transpileModule(readFileSync(new URL("../lib/audit.ts", import.meta.url), "utf8"), {
   compilerOptions: { module: ts.ModuleKind.CommonJS },
 }).outputText)(auditModel);
+const editorialContent = {};
+new Function("exports", ts.transpileModule(readFileSync(new URL("../lib/editorial-content.ts", import.meta.url), "utf8"), {
+  compilerOptions: { module: ts.ModuleKind.CommonJS },
+}).outputText)(editorialContent);
 const input = { title: "Encuentro del club", kind: "encuentro", startsAt: "2040-10-09T18:30:00-04:00", status: "draft" };
 
 // Substitute only the request context and database transport; exercise the actual server actions.
@@ -43,6 +47,7 @@ function setup({ role = "admin", status = "active", signedIn = true, eventStatus
     "next/cache": { revalidatePath: (...args) => invalidations.push(args) },
     "@/lib/platform": { isMissingSchemaError: () => false },
     "@/lib/audit": auditModel,
+    "@/lib/editorial-content": editorialContent,
     "@/utils/supabase/config": { isSupabaseConfigured: () => true },
     "@/utils/supabase/server": { createClient: async () => client },
   };

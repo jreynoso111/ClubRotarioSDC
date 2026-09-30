@@ -6,6 +6,7 @@ import { isSupabaseConfigured } from "@/utils/supabase/config";
 import { createClient } from "@/utils/supabase/server";
 
 import { withPublicContentTimeout } from "@/lib/supabase/timeout";
+import { parseEditorialContent, type EditorialArticleContent } from "@/lib/editorial-content";
 
 const CLUB_TIMEZONE = "America/Santo_Domingo";
 
@@ -25,6 +26,7 @@ export type PublicStory = {
   publishedAt: string | null;
   coverImagePath: string | null;
   coverImageUrl?: string;
+  editorial?: EditorialArticleContent & { inlineImageUrl?: string };
   isReference: boolean;
   isExample?: boolean;
   source?: EditorialSource;
@@ -375,6 +377,7 @@ function mapStory(
   record: StoryRecord,
   supabase: Awaited<ReturnType<typeof createClient>>,
 ): PublicStory {
+  const editorial = parseEditorialContent(record.content);
   return {
     id: record.id,
     title: record.title,
@@ -386,6 +389,9 @@ function mapStory(
     publishedAt: record.published_at,
     coverImagePath: record.cover_image_path,
     coverImageUrl: publicImageUrl(supabase, record.cover_image_path),
+    editorial: editorial
+      ? { ...editorial, inlineImageUrl: publicImageUrl(supabase, editorial.inlineImagePath) }
+      : undefined,
     isReference: false,
   };
 }
@@ -456,16 +462,11 @@ export type PublicStoriesPage = {
   hasClubStories: boolean;
 };
 
-function getGuidePage(page: number, pageSize: number): PublicStoriesPage {
-  const total = editorialGuides.length;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const resolvedPage = Math.min(page, totalPages);
-  const from = (resolvedPage - 1) * pageSize;
-
+function getEmptyStoryPage(pageSize: number): PublicStoriesPage {
   return {
-    stories: editorialGuides.slice(from, from + pageSize),
-    total,
-    page: resolvedPage,
+    stories: [],
+    total: 0,
+    page: 1,
     pageSize,
     hasClubStories: false,
   };
@@ -475,7 +476,7 @@ export const getPublicStoriesPage = cache(async (page = 1, pageSize = 9): Promis
   const safePage = Number.isFinite(page) ? Math.max(1, Math.floor(page)) : 1;
   const safePageSize = Number.isFinite(pageSize) ? Math.max(1, Math.floor(pageSize)) : 9;
 
-  if (!isSupabaseConfigured()) return getGuidePage(safePage, safePageSize);
+  if (!isSupabaseConfigured()) return getEmptyStoryPage(safePageSize);
 
   try {
     const supabase = await createClient();
@@ -492,13 +493,13 @@ export const getPublicStoriesPage = cache(async (page = 1, pageSize = 9): Promis
       null,
     );
 
-    if (!result) return getGuidePage(safePage, safePageSize);
+    if (!result) return getEmptyStoryPage(safePageSize);
     const { data, error, count } = result;
 
-    if (error) return getGuidePage(safePage, safePageSize);
+    if (error) return getEmptyStoryPage(safePageSize);
 
     const records = (data ?? []) as StoryRecord[];
-    if (records.length === 0 && (count ?? 0) === 0) return getGuidePage(safePage, safePageSize);
+    if (records.length === 0 && (count ?? 0) === 0) return getEmptyStoryPage(safePageSize);
 
     if (records.length === 0 && count && from >= count) {
       const lastPage = Math.max(1, Math.ceil(count / safePageSize));
@@ -514,10 +515,10 @@ export const getPublicStoriesPage = cache(async (page = 1, pageSize = 9): Promis
         null,
       );
 
-      if (!lastResult) return getGuidePage(safePage, safePageSize);
+      if (!lastResult) return getEmptyStoryPage(safePageSize);
       const { data: lastData, error: lastError } = lastResult;
 
-      if (lastError) return getGuidePage(safePage, safePageSize);
+      if (lastError) return getEmptyStoryPage(safePageSize);
 
       return {
         stories: ((lastData ?? []) as StoryRecord[]).map((record) => mapStory(record, supabase)),
@@ -536,7 +537,7 @@ export const getPublicStoriesPage = cache(async (page = 1, pageSize = 9): Promis
       hasClubStories: true,
     };
   } catch {
-    return getGuidePage(safePage, safePageSize);
+    return getEmptyStoryPage(safePageSize);
   }
 });
 

@@ -7,13 +7,13 @@ import type { FormEvent, ReactNode } from "react";
 
 import type { PlatformSnapshot } from "@/lib/platform";
 import { defaultAuditFilters, type AuditPageResult } from "@/lib/audit";
+import { editorialLayouts, parseEditorialContent } from "@/lib/editorial-content";
 
 import {
   assignCommitteeMemberAction,
   createActivityAction,
   createCommitteeAction,
   createProposalAction,
-  createStoryAction,
   getAuditPageAction,
   markMessageReadAction,
   markNotificationReadAction,
@@ -27,6 +27,7 @@ import {
 import { SignOutButton } from "./SignOutButton";
 import { PlatformEvents } from "./PlatformEvents";
 import { PlatformAudit } from "./PlatformAudit";
+import { StoryComposerDialog } from "./StoryComposerDialog";
 import styles from "./platform.module.css";
 
 type Tab = "resumen" | "propuestas" | "agenda" | "organizacion" | "revista" | "mensajes" | "auditoria";
@@ -50,6 +51,7 @@ const roleLabels: Record<string, string> = {
 };
 
 const statusLabels: Record<string, string> = {
+  published: "Publicada",
   draft: "Borrador",
   submitted: "Enviada",
   in_review: "En revisión",
@@ -237,21 +239,6 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
     event.currentTarget.reset();
   }
 
-  function handleStory(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    run(createStoryAction({
-      title: String(data.get("title") ?? ""),
-      excerpt: String(data.get("excerpt") ?? ""),
-      content: String(data.get("content") ?? ""),
-      storyType: String(data.get("storyType") ?? "cronica"),
-      status: data.get("status") === "published" ? "published" : "draft",
-      isPublic: data.get("isPublic") === "on",
-      coverImagePath: String(data.get("coverImagePath") ?? ""),
-    }));
-    event.currentTarget.reset();
-  }
-
   function handleMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
@@ -282,7 +269,6 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
 
   const unreadNotifications = snapshot.notifications.filter((item) => !item.readAt).length;
   const unreadMessages = snapshot.messages.filter((item) => item.direction === "inbox" && !item.readAt).length;
-  const canPublish = snapshot.capabilities.canEdit;
 
   return <main className={styles.shell}><div className={styles.inner}>
     <header className={styles.header}>
@@ -333,8 +319,26 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
       </section>}
 
       {tab === "revista" && <section className={styles.moduleGrid}>
-        <article className={`${styles.card} ${styles.cardWide}`}><p className={styles.cardLabel}>Archivo editorial</p><h2 className={styles.cardTitle}>Lo que hacemos merece memoria.</h2>{snapshot.stories.map(story => <div className={styles.row} key={story.id}><div><strong>{story.title}</strong><small>{statusLabels[story.status] ?? story.status} · {story.isPublic ? "Visible públicamente" : "Solo equipo editorial"}</small><span>{story.excerpt ?? "Sin extracto todavía."}</span></div>{snapshot.capabilities.canEdit ? <button type="button" className={styles.smallButtonQuiet} disabled={pending} onClick={() => run(setStoryPublicationAction(story.id, !story.isPublic))}>{story.isPublic ? "Pasar a borrador" : "Publicar"}</button> : null}</div>)}{snapshot.stories.length === 0 && <EmptyState>El archivo propio está listo para recibir la primera crónica verificada.</EmptyState>}</article>
-        {snapshot.capabilities.canEdit ? <form className={styles.formCard} onSubmit={handleStory}><p className={styles.cardLabel}>Nueva historia</p><h2 className={styles.cardTitle}>Cuenta lo que aprendimos.</h2><label>Título<input name="title" required minLength={3} maxLength={180} /></label><label>Tipo<select name="storyType" defaultValue="cronica"><option value="cronica">Crónica</option><option value="voces">Voces del club</option><option value="archivo">Archivo</option><option value="noticia">Noticia</option></select></label><label>Extracto<textarea name="excerpt" maxLength={1000} /></label><label>Contenido<textarea name="content" required minLength={1} maxLength={20000} /></label><label>Imagen existente<input name="coverImagePath" placeholder="/imagen.jpg o ruta del bucket" /></label><label className={styles.check}><input name="isPublic" type="checkbox" /> Visible en la revista pública</label><label>Publicación<select name="status" defaultValue="draft"><option value="draft">Guardar borrador</option>{canPublish && <option value="published">Publicar ahora</option>}</select></label><button className={styles.button} disabled={pending}>{pending ? "Guardando…" : "Guardar historia"}</button></form> : <article className={styles.card}><p className={styles.cardLabel}>Equipo editorial</p><h2 className={styles.cardTitle}>Una historia bien contada también sirve.</h2><EmptyState>El rol de edición puede preparar y publicar historias verificadas del club.</EmptyState></article>}
+        <article className={`${styles.card} ${styles.cardWide} ${styles.storyArchiveCard}`}>
+          <div className={styles.storyArchiveHeading}><div><p className={styles.cardLabel}>Archivo editorial</p><h2 className={styles.cardTitle}>Publicaciones del club</h2></div><span className={styles.storyCount}>{snapshot.stories.length} {snapshot.stories.length === 1 ? "historia" : "historias"}</span></div>
+          {snapshot.stories.map(story => {
+            const editorial = parseEditorialContent(story.content);
+            const layoutName = editorialLayouts.find(layout => layout.id === editorial?.layoutId)?.name ?? "Formato anterior";
+            return <article className={styles.storyAdminRow} key={story.id}>
+              <div className={styles.storyAdminMeta}><span className={story.isPublic ? styles.storyPublished : styles.storyDraft}>{story.isPublic ? "Publicada" : statusLabels[story.status] ?? story.status}</span><span>{layoutName}</span><time>{story.publishedAt ? formatDate(story.publishedAt) : "Aún no publicada"}</time></div>
+              <h3>{story.isPublic ? <Link href={`/revista/${story.slug}`}>{story.title}</Link> : story.title}</h3>
+              <p>{story.excerpt ?? "Sin bajada todavía."}</p>
+              <div className={styles.storyAdminActions}>
+                {story.isPublic ? <Link href={`/revista/${story.slug}`} className={styles.storyTextLink}>Ver publicación ↗</Link> : <span className={styles.storyPrivateNote}>Solo equipo editorial</span>}
+                {snapshot.capabilities.canEdit ? <button type="button" className={styles.smallButtonQuiet} disabled={pending} onClick={() => run(setStoryPublicationAction(story.id, !story.isPublic))}>{story.isPublic ? "Pasar a borrador" : "Publicar"}</button> : null}
+              </div>
+            </article>;
+          })}
+          {snapshot.stories.length === 0 ? <div className={styles.storyArchiveEmpty}><span>01 / ARCHIVO ABIERTO</span><h3>Aquí aparecerán las historias del club.</h3><p>La base de datos todavía no contiene publicaciones propias. Las lecturas de ejemplo en Revista son maquetas editoriales, no posts publicados.</p></div> : null}
+        </article>
+        {snapshot.capabilities.canEdit
+          ? <StoryComposerDialog canPublish={snapshot.capabilities.canEdit} />
+          : <article className={styles.card}><p className={styles.cardLabel}>Equipo editorial</p><h2 className={styles.cardTitle}>Una historia bien contada también sirve.</h2><EmptyState>El rol de edición puede preparar y publicar historias verificadas del club.</EmptyState></article>}
       </section>}
 
       {tab === "mensajes" && <section className={styles.moduleGrid}>

@@ -10,6 +10,8 @@ function compile(path) {
 }
 const audit = {};
 new Function("exports", compile("../lib/audit.ts"))(audit);
+const editorialContent = {};
+new Function("exports", compile("../lib/editorial-content.ts"))(editorialContent);
 const auditTable = {};
 new Function("exports", compile("../lib/audit-table.ts"))(auditTable);
 const compiledActions = compile("../app/plataforma/actions.ts");
@@ -34,6 +36,7 @@ function setup({ role = "admin", status = "active", signedIn = true, rows = [] }
   const dependencies = {
     "next/cache": { revalidatePath: () => {} }, "@/lib/audit": audit,
     "@/lib/platform": { isMissingSchemaError: () => false },
+    "@/lib/editorial-content": editorialContent,
     "@/utils/supabase/config": { isSupabaseConfigured: () => true },
     "@/utils/supabase/server": { createClient: async () => client },
   };

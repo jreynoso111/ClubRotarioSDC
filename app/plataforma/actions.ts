@@ -7,6 +7,7 @@ import { isSupabaseConfigured } from "@/utils/supabase/config";
 import { createClient } from "@/utils/supabase/server";
 import { auditCursorFilter, auditPageCursor, defaultAuditSort, normalizeAuditQuery } from "@/lib/audit";
 import type { AuditCursor, AuditDetail, AuditDetailResult, AuditEntry, AuditFilters, AuditPageResult, AuditSort } from "@/lib/audit";
+import { isStoryAssetPath, parseEditorialContent } from "@/lib/editorial-content";
 
 type ActionCode =
   | "unauthenticated"
@@ -588,8 +589,9 @@ export async function createStoryAction(input: {
     : "cronica";
   const status = input?.status === "published" ? "published" : "draft";
   const coverImagePath = optionalText(input?.coverImagePath, 500);
-  if (!title || title.length < 3 || content.length > 20000) {
-    return failure("Completa el título y un contenido de hasta 20,000 caracteres.", "invalid");
+  const editorial = parseEditorialContent(content);
+  if (!title || title.length < 3 || content.length > 20000 || !editorial || (coverImagePath && !isStoryAssetPath(coverImagePath))) {
+    return failure("Completa el título, el texto y las imágenes válidas para una plantilla editorial.", "invalid");
   }
   if (status === "published" && !canPublish(actor!.role)) {
     return failure("Tu rol puede preparar la publicación, pero un editor o gestor debe publicarla.", "forbidden");
@@ -618,6 +620,8 @@ export async function createStoryAction(input: {
 
   revalidatePath("/plataforma");
   revalidatePath("/");
+  revalidatePath("/revista");
+  revalidatePath(`/revista/${slug}`);
   return success(status === "published" ? "La historia fue publicada." : "La historia quedó como borrador.", data.id);
 }
 
@@ -638,12 +642,14 @@ export async function setStoryPublicationAction(
       updated_by: actor!.userId,
     })
     .eq("id", storyId)
-    .select("id")
+    .select("id,slug")
     .maybeSingle();
   if (updateError || !data) return errorFor(updateError);
 
   revalidatePath("/plataforma");
   revalidatePath("/");
+  revalidatePath("/revista");
+  revalidatePath(`/revista/${data.slug}`);
   return success(published ? "La historia ya es visible en el sitio." : "La historia volvió a borrador.");
 }
 
