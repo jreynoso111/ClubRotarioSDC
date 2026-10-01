@@ -60,6 +60,7 @@ function setup(role = "admin", activeMemberIds = [memberId], membershipStatus = 
   };
 
   const dependencies = {
+    "./members-actions": { updateMemberAccessAction: async () => { throw new Error("Membership access is outside this harness."); } },
     "next/cache": { revalidatePath: (path) => invalidations.push(path) },
     "@/lib/platform": { isMissingSchemaError: () => false },
     "@/lib/audit": { auditCursorFilter() {}, auditPageCursor() {}, defaultAuditSort: {}, normalizeAuditQuery() {} },

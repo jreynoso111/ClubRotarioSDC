@@ -44,6 +44,7 @@ function setup({ role = "admin", status = "active", signedIn = true, eventStatus
     },
   };
   const dependencies = {
+    "./members-actions": { updateMemberAccessAction: async () => { throw new Error("Membership access is outside this harness."); } },
     "next/cache": { revalidatePath: (...args) => invalidations.push(args) },
     "@/lib/platform": { isMissingSchemaError: () => false },
     "@/lib/audit": auditModel,

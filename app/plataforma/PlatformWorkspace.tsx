@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import type { FormEvent, ReactNode } from "react";
@@ -10,7 +11,6 @@ import { defaultAuditFilters, type AuditPageResult } from "@/lib/audit";
 import { editorialLayouts, parseEditorialContent } from "@/lib/editorial-content";
 
 import {
-  createActivityAction,
   createProposalAction,
   castProposalVoteAction,
   getAuditPageAction,
@@ -21,12 +21,13 @@ import {
   setStoryPublicationAction,
   setProposalVotingAction,
   submitProposalAction,
-  updateMembershipAction,
   updateMembershipApplicationStatusAction,
   updateTaskStatusAction,
   type PlatformActionResult,
 } from "./actions";
-import { CommitteeManager } from "./CommitteeManager";
+import { editProposalDraftAction, reviewProposalAction } from "./proposal-management-actions";
+import { OrganizationManager } from "./OrganizationManager";
+import { ActivityManager } from "./ActivityManager";
 import { FinanceModule } from "./FinanceModule";
 import { MembershipApplicationsModule } from "./MembershipApplicationsModule";
 import { ProposalCard } from "./ProposalCard";
@@ -37,20 +38,54 @@ import { StoryComposerDialog } from "./StoryComposerDialog";
 import { MembershipPhotoManager } from "./MembershipPhotoManager";
 import styles from "./platform.module.css";
 
-type Tab = "resumen" | "propuestas" | "agenda" | "finanzas" | "solicitudes" | "organizacion" | "revista" | "fotografias" | "mensajes" | "auditoria";
+type Tab = "resumen" | "propuestas" | "agenda" | "actividades" | "finanzas" | "solicitudes" | "organizacion" | "revista" | "fotografias" | "mensajes" | "auditoria";
 
 const tabs: Array<{ id: Tab; label: string }> = [
   { id: "resumen", label: "Resumen" },
   { id: "propuestas", label: "Propuestas" },
   { id: "agenda", label: "Agenda" },
+  { id: "actividades", label: "Actividades y tareas" },
   { id: "finanzas", label: "Finanzas" },
   { id: "solicitudes", label: "Solicitudes" },
-  { id: "organizacion", label: "Organización" },
+  { id: "organizacion", label: "Miembros y comités" },
   { id: "revista", label: "Revista" },
-  { id: "fotografias", label: "Fotografías" },
+  { id: "fotografias", label: "Fotos de la web" },
   { id: "mensajes", label: "Mensajes" },
   { id: "auditoria", label: "Auditoría" },
 ];
+
+const administrationTabs: Tab[] = ["revista", "fotografias", "auditoria"];
+
+function ModuleIcon({ module }: { module: Tab }) {
+  const paths: Record<Tab, string> = {
+    resumen: "M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z",
+    propuestas: "M9 18h6 M10 21h4 M8 14a6 6 0 1 1 8 0l-1 2H9z",
+    agenda: "M4 5h16v16H4z M8 3v4 M16 3v4 M4 10h16 M8 14h2 M14 14h2",
+    actividades: "M4 3h16v18H4z M8 7h8 M8 12h8 M8 17h5",
+    finanzas: "M3 7h18v14H3z M3 7V4h15 M15 12h6v5h-6z",
+    solicitudes: "M5 3h10l4 4v14H5z M9 11h6 M9 15h6 M15 3v5h4",
+    organizacion: "M8 21v-4h8v4 M12 13v4 M4 17v-4h16v4 M9 3h6v6H9z",
+    revista: "M3 4h7l2 2 2-2h7v16h-7l-2 1-2-1H3z M12 6v15",
+    fotografias: "M3 6h5l2-3h4l2 3h5v15H3z M15 13a3 3 0 1 1-6 0 3 3 0 0 1 6 0",
+    mensajes: "M3 4h18v14H9l-6 3z M7 9h10 M7 13h6",
+    auditoria: "M12 3l8 3v6c0 5-8 9-8 9s-8-4-8-9V6z M8 12l3 3 5-6",
+  };
+  return <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[module]} /></svg>;
+}
+
+const descriptions: Record<Tab, string> = {
+  resumen: "Consulta los próximos encuentros y los compromisos abiertos.",
+  propuestas: "Presenta ideas, revisa sus detalles y da seguimiento a la votación y decisión.",
+  agenda: "Gestiona eventos, su publicación en la web y la asistencia de miembros.",
+  actividades: "Coordina el trabajo del club con responsables, fechas y tareas.",
+  finanzas: "Consulta los ingresos, egresos y aportes de cada miembro o actividad.",
+  solicitudes: "Da seguimiento a las personas que solicitan ingresar desde la web.",
+  organizacion: "Define la directiva rotaria, asigna cargos a los perfiles y organiza los comités del club.",
+  revista: "Prepara, edita y publica artículos con sus fotografías y diseño.",
+  fotografias: "Identifica la ubicación de cada imagen y edita las fotos de la página de ingreso.",
+  mensajes: "Consulta tus avisos y conversaciones con los miembros del club.",
+  auditoria: "Revisa quién cambió cada registro y compara sus valores anteriores y actuales.",
+};
 
 const roleLabels: Record<string, string> = {
   member: "Miembro",
@@ -173,6 +208,7 @@ function NotificationBell({ notifications, disabled, onMarkRead, onViewAll, mess
 export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("resumen");
+  const [administrationExpanded, setAdministrationExpanded] = useState(false);
   const [feedback, setFeedback] = useState("");
   const [feedbackError, setFeedbackError] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -198,48 +234,40 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
     }
   }
 
-  function run(action: Promise<PlatformActionResult>) {
+  function run(action: Promise<PlatformActionResult>, onSuccess?: () => void) {
     startTransition(async () => {
-      const result = await action;
-      setFeedback(result.message);
-      setFeedbackError(!result.ok);
-      if (result.ok) router.refresh();
+      try {
+        const result = await action;
+        setFeedback(result.message);
+        setFeedbackError(!result.ok);
+        if (result.ok) { onSuccess?.(); router.refresh(); }
+      } catch {
+        setFeedback("No se pudo guardar. Tus datos siguen en el formulario para volver a intentarlo.");
+        setFeedbackError(true);
+      }
     });
   }
 
   function handleProposal(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const data = new FormData(form);
     run(createProposalAction({
       title: String(data.get("title") ?? ""),
       summary: String(data.get("summary") ?? ""),
       details: String(data.get("details") ?? ""),
-    }));
-    event.currentTarget.reset();
-  }
-
-  function handleActivity(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    run(createActivityAction({
-      title: String(data.get("title") ?? ""),
-      description: String(data.get("description") ?? ""),
-      startsAt: String(data.get("startsAt") ?? ""),
-      endsAt: String(data.get("endsAt") ?? ""),
-      location: String(data.get("location") ?? ""),
-    }));
-    event.currentTarget.reset();
+    }), () => form.reset());
   }
 
   function handleMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const data = new FormData(form);
     run(sendInternalMessageAction({
       recipientUserId: String(data.get("recipientUserId") ?? ""),
       subject: String(data.get("subject") ?? ""),
       body: String(data.get("body") ?? ""),
-    }));
-    event.currentTarget.reset();
+    }), () => form.reset());
   }
 
   if (snapshot.access !== "active") {
@@ -261,10 +289,43 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
 
   const unreadNotifications = snapshot.notifications.filter((item) => !item.readAt).length;
   const unreadMessages = snapshot.messages.filter((item) => item.direction === "inbox" && !item.readAt).length;
+  const isAdministrator = snapshot.membership?.role === "admin";
+  const availableTabs = tabs.filter(item =>
+    (item.id !== "auditoria" || snapshot.capabilities.canAudit) &&
+    (item.id !== "fotografias" || snapshot.capabilities.canEdit)
+  );
+  const mainTabs = availableTabs.filter(item => !isAdministrator || !administrationTabs.includes(item.id));
+  const adminTabs = isAdministrator ? availableTabs.filter(item => administrationTabs.includes(item.id)) : [];
 
-  return <main className={styles.shell}><div className={styles.inner}>
+  return <main className={`${styles.shell} ${styles.dashboard} ${isAdministrator ? styles.dashboardWithAdmin : ""}`}>
+    <aside className={styles.sidebar}>
+      <Link href="/" className={styles.clubBrand}><Image src="/club-santo-domingo-colonial-logo.png" alt="Rotary Club Santo Domingo Colonial" width={1401} height={310} preload /></Link>
+      <div className={styles.sideSection}>ESPACIO DE TRABAJO</div>
+      <nav className={styles.sideNav} aria-label="Módulos de la plataforma">
+        {mainTabs.map((item) => <button type="button" key={item.id} className={tab === item.id ? styles.tabActive : styles.tab} aria-current={tab === item.id ? "page" : undefined} onClick={() => selectTab(item.id)}><ModuleIcon module={item.id} /><span>{item.label}</span>{item.id === "mensajes" && (unreadNotifications + unreadMessages > 0) ? <span className={styles.tabBadge}>{unreadNotifications + unreadMessages}</span> : null}</button>)}
+      </nav>
+      <div className={styles.sidebarFooter}><span className={styles.memberDot} /> Membresía activa<p>Personas de acción.<br />Un club, muchas formas de servir.</p><Link href="/">Visitar sitio público ↗</Link></div>
+    </aside>
+    {isAdministrator && <aside className={`${styles.adminRail} ${administrationExpanded ? styles.adminRailExpanded : ""}`} aria-label="Herramientas de administración">
+      <button type="button" className={styles.adminToggle} aria-expanded={administrationExpanded} aria-controls="administration-navigation"
+        aria-label={administrationExpanded ? "Contraer administración" : "Expandir administración"}
+        title={administrationExpanded ? "Contraer administración" : "Expandir administración"}
+        onClick={() => setAdministrationExpanded(expanded => !expanded)}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 4h18v16H3z M16 4v16" /><path d={administrationExpanded ? "M8 9l3 3-3 3" : "M11 9l-3 3 3 3"} /></svg>
+        <span className={styles.adminLabel}>Administración</span>
+      </button>
+      <nav id="administration-navigation" className={styles.adminNav} aria-label="Administración">
+        {adminTabs.map(item => <button type="button" key={item.id}
+          className={`${styles.adminTab} ${tab === item.id ? styles.adminTabActive : ""}`}
+          aria-label={item.label} aria-current={tab === item.id ? "page" : undefined}
+          title={item.label} data-label={item.label} onClick={() => selectTab(item.id)}>
+          <ModuleIcon module={item.id} /><span className={styles.adminLabel}>{item.label}</span>
+        </button>)}
+      </nav>
+    </aside>}
+    <div className={styles.dashboardMain}>
     <header className={styles.header}>
-      <div><p className={styles.eyebrow}>Plataforma del club · espacio interno</p><h1 className={styles.title}>Hola, <em>{user?.displayName.split(" ")[0] ?? "miembro"}.</em></h1></div>
+      <div><p className={styles.eyebrow}>Tu espacio de trabajo</p><h1 className={styles.title}>Hola, <em>{user?.displayName.split(" ")[0] ?? "miembro"}.</em></h1></div>
       <div className={styles.accountHeader}>
         <p className={styles.identity}><strong>{user?.displayName}</strong><span className={styles.role}>{roleLabels[snapshot.membership?.role ?? "member"]}</span><span>Membresía activa</span></p>
         <div className={styles.headerActions}>
@@ -277,24 +338,27 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
     </header>
 
     <section className={styles.content}>
-      <div className={styles.workspaceIntro}><div><p className={styles.cardLabel}>Centro de coordinación</p><h2>Ideas, personas y servicio en un mismo lugar.</h2></div><p>{snapshot.accessMessage} Los módulos se muestran según tu rol y tus permisos.</p></div>
-      <nav className={styles.tabs} aria-label="Módulos de la plataforma">
-        {tabs.filter(item =>
-          (item.id !== "auditoria" || snapshot.capabilities.canAudit) &&
-          (item.id !== "fotografias" || snapshot.capabilities.canEdit)
-        ).map((item) => <button type="button" key={item.id} className={tab === item.id ? styles.tabActive : styles.tab} onClick={() => selectTab(item.id)}>{item.label}{item.id === "mensajes" && (unreadNotifications + unreadMessages > 0) ? <span className={styles.tabBadge}>{unreadNotifications + unreadMessages}</span> : null}</button>)}
-      </nav>
+      <div className={styles.workspaceIntro}><div><p className={styles.cardLabel}>Club Rotario / Gestión</p><h2>{tab === "resumen" ? "Vista general" : tabs.find(item => item.id === tab)?.label}</h2><p className={styles.sectionDescription}>{descriptions[tab]}</p></div><button className={styles.buttonQuiet} onClick={() => selectTab(tab === "agenda" ? "resumen" : "agenda")}>{tab === "agenda" ? "Ver resumen" : "Ver agenda"} ↗</button></div>
+
       <ActionFeedback message={feedback} error={feedbackError} />
 
       {tab === "auditoria" && snapshot.capabilities.canAudit && <PlatformAudit initialResult={auditResult} initialLoading={pending && !auditResult} />}
 
-      {tab === "resumen" && <section className={styles.moduleGrid}>
+      {tab === "resumen" && <>
+        <div className={styles.overviewMetrics}>
+          {([
+            ["propuestas", snapshot.proposals.length, "Propuestas visibles", "Ideas para transformar el club"],
+            ["resumen", snapshot.tasks.filter(task => !["done", "cancelled"].includes(task.status)).length, "Tareas abiertas", "Compromisos por completar"],
+            ["organizacion", snapshot.committees.filter(committee => committee.isActive).length, "Comités activos", "Equipos que hacen la diferencia"],
+            ["mensajes", unreadMessages + unreadNotifications, "Sin leer", "Mensajes y notificaciones"],
+          ] as const).map(([module, value, label, detail]) => <button type="button" key={label} className={styles.overviewMetric} onClick={() => { if (module === "resumen") document.getElementById("overview-tasks")?.scrollIntoView({ behavior: "smooth", block: "center" }); else selectTab(module); }}><span className={styles.metricHeading}><ModuleIcon module={module} />{label}<span>↗</span></span><strong>{value}</strong><small>{detail}</small></button>)}
+        </div>
+        <section className={styles.moduleGrid}>
         <PlatformEvents snapshot={snapshot} summary onOpenAgenda={() => setTab("agenda")} />
-        <article className={styles.card}><p className={styles.cardLabel}>Tu pulso</p><div className={styles.metric}><strong>{snapshot.proposals.length}</strong><span>propuestas visibles</span></div><div className={styles.metric}><strong>{snapshot.tasks.filter(task => task.status !== "done").length}</strong><span>tareas abiertas</span></div></article>
-        <article className={styles.card}><p className={styles.cardLabel}>Avisos</p><h2 className={styles.cardTitle}>{unreadNotifications || "Sin"} {unreadNotifications === 1 ? "aviso nuevo" : "avisos nuevos"}.</h2><p className={styles.empty}>Revisa Mensajes para leer las novedades del club.</p></article>
+        <article className={`${styles.card} ${styles.welcomeCard}`}><p className={styles.cardLabel}>Personas de acción</p><h2 className={styles.cardTitle}>Tu próxima idea puede hacer la diferencia.</h2><p>Comparte una propuesta y empieza a construir junto al club.</p><button type="button" className={styles.button} onClick={() => selectTab("propuestas")}>Crear una propuesta ↗</button><span className={styles.welcomeDecoration} aria-hidden="true">✦</span></article>
         <article className={`${styles.card} ${styles.cardWide}`}><p className={styles.cardLabel}>Actividad reciente</p><h2 className={styles.cardTitle}>Lo que se está moviendo.</h2>{snapshot.activities.slice(0, 4).map(activity => <div className={styles.row} key={activity.id}><div><strong>{activity.title}</strong><small>{statusLabels[activity.status] ?? activity.status} · {activity.location ?? "Ubicación por confirmar"}</small></div></div>)}{snapshot.activities.length === 0 && <EmptyState>Las actividades aparecerán cuando coordinación las registre.</EmptyState>}</article>
-        <article className={`${styles.card} ${styles.cardWide}`}><p className={styles.cardLabel}>Tareas abiertas</p><h2 className={styles.cardTitle}>Cada compromiso tiene un siguiente paso.</h2>{snapshot.tasks.slice(0, 5).map(task => <div className={styles.row} key={task.id}><div><strong>{task.title}</strong><small>{statusLabels[task.status] ?? task.status} · {task.dueAt ? `Vence ${formatDate(task.dueAt)}` : "Sin fecha límite"}</small></div><button type="button" className={styles.smallButtonQuiet} disabled={pending || task.status === "done"} onClick={() => run(updateTaskStatusAction(task.id, task.status === "in_progress" ? "done" : "in_progress"))}>{task.status === "in_progress" ? "Marcar lista" : "Empezar"}</button></div>)}{snapshot.tasks.length === 0 && <EmptyState>Las tareas de propuestas y actividades aparecerán aquí.</EmptyState>}</article>
-      </section>}
+        <article id="overview-tasks" className={`${styles.card} ${styles.taskOverview}`}><p className={styles.cardLabel}>Tareas abiertas</p><h2 className={styles.cardTitle}>Cada compromiso tiene un siguiente paso.</h2>{snapshot.tasks.filter(task => !["done", "cancelled"].includes(task.status)).slice(0, 5).map(task => <div className={styles.row} key={task.id}><div><strong>{task.title}</strong><small>{statusLabels[task.status] ?? task.status} · {task.dueAt ? `Vence ${formatDate(task.dueAt)}` : "Sin fecha límite"}</small></div><button type="button" className={styles.smallButtonQuiet} disabled={pending || !(snapshot.capabilities.canCoordinate || task.assigneeId === user?.id)} onClick={() => run(updateTaskStatusAction(task.id, task.status === "in_progress" ? "done" : "in_progress"))}>{task.status === "in_progress" ? "Marcar lista" : "Empezar"}</button></div>)}{snapshot.tasks.filter(task => !["done", "cancelled"].includes(task.status)).length === 0 && <EmptyState>Las tareas de propuestas y actividades aparecerán aquí.</EmptyState>}</article>
+      </section></>}
 
       {tab === "propuestas" && <section className={styles.moduleGrid}>
         <article className={`${styles.card} ${styles.cardWide}`}>
@@ -309,7 +373,9 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
             pending={pending}
             onSubmit={() => run(submitProposalAction(proposal.id))}
             onToggleVoting={enabled => run(setProposalVotingAction(proposal.id, enabled))}
-            onVote={(choice: ProposalVoteChoice) => run(castProposalVoteAction(proposal.id, choice))} />)}
+            onVote={(choice: ProposalVoteChoice) => run(castProposalVoteAction(proposal.id, choice))}
+            onEdit={(input,onSuccess)=>run(editProposalDraftAction({proposalId:proposal.id,...input}),onSuccess)}
+            onReview={input=>run(reviewProposalAction({proposalId:proposal.id,...input}))} />)}
           {snapshot.proposals.length === 0 && <EmptyState>Todavía no hay propuestas visibles. Puedes abrir la primera conversación en el formulario.</EmptyState>}
         </article>
         <form className={styles.formCard} onSubmit={handleProposal}>
@@ -322,14 +388,14 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
         </form>
       </section>}
 
-      {tab === "agenda" && <section className={styles.moduleGrid}>
-        <PlatformEvents snapshot={snapshot} />
-        {snapshot.capabilities.canCoordinate ? <form className={styles.formCard} onSubmit={handleActivity}><p className={styles.cardLabel}>Nueva actividad</p><h2 className={styles.cardTitle}>Convierte el plan en movimiento.</h2><label>Nombre<input name="title" required minLength={3} maxLength={180} /></label><label>Inicio<input name="startsAt" type="datetime-local" /></label><label>Fin<input name="endsAt" type="datetime-local" /></label><label>Lugar<input name="location" maxLength={300} /></label><label>Descripción<textarea name="description" maxLength={4000} /></label><button className={styles.button} disabled={pending}>{pending ? "Guardando…" : "Guardar actividad"}</button></form> : <article className={styles.card}><p className={styles.cardLabel}>Coordina con tu equipo</p><h2 className={styles.cardTitle}>La agenda se construye entre todos.</h2><EmptyState>Cuando tengas una fecha o una idea, compártela en Propuestas.</EmptyState></article>}
-      </section>}
+      {tab === "agenda" && <section className={styles.moduleGrid}><PlatformEvents snapshot={snapshot} /></section>}
 
-      {tab === "finanzas" && <FinanceModule canManage={snapshot.capabilities.canManageFinances} />}
+      {tab === "actividades" && <ActivityManager activities={snapshot.activities} tasks={snapshot.tasks}
+        members={snapshot.capabilities.canManageMembership ? snapshot.committeeCandidates : snapshot.memberDirectory} currentUserId={user?.id ?? ""} canManage={snapshot.capabilities.canCoordinate} />}
 
-      {tab === "fotografias" && snapshot.capabilities.canEdit && <MembershipPhotoManager />}
+      {tab === "finanzas" && <FinanceModule canManage={snapshot.capabilities.canManageFinances} onOpenActivities={() => selectTab("actividades")} />}
+
+      {tab === "fotografias" && snapshot.capabilities.canEdit && <MembershipPhotoManager onOpenMagazine={() => selectTab("revista")} />}
 
       {tab === "solicitudes" && <MembershipApplicationsModule
         canReview={snapshot.capabilities.canManageMembership}
@@ -337,11 +403,9 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
         updateStatus={updateMembershipApplicationStatusAction}
       />}
 
-      {tab === "organizacion" && <section className={styles.moduleGrid}>
-        <CommitteeManager committees={snapshot.committees} candidates={snapshot.committeeCandidates}
-          canManage={snapshot.capabilities.canManageCommittees} />
-        {snapshot.capabilities.canManageMembership ? <article className={`${styles.card} ${styles.cardWide}`}><p className={styles.cardLabel}>Solicitudes de membresía</p><h2 className={styles.cardTitle}>Personas que quieren servir.</h2>{snapshot.pendingMembers.map(member => <div className={styles.row} key={member.userId}><div><strong>{member.name}</strong><small>Solicitud recibida · {formatDate(member.createdAt)}</small></div><div className={styles.rowActions}><button type="button" className={styles.smallButton} disabled={pending} onClick={() => run(updateMembershipAction({ userId: member.userId, status: "active", role: "member" }))}>Activar</button><button type="button" className={styles.smallButtonQuiet} disabled={pending} onClick={() => run(updateMembershipAction({ userId: member.userId, status: "suspended", role: member.role }))}>Rechazar</button></div></div>)}{snapshot.pendingMembers.length === 0 && <EmptyState>No hay solicitudes pendientes.</EmptyState>}</article> : null}
-      </section>}
+      {tab === "organizacion" && <OrganizationManager currentUserId={user?.id ?? ""} committees={snapshot.committees} tasks={snapshot.tasks}
+        canManageMembers={snapshot.capabilities.canManageMembership} canManageCommittees={snapshot.capabilities.canManageCommittees}
+        canManageOrganization={isAdministrator} />}
 
       {tab === "revista" && <section className={styles.moduleGrid}>
         <article className={`${styles.card} ${styles.cardWide} ${styles.storyArchiveCard}`}>
@@ -352,9 +416,10 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
             return <article className={styles.storyAdminRow} key={story.id}>
               <div className={styles.storyAdminMeta}><span className={story.isPublic ? styles.storyPublished : styles.storyDraft}>{story.isPublic ? "Publicada" : statusLabels[story.status] ?? story.status}</span><span>{layoutName}</span><time>{story.publishedAt ? formatDate(story.publishedAt) : "Aún no publicada"}</time></div>
               <h3>{story.isPublic ? <Link href={`/revista/${story.slug}`}>{story.title}</Link> : story.title}</h3>
-              <p>{story.excerpt ?? "Sin bajada todavía."}</p>
+              <p>{story.excerpt ?? "Sin resumen todavía."}</p>
               <div className={styles.storyAdminActions}>
                 {story.isPublic ? <Link href={`/revista/${story.slug}`} className={styles.storyTextLink}>Ver publicación ↗</Link> : <span className={styles.storyPrivateNote}>Solo equipo editorial</span>}
+                {snapshot.capabilities.canEdit ? <StoryComposerDialog canPublish={snapshot.capabilities.canEdit} story={story} /> : null}
                 {snapshot.capabilities.canEdit ? <button type="button" className={styles.smallButtonQuiet} disabled={pending} onClick={() => run(setStoryPublicationAction(story.id, !story.isPublic))}>{story.isPublic ? "Pasar a borrador" : "Publicar"}</button> : null}
               </div>
             </article>;
@@ -368,7 +433,7 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
 
       {tab === "mensajes" && <section className={styles.moduleGrid}>
         <article className={`${styles.card} ${styles.cardWide}`}><p className={styles.cardLabel}>Avisos y conversaciones</p><h2 className={styles.cardTitle}>Lo importante, cerca.</h2>{snapshot.notifications.slice(0, 8).map(notification => <div className={styles.row} key={notification.id}><div><strong>{notification.title}</strong><small>{formatDate(notification.createdAt, true)} · {notification.readAt ? "Leído" : "Sin leer"}</small><span>{notification.body}</span></div>{!notification.readAt ? <button type="button" className={styles.smallButtonQuiet} disabled={pending} onClick={() => run(markNotificationReadAction(notification.id))}>Marcar leído</button> : null}</div>)}{snapshot.notifications.length === 0 && <EmptyState>No hay avisos nuevos.</EmptyState>}{snapshot.messages.slice(0, 8).map(message => <div className={styles.message} key={`${message.direction}-${message.id}`}><div><span className={styles.messageTag}>{message.direction === "inbox" ? "Recibido" : "Enviado"}</span><strong>{message.subject}</strong><small>{message.senderName} · {formatDate(message.createdAt, true)}</small></div><p>{message.body}</p>{message.direction === "inbox" && !message.readAt ? <button type="button" className={styles.smallButtonQuiet} disabled={pending} onClick={() => run(markMessageReadAction(message.id))}>Marcar leído</button> : null}</div>)}{snapshot.messages.length === 0 && snapshot.messagingSchema.state === "ready" && <EmptyState>Tu buzón todavía está vacío.</EmptyState>}{snapshot.messagingSchema.state !== "ready" && <p className={styles.noticeMessage}>{snapshot.messagingSchema.message}</p>}</article>
-        <form className={styles.formCard} onSubmit={handleMessage}><p className={styles.cardLabel}>Nuevo mensaje</p><h2 className={styles.cardTitle}>Mantén el vínculo.</h2><label>Destinatario<select name="recipientUserId" defaultValue=""><option value="" disabled>Selecciona una persona</option>{snapshot.capabilities.canBroadcast && <option value="all">Aviso a todo el club</option>}{snapshot.memberDirectory.filter(member => member.userId !== user?.id).map(member => <option key={member.userId} value={member.userId}>{member.name}</option>)}</select></label><label>Asunto<input name="subject" required minLength={3} maxLength={180} /></label><label>Mensaje<textarea name="body" required minLength={1} maxLength={8000} /></label><button className={styles.button} disabled={pending || snapshot.messagingSchema.state !== "ready"}>{pending ? "Enviando…" : "Enviar mensaje"}</button></form>
+        <form className={styles.formCard} onSubmit={handleMessage}><p className={styles.cardLabel}>Nuevo mensaje</p><h2 className={styles.cardTitle}>Mantén el vínculo.</h2><label>Destinatario<select name="recipientUserId" required defaultValue=""><option value="" disabled>Selecciona una persona</option>{snapshot.capabilities.canBroadcast && <option value="all">Aviso a todo el club</option>}{(snapshot.capabilities.canManageMembership ? snapshot.committeeCandidates : snapshot.memberDirectory).filter(member => member.userId !== user?.id).map(member => <option key={member.userId} value={member.userId}>{member.name}</option>)}</select></label><label>Asunto<input name="subject" required minLength={3} maxLength={180} /></label><label>Mensaje<textarea name="body" required minLength={1} maxLength={8000} /></label><button className={styles.button} disabled={pending || snapshot.messagingSchema.state !== "ready"}>{pending ? "Enviando…" : "Enviar mensaje"}</button></form>
       </section>}
 
       {(snapshot.dataWarnings.length > 0) && <details className={styles.warnings}><summary>Algunas fuentes no respondieron</summary><ul>{snapshot.dataWarnings.map(warning => <li key={warning}>{warning}</li>)}</ul></details>}

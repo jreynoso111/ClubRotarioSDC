@@ -25,26 +25,28 @@ const content = editorialContent.serializeEditorialContent({
   coverImageAlt: "Voluntarios reunidos en la comunidad",
 });
 
-function setup(role = "editor") {
+function setup(role = "editor", storyRecord = { id: storyId, slug: "una-historia-de-servicio", published_at: "2026-09-20T12:00:00.000Z", cover_image_path: null }) {
   const writes = [];
   const invalidations = [];
+  const filters = [];
   const client = {
     auth: { getUser: async () => ({ data: { user: { id: actorId } }, error: null }) },
     from(table) {
       const query = {
         select() { return query; },
-        eq() { return query; },
+        eq(column, value) { filters.push({ table, column, value }); return query; },
         insert(value) { writes.push({ table, operation: "insert", value }); return query; },
         update(value) { writes.push({ table, operation: "update", value }); return query; },
         async maybeSingle() {
           if (table === "memberships") return { data: { membership_role: role, membership_status: "active" }, error: null };
-          return { data: { id: storyId, slug: "una-historia-de-servicio" }, error: null };
+          return { data: storyRecord, error: null };
         },
       };
       return query;
     },
   };
   const dependencies = {
+    "./members-actions": { updateMemberAccessAction: async () => { throw new Error("Membership access is outside this harness."); } },
     "next/cache": { revalidatePath: (path) => invalidations.push(path) },
     "@/lib/platform": { isMissingSchemaError: () => false },
     "@/lib/audit": { auditCursorFilter() {}, auditPageCursor() {}, defaultAuditSort: {}, normalizeAuditQuery() {} },
@@ -54,7 +56,7 @@ function setup(role = "editor") {
   };
   const actions = {};
   new Function("require", "exports", compiledActions)((name) => dependencies[name], actions);
-  return { actions, writes, invalidations };
+  return { actions, writes, invalidations, filters };
 }
 
 test("an editor saves a structured draft and invalidates the magazine routes", async () => {
@@ -99,4 +101,56 @@ test("publishing and returning a story to draft refresh the public index and det
   assert.deepEqual(invalidations.slice(-4), ["/plataforma", "/", "/revista", "/revista/una-historia-de-servicio"]);
   assert.equal((await actions.setStoryPublicationAction(storyId, false)).ok, true);
   assert.equal(writes[1].value.status, "draft");
+});
+
+test("editing updates the selected article while preserving its link, publication date and author", async () => {
+  const { actions, writes, invalidations, filters } = setup();
+  const result = await actions.createStoryAction({
+    storyId, title: "Un título actualizado", excerpt: "Resumen actualizado para la revista del club.",
+    content, storyType: "noticia", status: "published", isPublic: true,
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(writes.length, 1);
+  assert.equal(writes[0].operation, "update");
+  assert.equal(writes[0].value.title, "Un título actualizado");
+  assert.equal(writes[0].value.published_at, "2026-09-20T12:00:00.000Z");
+  assert.equal(Object.hasOwn(writes[0].value, "author_id"), false);
+  assert.equal(Object.hasOwn(writes[0].value, "created_by"), false);
+  assert.equal(Object.hasOwn(writes[0].value, "slug"), false);
+  assert.equal(filters.filter((filter) => filter.table === "stories" && filter.column === "id" && filter.value === storyId).length, 2);
+  assert.deepEqual(invalidations.slice(-4), ["/plataforma", "/", "/revista", "/revista/una-historia-de-servicio"]);
+});
+
+test("an existing cover can be retained; invalid or unavailable edit targets never write", async () => {
+  const originalCover = "https://example.com/current-cover.jpg";
+  const { actions, writes } = setup("editor", { id: storyId, slug: "historia", published_at: null, cover_image_path: originalCover });
+  assert.equal((await actions.createStoryAction({ storyId, title: "Historia editada", content, storyType: "cronica", coverImagePath: originalCover })).ok, true);
+  assert.equal(writes[0].value.cover_image_path, originalCover);
+  assert.equal((await actions.createStoryAction({ storyId, title: "Historia editada", content, storyType: "cronica", coverImagePath: "https://example.com/another.jpg" })).code, "invalid");
+  assert.equal((await actions.createStoryAction({ storyId: "not-an-id", title: "Historia editada", content, storyType: "cronica" })).code, "invalid");
+  assert.equal(writes.length, 1);
+
+  const unavailable = setup("editor", null);
+  assert.equal((await unavailable.actions.createStoryAction({ storyId, title: "Historia editada", content, storyType: "cronica" })).code, "invalid");
+  assert.equal(unavailable.writes.length, 0);
+});
+
+test("the selected layout, inline photo position and ordered gallery are persisted together", async () => {
+  const { actions, writes } = setup();
+  const document = editorialContent.parseEditorialContent(content);
+  document.inlineImageAfterParagraph = 0;
+  document.inlineImageAlignment = "left";
+  document.gallery = [
+    { path: `stories/${storyId}-gallery.jpg`, alt: "Primera foto", caption: "Inicio de la jornada" },
+    { path: `stories/${uploadId}-gallery.webp`, alt: "Segunda foto", caption: "" },
+  ];
+  const result = await actions.createStoryAction({ title: "Historia con galería", content: editorialContent.serializeEditorialContent(document), storyType: "cronica", status: "draft" });
+  assert.equal(result.ok, true);
+  assert.deepEqual(editorialContent.parseEditorialContent(writes[0].value.content), document);
+
+  const invalid = { ...document, gallery: [{ ...document.gallery[0], path: "../private.jpg" }] };
+  const rejected = await actions.createStoryAction({ title: "Historia con galería", content: editorialContent.serializeEditorialContent(invalid), storyType: "cronica" });
+  assert.equal(rejected.code, "invalid");
+  assert.equal(writes.length, 1);
 });

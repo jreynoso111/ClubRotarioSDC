@@ -81,13 +81,13 @@ const rotaryParts = [
     number: "02",
     eyebrow: "Red global",
     title: "Rotary International",
-    body: "La organización que apoya y coordina proyectos, campañas e iniciativas para conectar a los clubes rotarios en todo el mundo.",
+    body: "La organización que conecta y coordina clubes, campañas e iniciativas para servir en distintas comunidades del mundo.",
   },
   {
     number: "03",
     eyebrow: "Alcance",
     title: "La Fundación Rotaria",
-    body: "La entidad que proporciona fondos para actividades humanitarias, desde proyectos comunitarios hasta iniciativas de alcance internacional.",
+    body: "La entidad que reúne programas humanitarios y espacios de colaboración para iniciativas comunitarias y de alcance internacional.",
   },
 ];
 
@@ -119,29 +119,6 @@ const clubStructure = [
   },
 ];
 
-const sources = [
-  {
-    label: "Rotary International · Historia",
-    body: "Origen, cronología fundacional y evolución del movimiento rotario.",
-    href: "https://www.rotary.org/es-mx/who-we-are/our-history",
-  },
-  {
-    label: "Rotary International · Estructura",
-    body: "Los tres pilares que conectan clubes, Rotary International y La Fundación Rotaria.",
-    href: "https://www.rotary.org/es-mx/who-we-are/our-structure",
-  },
-  {
-    label: "Rotary en el Corazón de las Américas",
-    body: "Referencia pública sobre Leonidas Heyaime Valenzuela y la fundación del club en 1969.",
-    href: "https://rotaryca.org/publicaciones/personajes-inolvidables-leonidas-heyaime-valenzuela-pdg-1968-196/",
-  },
-  {
-    label: "INPOSDOM · 50 aniversario",
-    body: "Registro institucional de la conmemoración del club en 2019.",
-    href: "https://inposdom.gob.do/filatelia/el-inposdom-celebra-el-50-aniversario-del-club-rotario-santo-domingo-colonial-con-la-emision-de-una-nueva-serie-postal/",
-  },
-];
-
 export default function NosotrosPage() {
   return (
     <PublicShell active="nosotros">
@@ -163,21 +140,19 @@ export default function NosotrosPage() {
           </div>
         </section>
 
-        <section className={styles.relationship} id="relacion">
+        <section className={styles.structure} id="estructura">
           <div className={styles.sectionHeading}>
-            <div><SectionLabel>La relación</SectionLabel><h2>Un club local dentro de <span>una red mundial.</span></h2></div>
-            <p>Rotary se organiza en tres pilares que trabajan juntos para lograr un cambio duradero.</p>
+            <div><SectionLabel>Cómo se articula</SectionLabel><h2>Tres piezas. <span>Un mismo propósito.</span></h2></div>
+            <p>La estructura oficial explica cómo una idea local puede encontrar apoyo y alcance internacional.</p>
           </div>
-          <div className={styles.relationshipGrid}>
+          <div className={styles.partsGrid}>
             {rotaryParts.map((part) => (
-              <article className={styles.relationshipCard} key={part.number}>
-                <span>{part.number}</span>
-                <small>{part.eyebrow}</small>
-                <h3>{part.title}</h3>
-                <p>{part.body}</p>
+              <article className={styles.partCard} key={part.number}>
+                <span>{part.number}</span><small className={styles.partEyebrow}>{part.eyebrow}</small><h3>{part.title}</h3><p>{part.body}</p>
               </article>
             ))}
           </div>
+          <a className={styles.sourceLink} href="https://www.rotary.org/es-mx/who-we-are/our-structure" target="_blank" rel="noreferrer">Consultar la estructura oficial <ArrowUpRight /></a>
         </section>
 
         <section className={styles.clubHistory} id="historia-club">
@@ -200,11 +175,7 @@ export default function NosotrosPage() {
           <a className={styles.sourceLink} href="https://rotaryca.org/publicaciones/personajes-inolvidables-leonidas-heyaime-valenzuela-pdg-1968-196/" target="_blank" rel="noreferrer">Ver la referencia histórica del club <ArrowUpRight /></a>
         </section>
 
-        <section className={styles.history} id="rotary-international">
-          <div className={styles.sectionHeading}>
-            <div><SectionLabel>Rotary International</SectionLabel><h2>La red que empezó con <span>una conversación.</span></h2></div>
-            <p>Una cronología editorial basada en las fuentes oficiales de Rotary International.</p>
-          </div>
+        <section className={`${styles.history} ${styles.historyRotary}`} id="rotary-international">
           <div className={styles.historyLead}>
             <p>Rotary nació el 23 de febrero de 1905 en Chicago, cuando Paul P. Harris reunió a personas de distintas profesiones para compartir ideas, crear amistades y servir.</p>
             <p>El movimiento internacional ofrece el marco que conecta al club local con otros clubes, programas y comunidades alrededor del mundo.</p>
@@ -220,28 +191,12 @@ export default function NosotrosPage() {
           <a className={styles.sourceLink} href="https://www.rotary.org/es-mx/who-we-are/our-history" target="_blank" rel="noreferrer">Ver la historia completa en Rotary International <ArrowUpRight /></a>
         </section>
 
-        <section className={styles.structure} id="estructura">
-          <div className={styles.sectionHeading}>
-            <div><SectionLabel>Cómo se articula</SectionLabel><h2>Tres piezas. <span>Un mismo propósito.</span></h2></div>
-            <p>La estructura oficial explica cómo una idea local puede encontrar apoyo y alcance internacional.</p>
-          </div>
-          <div className={styles.partsGrid}>
-            {rotaryParts.map((part) => (
-              <article className={styles.partCard} key={part.number}>
-                <span>{part.number}</span><small className={styles.partEyebrow}>{part.eyebrow}</small><h3>{part.title}</h3><p>{part.body}</p>
-              </article>
-            ))}
-          </div>
-          <a className={styles.sourceLink} href="https://www.rotary.org/es-mx/who-we-are/our-structure" target="_blank" rel="noreferrer">Consultar la estructura oficial <ArrowUpRight /></a>
-        </section>
-
         <section className={styles.club} id="estructura-club">
           <div className={styles.clubIntro}>
             <SectionLabel>El club por dentro</SectionLabel>
             <h2>La organización convierte la intención en <em>acción.</em></h2>
             <p>La estructura del Club Rotario Santo Domingo Colonial se presenta aquí de forma clara para que la directiva pueda completarla con sus nombres, periodos y responsabilidades.</p>
             <p className={styles.notice}>Los cargos y el directorio vigente se publicarán únicamente después de ser confirmados por la organización.</p>
-            <a className={styles.buttonLight} href="mailto:club@rotariosantodomingo.org?subject=Información%20institucional%20del%20club">Compartir información del club <ArrowUpRight /></a>
           </div>
           <div className={styles.clubStructure}>
             <div className={styles.clubStructureHead}><span>Estructura pública</span><span>01 — 03</span></div>
@@ -258,24 +213,6 @@ export default function NosotrosPage() {
           <div className={styles.focusList}>{focusAreas.map((area, index) => <span key={area}><strong>{String(index + 1).padStart(2, "0")}</strong>{area}</span>)}</div>
         </section>
         <a className={styles.sourceLink} href="https://www.rotary.org/es-mx/our-causes" target="_blank" rel="noreferrer">Conocer las áreas de interés en Rotary International <ArrowUpRight /></a>
-
-        <section className={styles.sources} id="fuentes">
-          <div className={styles.sectionHeading}>
-            <div><SectionLabel>Fuentes consultadas</SectionLabel><h2>Una historia con <span>referencias.</span></h2></div>
-            <p>Enlaces públicos para ampliar cada capítulo y mantener la memoria institucional verificable.</p>
-          </div>
-          <div className={styles.sourceGrid}>
-            {sources.map((source, index) => (
-              <a className={styles.sourceCard} href={source.href} key={source.href} target="_blank" rel="noreferrer">
-                <span>{String(index + 1).padStart(2, "0")}</span>
-                <strong>{source.label}</strong>
-                <p>{source.body}</p>
-                <ArrowUpRight />
-              </a>
-            ))}
-          </div>
-          <p className={styles.sourceDisclaimer}>La historia local seguirá creciendo con testimonios, documentos y fotografías que el club revise y autorice para publicación.</p>
-        </section>
 
         <section className={styles.joinBand}>
           <div><SectionLabel>Ser parte</SectionLabel><h2>El servicio también necesita nuevas preguntas.</h2></div>

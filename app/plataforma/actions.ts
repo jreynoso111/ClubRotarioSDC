@@ -1,13 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { updateMemberAccessAction } from "./members-actions";
 
 import { isMissingSchemaError, type ProposalVoteChoice } from "@/lib/platform";
 import { isSupabaseConfigured } from "@/utils/supabase/config";
 import { createClient } from "@/utils/supabase/server";
 import { auditCursorFilter, auditPageCursor, defaultAuditSort, normalizeAuditQuery } from "@/lib/audit";
 import type { AuditCursor, AuditDetail, AuditDetailResult, AuditEntry, AuditFilters, AuditPageResult, AuditSort } from "@/lib/audit";
-import { isStoryAssetPath, parseEditorialContent } from "@/lib/editorial-content";
+import { isStoryAssetPath, MAX_EDITORIAL_CONTENT_LENGTH, parseEditorialContent } from "@/lib/editorial-content";
 import type { MembershipApplication, MembershipApplicationStatus } from "@/lib/membership-applications";
 import type {
   FinanceCategory,
@@ -322,32 +323,36 @@ const financeMethods: FinancePaymentMethod[] = ["cash", "bank_transfer", "card",
 
 export async function getFinanceDashboardAction(
   month: string,
+  filters: { memberId?: string; activityId?: string; page?: number } = {},
 ): Promise<PlatformActionResult & { dashboard?: FinanceDashboard }> {
   const { actor, error } = await requireActor();
   if (error) return error;
   if (!validFinanceMonth(month)) return failure("Selecciona un mes válido para consultar Finanzas.", "invalid");
 
+  if ((filters.memberId && !isUuid(filters.memberId)) || (filters.activityId && !isUuid(filters.activityId))
+    || (filters.page !== undefined && (!Number.isInteger(filters.page) || filters.page < 0 || filters.page > 10000))) {
+    return failure("Revisa los filtros financieros.", "invalid");
+  }
+  const page = filters.page ?? 0;
   const monthStart = `${month}-01`;
   const [year, monthNumber] = month.split("-").map(Number);
   const nextMonthStart = new Date(Date.UTC(year, monthNumber, 1)).toISOString().slice(0, 10);
   const canManage = actor!.role === "club_manager" || actor!.role === "admin";
   const supabase = actor!.supabase;
-  const [summaryResult, duesResult, entriesResult, membersResult, activitiesResult] = await Promise.all([
+  let entriesQuery = supabase.from("finance_entries")
+    .select("id,direction,category,amount,occurred_on,description,member_id,member_name_snapshot,counterparty_name,activity_id,activity_name_snapshot,monthly_due_id,payment_method,receipt_reference")
+    .gte("occurred_on", monthStart).lt("occurred_on", nextMonthStart)
+    .order("occurred_on", { ascending: false }).order("created_at", { ascending: false }).order("id", { ascending: false });
+  if (filters.memberId) entriesQuery = entriesQuery.eq("member_id", filters.memberId);
+  if (filters.activityId) entriesQuery = entriesQuery.eq("activity_id", filters.activityId);
+  const [summaryResult, duesResult, entriesResult, membersResult, activitiesResult, scopeResult] = await Promise.all([
     supabase.rpc("get_finance_period_summary", { _month_start: monthStart }),
     supabase.rpc("get_finance_month_dues", { _month_start: monthStart }),
-    supabase
-      .from("finance_entries")
-      .select("id,direction,category,amount,occurred_on,description,member_id,member_name_snapshot,counterparty_name,activity_id,activity_name_snapshot,monthly_due_id,payment_method,receipt_reference")
-      .gte("occurred_on", monthStart)
-      .lt("occurred_on", nextMonthStart)
-      .order("occurred_on", { ascending: false })
-      .order("created_at", { ascending: false })
-      .limit(100),
+    entriesQuery.range(page * 50, page * 50 + 49),
     canManage
       ? supabase
           .from("memberships")
-          .select("user_id,profile:profiles!memberships_user_id_fkey(display_name)")
-          .eq("membership_status", "active")
+          .select("user_id,membership_status,profile:profiles!memberships_user_id_fkey(display_name)")
           .order("user_id", { ascending: true })
           .limit(200)
       : Promise.resolve({ data: [], error: null }),
@@ -355,10 +360,10 @@ export async function getFinanceDashboardAction(
       ? supabase
           .from("activities")
           .select("id,title")
-          .in("activity_status", ["planned", "active", "completed"])
           .order("starts_at", { ascending: false, nullsFirst: false })
           .limit(100)
       : Promise.resolve({ data: [], error: null }),
+    supabase.rpc("get_finance_scope_totals", { _month_start: monthStart, _member_id: filters.memberId || null, _activity_id: filters.activityId || null }),
   ]);
 
   const queryErrors = [
@@ -367,6 +372,7 @@ export async function getFinanceDashboardAction(
     entriesResult.error,
     membersResult.error,
     activitiesResult.error,
+    scopeResult.error,
   ].filter(Boolean);
   if (queryErrors.some((queryError) => isMissingSchemaError(queryError))) {
     return failure(
@@ -413,6 +419,7 @@ export async function getFinanceDashboardAction(
   };
   type MemberRow = {
     user_id: string;
+    membership_status: string;
     profile: { display_name: string | null } | null;
   };
   type ActivityOptionRow = { id: string; title: string };
@@ -455,6 +462,7 @@ export async function getFinanceDashboardAction(
   const members = ((membersResult.data ?? []) as unknown as MemberRow[]).map((member) => ({
     id: member.user_id,
     name: member.profile?.display_name?.trim() || "Miembro del club",
+    active: member.membership_status === "active",
   }));
   const activities = ((activitiesResult.data ?? []) as unknown as ActivityOptionRow[]).map((activity) => ({
     id: activity.id,
@@ -463,13 +471,15 @@ export async function getFinanceDashboardAction(
 
   return {
     ...success("Resumen financiero cargado."),
-    dashboard: { monthStart, summary: summaryData, dues, entries, members, activities },
+    dashboard: { monthStart, summary: summaryData, dues, entries, members, activities,
+      page, scope: { income: String(scopeResult.data?.[0]?.income_total ?? 0), expense: String(scopeResult.data?.[0]?.expense_total ?? 0), count: Number(scopeResult.data?.[0]?.entry_count ?? 0) } },
   };
 }
 
 export async function createFinanceMonthlyDuesAction(input: {
   month: string;
   amountDue: string;
+  memberIds?: string[];
 }): Promise<PlatformActionResult> {
   const { actor, error } = await requireActor(["club_manager", "admin"]);
   if (error) return error;
@@ -477,15 +487,20 @@ export async function createFinanceMonthlyDuesAction(input: {
   const amountDue = financeAmount(input?.amountDue);
   if (!amountDue) return failure("Indica un aporte mensual mayor que cero, con hasta dos decimales.", "invalid");
 
-  const { data, error: insertError } = await actor!.supabase.rpc("create_finance_monthly_dues", {
+  if (input.memberIds !== undefined && (!Array.isArray(input.memberIds) || input.memberIds.length < 1
+    || input.memberIds.length > 200 || input.memberIds.some(id => !isUuid(id)) || new Set(input.memberIds).size !== input.memberIds.length)) {
+    return failure("Selecciona al menos un miembro y evita repetirlo.", "invalid");
+  }
+  const { data, error: insertError } = await actor!.supabase.rpc(input.memberIds ? "create_finance_member_dues" : "create_finance_monthly_dues", {
     _due_month: `${input.month}-01`,
     _amount_due: amountDue,
+    ...(input.memberIds ? { _member_ids: input.memberIds } : {}),
   });
   if (insertError) return errorFor(insertError);
   revalidatePath("/plataforma");
   const count = Number(data ?? 0);
   return success(count > 0
-    ? `Se generaron ${count} aportes mensuales para ${input.month}.`
+    ? `Se generaron ${count} aportes mensuales por miembro para ${input.month}.`
     : `No se generaron aportes: el mes ${input.month} ya tenía cuotas para las membresías activas.`);
 }
 
@@ -1062,6 +1077,7 @@ export async function removeCommitteeMemberAction(input: {
 }
 
 export async function createStoryAction(input: {
+  storyId?: string;
   title: string;
   excerpt?: string;
   content: string;
@@ -1082,39 +1098,50 @@ export async function createStoryAction(input: {
   const status = input?.status === "published" ? "published" : "draft";
   const coverImagePath = optionalText(input?.coverImagePath, 500);
   const editorial = parseEditorialContent(content);
-  if (!title || title.length < 3 || content.length > 20000 || !editorial || (coverImagePath && !isStoryAssetPath(coverImagePath))) {
+  if (!title || title.length < 3 || content.length > MAX_EDITORIAL_CONTENT_LENGTH || !editorial || (input?.storyId !== undefined && !isUuid(input.storyId))) {
     return failure("Completa el título, el texto y las imágenes válidas para una plantilla editorial.", "invalid");
+  }
+  if (editorial.inlineImagePath && !editorial.inlineImageAlt.trim()) {
+    return failure("Describe la fotografía dentro del texto antes de guardar.", "invalid");
   }
   if (status === "published" && !canPublish(actor!.role)) {
     return failure("Tu rol puede preparar la publicación, pero un editor o gestor debe publicarla.", "forbidden");
   }
-  const slug = slugify(title);
+  let existing: { id: string; slug: string; published_at: string | null; cover_image_path: string | null } | null = null;
+  if (input.storyId) {
+    const { data, error: readError } = await actor!.supabase
+      .from("stories")
+      .select("id,slug,published_at,cover_image_path")
+      .eq("id", input.storyId)
+      .maybeSingle();
+    if (readError) return errorFor(readError);
+    if (!data) return failure("Esta publicación ya no está disponible. Actualiza la página y vuelve a intentar.", "invalid");
+    existing = data;
+  }
+  if (coverImagePath && !isStoryAssetPath(coverImagePath) && coverImagePath !== existing?.cover_image_path) {
+    return failure("Selecciona una fotografía válida para esta publicación.", "invalid");
+  }
+  // Preserve links and original publication date when editing an existing article.
+  const slug = existing?.slug ?? slugify(title);
   if (!slug) return failure("El título no permite crear un enlace válido.", "invalid");
 
-  const { data, error: insertError } = await actor!.supabase
-    .from("stories")
-    .insert({
-      title,
-      slug,
-      excerpt,
-      content,
-      story_type: storyType,
-      status,
-      is_public: status === "published" && Boolean(input?.isPublic),
-      published_at: status === "published" ? new Date().toISOString() : null,
-      cover_image_path: coverImagePath,
-      author_id: actor!.userId,
-      created_by: actor!.userId,
-    })
-    .select("id")
-    .maybeSingle();
-  if (insertError || !data) return errorFor(insertError);
+  const values = {
+    title, excerpt, content, story_type: storyType, status,
+    is_public: status === "published" && Boolean(input?.isPublic),
+    published_at: status === "published" ? existing?.published_at ?? new Date().toISOString() : null,
+    cover_image_path: coverImagePath,
+  };
+  const query = existing
+    ? actor!.supabase.from("stories").update(values).eq("id", existing.id)
+    : actor!.supabase.from("stories").insert({ ...values, slug, author_id: actor!.userId, created_by: actor!.userId });
+  const { data, error: writeError } = await query.select("id").maybeSingle();
+  if (writeError || !data) return errorFor(writeError);
 
   revalidatePath("/plataforma");
   revalidatePath("/");
   revalidatePath("/revista");
   revalidatePath(`/revista/${slug}`);
-  return success(status === "published" ? "La historia fue publicada." : "La historia quedó como borrador.", data.id);
+  return success(existing ? "Los cambios de la publicación quedaron guardados." : status === "published" ? "La historia fue publicada." : "La historia quedó como borrador.", data.id);
 }
 
 export async function setStoryPublicationAction(
@@ -1281,41 +1308,7 @@ export async function updateMembershipAction(input: {
   status: MembershipStatus;
   role: PlatformRole;
 }): Promise<PlatformActionResult> {
-  const { actor, error } = await requireActor(["club_manager", "admin"]);
-  if (error) return error;
-  if (!isUuid(input?.userId) || !["pending", "active", "suspended"].includes(input.status)) {
-    return failure("La membresía indicada no es válida.", "invalid");
-  }
-  if (!["member", "coordinator", "editor", "club_manager", "admin"].includes(input.role)) {
-    return failure("El rol indicado no es válido.", "invalid");
-  }
-  if (input.userId === actor!.userId) {
-    return failure("La cuenta actual no puede cambiar su propio acceso.", "forbidden");
-  }
-
-  const now = new Date().toISOString();
-  const { data, error: updateError } = await actor!.supabase
-    .from("memberships")
-    .update({
-      membership_status: input.status,
-      membership_role: input.role,
-      approved_by: input.status === "active" ? actor!.userId : null,
-      approved_at: input.status === "active" ? now : null,
-      joined_at: input.status === "active" ? now : null,
-    })
-    .eq("user_id", input.userId)
-    .select("user_id")
-    .maybeSingle();
-  if (updateError || !data) return errorFor(updateError);
-
-  revalidatePath("/plataforma");
-  return success(
-    input.status === "active"
-      ? "La membresía fue activada."
-      : input.status === "suspended"
-        ? "La membresía fue suspendida."
-        : "La solicitud volvió a pendiente.",
-  );
+  return updateMemberAccessAction(input);
 }
 
 export type MembershipApplicationsActionResult = {

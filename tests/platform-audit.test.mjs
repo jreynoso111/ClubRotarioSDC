@@ -34,6 +34,7 @@ function setup({ role = "admin", status = "active", signedIn = true, rows = [] }
     },
   };
   const dependencies = {
+    "./members-actions": { updateMemberAccessAction: async () => { throw new Error("Membership access is outside this harness."); } },
     "next/cache": { revalidatePath: () => {} }, "@/lib/audit": audit,
     "@/lib/platform": { isMissingSchemaError: () => false },
     "@/lib/editorial-content": editorialContent,

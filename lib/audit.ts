@@ -5,7 +5,7 @@ export const auditModules = {
   membership: { label: "Miembros y solicitudes", tables: ["profiles", "memberships", "access_requests", "membership_applications"] },
   proposals: { label: "Propuestas", tables: ["proposals", "proposal_votes"] },
   finance: { label: "Finanzas", tables: ["finance_monthly_dues", "finance_entries"] },
-  organization: { label: "Comités", tables: ["committees", "committee_members"] },
+  organization: { label: "Organigrama y comités", tables: ["committees", "committee_members", "club_leadership_terms", "club_leadership_positions"] },
   activities: { label: "Actividades y tareas", tables: ["activities", "tasks"] },
   messaging: { label: "Mensajes y avisos", tables: ["internal_messages", "internal_message_recipients", "notifications"] },
   settings: { label: "Configuración de la web", tables: ["site_settings"] },
@@ -70,6 +70,7 @@ export const auditTableLabels: Record<string, string> = {
   media_assets: "Archivo", objects: "Archivo almacenado", users: "Cuenta", sessions: "Sesión", audit_log: "Auditoría",
   membership_applications: "Solicitud de ingreso", proposal_votes: "Participación en votación",
   finance_monthly_dues: "Cuota mensual", finance_entries: "Movimiento financiero", site_photo_slots: "Fotografía",
+  club_leadership_terms: "Período de directiva", club_leadership_positions: "Cargo del club",
 };
 export const auditFieldLabels: Record<string, string> = {
   id: "Identificador", title: "Título", slug: "Enlace", summary: "Resumen", description: "Descripción",
@@ -106,6 +107,9 @@ export const auditFieldLabels: Record<string, string> = {
   amount: "Monto", currency: "Moneda", occurred_on: "Fecha del movimiento", counterparty_name: "Persona o entidad",
   activity_name_snapshot: "Nombre de la actividad", monthly_due_id: "Cuota asociada", payment_method: "Medio de pago",
   receipt_reference: "Referencia del comprobante",
+  start_year: "Inicio del año rotario", label: "Nombre del período", is_locked: "Edición cerrada",
+  term_id: "Período de directiva", parent_id: "Cargo superior", responsibilities: "Responsabilidades",
+  sort_order: "Orden en el organigrama", access_role: "Nivel de acceso del cargo",
 };
 
 export function auditActionLabel(entry: Pick<AuditEntry, "table_name" | "operation">) {

@@ -29,7 +29,7 @@ export default async function MembershipApplicationPage() {
           </div>
           <div className={styles.photoGallery} aria-label="Fotografías sociales del club">
             {photoSlots.map((slot, index) => (
-              <figure className={styles.photoSlot} data-featured={index === 0 ? "true" : "false"} key={slot.key}>
+              <figure className={styles.photoSlot} data-featured={index === 0 ? "true" : "false"} id={slot.key} key={slot.key}>
                 <div className={styles.photoFrame}>
                   {slot.imageUrl ? (
                     <Image

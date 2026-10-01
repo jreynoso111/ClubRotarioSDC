@@ -54,7 +54,7 @@ export type FinanceLedgerEntry = {
   receiptReference: string | null;
 };
 
-export type FinanceOption = { id: string; name: string };
+export type FinanceOption = { id: string; name: string; active?: boolean };
 
 export type FinanceDashboard = {
   monthStart: string;
@@ -63,6 +63,8 @@ export type FinanceDashboard = {
   entries: FinanceLedgerEntry[];
   members: FinanceOption[];
   activities: FinanceOption[];
+  page: number;
+  scope: { income: string; expense: string; count: number };
 };
 
 export const financeCategoryLabels: Record<FinanceCategory, string> = {

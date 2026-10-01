@@ -177,6 +177,7 @@ function setupPlatformActions({ role = "member", status = "active", signedIn = t
     },
   };
   const source = loadTypeScript("../app/plataforma/actions.ts", {
+    "./members-actions": { updateMemberAccessAction: async () => { throw new Error("Membership access is outside this harness."); } },
     "next/cache": { revalidatePath: (path) => invalidations.push(path) },
     "@/lib/platform": { isMissingSchemaError: (error) => ["42P01", "42703", "PGRST202", "PGRST205"].includes(error?.code) },
     "@/lib/audit": { auditCursorFilter() {}, auditPageCursor() {}, defaultAuditSort: {}, normalizeAuditQuery() {} },

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Fragment } from "react";
 
 import {
   ArrowLeft,
@@ -9,10 +8,11 @@ import {
   ArrowUpRight,
   CoverArt,
   PublicShell,
-  SectionLabel,
   formatLongDate,
 } from "@/components/public/PublicChrome";
 import { getEditorialGuides, getPublicStories, getPublicStory, type PublicStory } from "@/lib/editorial";
+import { PublicationArticle, PublicationAside } from "@/components/public/PublicationArticle";
+import type { EditorialArticleContent } from "@/lib/editorial-content";
 
 import styles from "../magazine.module.css";
 
@@ -33,43 +33,12 @@ export async function generateMetadata({ params }: StoryPageProps): Promise<Meta
     : { title: "Lectura no encontrada" };
 }
 
-function StoryBody({ content }: { content: string }) {
-  const paragraphs = content.split(/\n{2,}/).map((paragraph) => paragraph.trim()).filter(Boolean);
-  return (
-    <div className={styles.articleBody}>
-      {paragraphs.length > 0 ? paragraphs.map((paragraph, index) => <p key={`${index}-${paragraph.slice(0, 16)}`}>{paragraph}</p>) : <p>El contenido de esta lectura se publicará próximamente.</p>}
-    </div>
-  );
-}
-
-function PullQuote({ children, featured = false }: { children: string; featured?: boolean }) {
-  return <blockquote className={featured ? styles.articleLeadQuote : styles.articlePullQuote}><p>“{children}”</p><span>Una voz de la historia</span></blockquote>;
-}
-
-function EditorialBody({ editorial }: { editorial: NonNullable<PublicStory["editorial"]> }) {
-  const paragraphs = editorial.body.split(/\n{2,}/).map((paragraph) => paragraph.trim()).filter(Boolean);
-  const midpoint = Math.max(0, Math.floor((paragraphs.length - 1) / 2));
-  const supportingImage = editorial.inlineImagePath ? (
-    <figure className={styles.articleInlineFigure} key="supporting-image">
-      <CoverArt src={editorial.inlineImageUrl ?? editorial.inlineImagePath} alt={editorial.inlineImageAlt} className={styles.articleInlineCover} />
-      {editorial.inlineImageCaption ? <figcaption>{editorial.inlineImageCaption}</figcaption> : null}
-    </figure>
-  ) : null;
-  const quote = editorial.pullQuote ? <PullQuote key="pull-quote">{editorial.pullQuote}</PullQuote> : null;
-
-  return (
-    <div className={styles.articleBody}>
-      {paragraphs.map((paragraph, index) => (
-        <Fragment key={`${index}-${paragraph.slice(0, 16)}`}>
-          <p>{paragraph}</p>
-          {editorial.layoutId === "cronica-visual" && index === midpoint ? supportingImage : null}
-          {editorial.layoutId === "portada" && editorial.pullQuote && index === Math.min(1, paragraphs.length - 1) ? quote : null}
-          {editorial.layoutId === "cronica-visual" && editorial.pullQuote && index === Math.min(1, paragraphs.length - 1) ? quote : null}
-        </Fragment>
-      ))}
-      {editorial.layoutId !== "cronica-visual" ? supportingImage : null}
-    </div>
-  );
+function contentForStory(story: PublicStory): EditorialArticleContent {
+  return story.editorial ?? {
+    layoutId: "portada", body: story.content, pullQuote: "", coverImageAlt: story.title,
+    inlineImagePath: null, inlineImageAlt: "", inlineImageCaption: "", inlineImageAfterParagraph: 0,
+    inlineImageAlignment: "right", gallery: [],
+  };
 }
 
 export default async function StoryPage({ params }: StoryPageProps) {
@@ -80,61 +49,31 @@ export default async function StoryPage({ params }: StoryPageProps) {
   const recommendations = story.isReference
     ? getEditorialGuides().filter((guide) => guide.slug !== story.slug)
     : (await getPublicStories(4)).filter((item) => item.slug !== story.slug);
-  const editorial = story.editorial;
+  const editorial = contentForStory(story);
 
   return (
     <PublicShell active="revista">
       <main className={styles.articleMain}>
         <Link className={styles.backLink} href="/revista"><ArrowLeft /> Volver a la revista</Link>
-        <article className={editorial ? styles.editorialStory : undefined} data-layout={editorial?.layoutId}>
-          {editorial?.layoutId === "voces" && editorial.pullQuote ? <PullQuote featured>{editorial.pullQuote}</PullQuote> : null}
-          <div className={`${styles.articleHero} ${editorial?.layoutId === "cronica-visual" ? styles.articleHeroSplit : ""}`}>
-          <header className={styles.articleHeader}>
-            <SectionLabel>{story.isExample ? "Ejemplo editorial" : story.isReference ? "Referencia Rotary International" : story.storyTypeLabel}</SectionLabel>
-            <h1>{story.title}</h1>
-            <p className={styles.articleExcerpt}>{story.excerpt}</p>
-            <div className={styles.articleMeta}>
-              <span>{story.isExample ? "Texto de muestra" : story.isReference ? "Lectura informativa" : "Publicado por el club"}</span>
-              {story.publishedAt ? <time dateTime={story.publishedAt}>{formatLongDate(story.publishedAt)}</time> : <span>Contenido editorial</span>}
-            </div>
-          </header>
-
-          <CoverArt
-            src={story.coverImageUrl ?? story.coverImagePath}
-            alt={editorial?.coverImageAlt || story.title}
-            className={`${styles.articleCover} ${editorial ? styles.editorialCover : ""}`}
-            priority
-          />
-          </div>
-
-          <div className={styles.articleLayout}>
-            {editorial ? <EditorialBody editorial={editorial} /> : <StoryBody content={story.content} />}
-            <aside className={styles.articleAside}>
-              <div className={styles.asideCard}>
-                <span className={styles.asideNumber}>01</span>
-                <strong>{story.isExample ? "Maqueta editorial" : story.isReference ? "Referencia" : "En contexto"}</strong>
-                <p>{story.isExample ? "Este contenido de muestra sirve para revisar el formato de la revista antes de publicar historias propias del club." : story.isReference ? "Esta lectura resume información publicada por Rotary International y no sustituye las comunicaciones oficiales." : "Las historias del club pasan por una revisión editorial antes de ser publicadas."}</p>
-                {story.source ? <a className={styles.sourceLink} href={story.source.href} target="_blank" rel="noreferrer">{story.source.label} <ArrowUpRight /></a> : null}
-              </div>
-              <div className={styles.asideCardMuted}>
-                <span>¿Quieres participar?</span>
-                <Link href="/auth/sign-up?next=/plataforma">Conoce el club <ArrowUpRight /></Link>
-              </div>
-            </aside>
-          </div>
-        </article>
+        <PublicationArticle title={story.title} excerpt={story.excerpt}
+          label={story.isExample ? "Ejemplo editorial" : story.isReference ? "Referencia Rotary International" : story.storyTypeLabel}
+          byline={story.isExample ? "Texto de muestra" : story.isReference ? "Lectura informativa" : "Publicado por el club"}
+          date={story.publishedAt ? <time dateTime={story.publishedAt}>{formatLongDate(story.publishedAt)}</time> : <span>Contenido editorial</span>}
+          editorial={editorial} coverSrc={story.coverImageUrl ?? story.coverImagePath}
+          inlineSrc={story.editorial?.inlineImageUrl ?? editorial.inlineImagePath}
+          galleryImages={editorial.gallery.map((image, index) => ({ src: story.editorial?.galleryImageUrls?.[index] ?? image.path, alt: image.alt, caption: image.caption }))}
+          aside={<PublicationAside kind={story.isExample ? "example" : story.isReference ? "reference" : "club"} source={story.source} />} />
 
         {recommendations.length > 0 ? (
           <section className={styles.moreReading}>
             <div className={styles.sectionHeading}>
-              <div><SectionLabel>Continúa leyendo</SectionLabel><h2>Más historias <span>para llevar.</span></h2></div>
+              <div><p className={styles.readingLabel}>Continúa leyendo</p><h2>Más historias <span>para llevar.</span></h2></div>
             </div>
             <div className={styles.moreGrid}>
               {recommendations.slice(0, 3).map((item) => (
                 <Link key={item.id} href={`/revista/${item.slug}`} className={styles.moreCard}>
-                  <span>{item.storyTypeLabel}</span>
-                  <strong>{item.title}</strong>
-                  <ArrowUpRight />
+                  <CoverArt src={item.coverImageUrl ?? item.coverImagePath} alt={item.editorial?.coverImageAlt || item.title} className={styles.moreCover} />
+                  <div className={styles.moreCardBody}><span>{item.storyTypeLabel}</span><strong>{item.title}</strong><ArrowUpRight /></div>
                 </Link>
               ))}
             </div>

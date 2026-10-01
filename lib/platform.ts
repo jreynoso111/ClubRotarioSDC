@@ -578,16 +578,15 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
       supabase
         .from("activities")
         .select("id,title,description,activity_status,starts_at,ends_at,location,lead_id")
-        .order("starts_at", { ascending: true, nullsFirst: false })
-        .limit(20),
+        .order("created_at", { ascending: false })
+        .limit(100),
     ),
     readQuery<TaskRow[]>(
       supabase
         .from("tasks")
         .select("id,title,description,task_status,priority,due_at,activity_id,proposal_id,assignee_id")
-        .in("task_status", ["todo", "in_progress", "blocked"])
         .order("due_at", { ascending: true, nullsFirst: false })
-        .limit(30),
+        .limit(300),
     ),
     readQuery<CommitteeRow[]>(
       committeesQuery().order("name", { ascending: true }).limit(60),
@@ -613,7 +612,7 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
       supabase.from("profiles").select("id,display_name").order("display_name", { ascending: true }).limit(200),
     ),
     readQuery<ActiveMembershipRow[]>(
-      capabilities.canManageCommittees
+      capabilities.canManageMembership
         ? supabase.from("memberships").select("user_id").eq("membership_status", "active").order("user_id").limit(200)
         : Promise.resolve({ data: [], error: null }),
     ),
@@ -630,7 +629,7 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
     [committeeMembersResult, "integrantes de comités"],
     [storiesResult, "publicaciones"],
     [directoryResult, "directorio"],
-    ...(capabilities.canManageCommittees ? [[committeeCandidatesResult, "integrantes activos"] as const] : []),
+    ...(capabilities.canManageMembership ? [[committeeCandidatesResult, "integrantes activos"] as const] : []),
   ] as const;
   for (const [result, label] of existingResults) {
     if (result.error && !isMissingSchemaError(result.error)) {

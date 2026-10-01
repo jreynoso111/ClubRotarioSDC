@@ -26,7 +26,7 @@ export type PublicStory = {
   publishedAt: string | null;
   coverImagePath: string | null;
   coverImageUrl?: string;
-  editorial?: EditorialArticleContent & { inlineImageUrl?: string };
+  editorial?: EditorialArticleContent & { inlineImageUrl?: string; galleryImageUrls?: Array<string | undefined> };
   isReference: boolean;
   isExample?: boolean;
   source?: EditorialSource;
@@ -117,7 +117,7 @@ const editorialGuides: PublicStory[] = [
       "Clubes, Rotary International y La Fundación Rotaria: tres piezas que trabajan juntas para generar cambio duradero.",
     content: [
       "Rotary International explica su organización a partir de tres partes que se complementan. Los clubes reúnen a personas para intercambiar ideas, formar relaciones y pasar a la acción.",
-      "Rotary International apoya y coordina programas e iniciativas que conectan a los clubes alrededor del mundo. La Fundación Rotaria proporciona fondos para actividades humanitarias, tanto en las comunidades como en proyectos de alcance internacional.",
+      "Rotary International conecta y coordina programas e iniciativas de los clubes alrededor del mundo. La Fundación Rotaria reúne programas humanitarios y espacios de colaboración para iniciativas comunitarias y de alcance internacional.",
       "En el ámbito de cada club, esta estructura se expresa en reuniones, comités, proyectos, alianzas y espacios de aprendizaje. La forma concreta de trabajar corresponde a cada club y debe quedar documentada por sus propios miembros.",
       "En el Club Rotario Santo Domingo Colonial, la plataforma en desarrollo servirá para ordenar esas conversaciones, responsabilidades y actividades cuando la estructura interna sea validada y publicada por el club.",
     ].join("\n\n"),
@@ -390,7 +390,7 @@ function mapStory(
     coverImagePath: record.cover_image_path,
     coverImageUrl: publicImageUrl(supabase, record.cover_image_path),
     editorial: editorial
-      ? { ...editorial, inlineImageUrl: publicImageUrl(supabase, editorial.inlineImagePath) }
+      ? { ...editorial, inlineImageUrl: publicImageUrl(supabase, editorial.inlineImagePath), galleryImageUrls: editorial.gallery.map((image) => publicImageUrl(supabase, image.path)) }
       : undefined,
     isReference: false,
   };
@@ -425,7 +425,25 @@ function mapEvent(
 }
 
 export function getEditorialGuides() {
-  return editorialGuides;
+  return editorialGuides.map((guide, index): PublicStory => {
+    if (!guide.isExample || index > 5) return guide;
+    return {
+      ...guide,
+      editorial: {
+        layoutId: index === 4 ? "cronica-visual" : index === 5 ? "voces" : "portada",
+        body: guide.content, pullQuote: index === 5 ? "El proyecto toma forma cuando el equipo acuerda un propósito y una siguiente acción." : "",
+        coverImageAlt: guide.title,
+        inlineImagePath: index === 3 ? "/zona-colonial-courtyard.png" : null,
+        inlineImageAlt: "Patio de la Ciudad Colonial", inlineImageCaption: index === 3 ? "Imagen de muestra para acompañar el texto." : "",
+        inlineImageAfterParagraph: 1, inlineImageAlignment: "right",
+        gallery: index === 3 ? [
+          { path: "/alcazar-colon-illustration.png", alt: "Ilustración del Alcázar de Colón", caption: "El Alcázar y la Plaza de España · imagen de muestra" },
+          { path: "/zona-colonial-las-damas.png", alt: "Calle de Las Damas en la Ciudad Colonial", caption: "Un recorrido por la Ciudad Colonial · imagen de muestra" },
+          { path: "/zona-colonial-courtyard.png", alt: "Patio colonial", caption: "Espacios que acompañan nuestras conversaciones · imagen de muestra" },
+        ] : [],
+      },
+    };
+  });
 }
 
 export const getPublicStories = cache(async (limit = 12): Promise<PublicStory[]> => {
@@ -542,7 +560,7 @@ export const getPublicStoriesPage = cache(async (page = 1, pageSize = 9): Promis
 });
 
 export const getPublicStory = cache(async (slug: string): Promise<PublicStory | null> => {
-  const guide = editorialGuides.find((item) => item.slug === slug);
+  const guide = getEditorialGuides().find((item) => item.slug === slug);
 
   if (!isSupabaseConfigured()) return guide ?? null;
 

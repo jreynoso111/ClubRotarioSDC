@@ -151,7 +151,7 @@ export function CoverArt({
     );
   }
 
-  if (src?.startsWith("https://")) {
+  if (src?.startsWith("https://") || src?.startsWith("blob:")) {
     return (
       <div
         className={coverClass}

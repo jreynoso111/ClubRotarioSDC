@@ -863,3 +863,154 @@
   .storyDialogActions { flex-wrap: wrap-reverse; }
   .storyDialogActions button { flex: 1; }
 }
+
+/* Management workspace: scoped independently from the public editorial site. */
+.dashboard {
+  --paper: #fff;
+  --paper-light: #fff;
+  --ink: #23324a;
+  --ink-soft: #65738a;
+  --line: #e5eaf1;
+  --teal: #416d91;
+  background: #f5f7fb;
+  color: var(--ink);
+  display: grid;
+  grid-template-columns: 224px minmax(0, 1fr);
+  padding: 0;
+  font-family: var(--font-open-sans), sans-serif;
+}
+.dashboardWithAdmin { grid-template-columns: 224px minmax(0, 1fr) 60px; }
+.sidebar { background: #fff; border-right: 1px solid var(--line); display: flex; flex-direction: column; padding: 32px 18px 24px; position: sticky; top: 0; height: 100dvh; overflow-y: auto; }
+.clubBrand { align-items: center; display: flex; gap: 10px; color: #005daa; font-size: 27px; font-weight: 750; letter-spacing: -1px; text-decoration: none; }
+.clubBrand small { color: var(--ink-soft); display: block; font-size: 9px; font-weight: 600; letter-spacing: 0; }
+.brandMark { display: grid; place-items: center; background: #eef5fc; border-radius: 12px; width: 42px; height: 46px; position: relative; font-size: 28px; }
+.brandMark > span { color: #d99a16; position: absolute; font-size: 20px; right: -3px; bottom: -5px; }
+.sideSection { color: #7b8799; font-size: 9px; font-weight: 700; letter-spacing: .1em; margin: 44px 12px 14px; }
+.sideNav { display: grid; gap: 5px; }
+.sideNav .tab, .sideNav .tabActive { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 9px; font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; text-align: left; }
+.sideNav .tab:hover { background: #f5f7fb; }
+.sideNav .tabActive { background: #eaf3ff; color: #005daa; }
+.sideNav .tabActive::after { display: none; }
+.sideNav svg { flex-shrink: 0; }
+.sidebarFooter { margin-top: auto; padding: 30px 12px 0; font-size: 10px; color: var(--ink-soft); }
+.sidebarFooter p { margin: 16px 0; line-height: 1.8; }
+.sidebarFooter a { color: #005daa; font-weight: 650; }
+.memberDot { display: inline-block; height: 6px; width: 6px; background: #2c9878; border-radius: 100%; margin-right: 5px; }
+.dashboardMain { min-width: 0; padding: 0 34px 32px; width: 100%; max-width: 1600px; margin-inline: auto; }
+.dashboardWithAdmin > .sidebar { grid-column: 1; grid-row: 1; }
+.dashboardWithAdmin > .dashboardMain { grid-column: 2; grid-row: 1; }
+.adminRail { background: #fff; border-left: 1px solid var(--line); grid-column: 3; grid-row: 1; height: 100dvh; padding: 28px 8px; position: sticky; top: 0; width: 60px; z-index: 20; }
+.adminToggle, .adminTab { align-items: center; background: transparent; border: 0; border-radius: 9px; color: var(--ink-soft); cursor: pointer; display: flex; font-family: inherit; font-size: 12px; font-weight: 600; gap: 12px; min-height: 44px; padding: 12px; position: relative; text-align: left; width: 44px; }
+.adminToggle svg, .adminTab svg { flex-shrink: 0; }
+.adminToggle:hover, .adminTab:hover { background: #f5f7fb; color: #005daa; }
+.adminToggle { color: #005daa; margin-bottom: 30px; }
+.adminNav { display: grid; gap: 8px; }
+.adminTabActive { background: #eaf3ff; color: #005daa; }
+.adminLabel { display: none; white-space: nowrap; }
+.adminRailExpanded { box-shadow: -10px 0 28px #243c6010; margin-left: -164px; width: 224px; }
+.adminRailExpanded .adminLabel { display: inline; }
+.adminRailExpanded .adminToggle, .adminRailExpanded .adminTab { width: 100%; }
+.adminRail:not(.adminRailExpanded) .adminTab::after { background: #23324a; border-radius: 6px; color: #fff; content: attr(data-label); font-size: 11px; font-weight: 500; opacity: 0; padding: 8px 11px; pointer-events: none; position: absolute; right: calc(100% + 10px); visibility: hidden; white-space: nowrap; }
+.adminRail:not(.adminRailExpanded) .adminTab:is(:hover, :focus-visible)::after { opacity: 1; visibility: visible; }
+.dashboard .header { align-items: center; padding: 24px 0; min-height: 104px; gap: 16px; }
+.dashboard .eyebrow { font-family: inherit; font-size: 10px; margin-bottom: 8px; letter-spacing: 0; text-transform: none; color: var(--ink-soft); }
+.dashboard .title { font-family: inherit; font-size: 24px; line-height: 1.25; font-weight: 700; letter-spacing: -.8px; }
+.dashboard .title em { color: var(--ink); font-style: normal; }
+.dashboard .accountHeader { align-items: center; gap: 22px; }
+.dashboard .identity { font-size: 10px; }
+.dashboard .identity strong { font-size: 12px; }
+.dashboard .identity > span:last-child { display: none; }
+.dashboard .role { font-family: inherit; font-size: 10px; letter-spacing: 0; text-transform: none; margin-top: 3px; }
+.dashboard .headerActions button { border-radius: 8px; font-family: inherit; font-size: 10px; letter-spacing: 0; text-transform: none; }
+.dashboard .content { padding-top: 30px; }
+.dashboard .workspaceIntro { align-items: center; border: 0; padding-bottom: 0; margin-bottom: 26px; }
+.dashboard .workspaceIntro h2 { font-family: inherit; font-weight: 700; letter-spacing: -.8px; font-size: 28px; line-height: 1.25; }
+.dashboard .workspaceIntro .cardLabel { margin-bottom: 8px; font-size: 10px; font-weight: 500; text-transform: none; letter-spacing: 0; }
+.sectionDescription { color: var(--ink-soft); font-size: 12px; line-height: 1.6; margin: 9px 0 0; }
+.overviewMetrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 24px; }
+.overviewMetric { background: #e9f1fc; border: 1px solid transparent; border-radius: 14px; padding: 19px; text-align: left; cursor: pointer; color: #234c7a; min-width: 0; transition: transform .15s, box-shadow .15s; }
+.overviewMetric:nth-child(2) { background: #fff2d8; color: #7c5714; }
+.overviewMetric:nth-child(3) { background: #e2f4ef; color: #236956; }
+.overviewMetric:nth-child(4) { background: #eeebfa; color: #63518a; }
+.overviewMetric:hover { transform: translateY(-2px); box-shadow: 0 5px 16px #243c6010; }
+.metricHeading { display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 600; }
+.metricHeading > span { margin-left: auto; }
+.overviewMetric > strong { display: block; font-size: 34px; line-height: 1.2; margin: 17px 0 8px; font-weight: 700; letter-spacing: -1px; }
+.overviewMetric > small { font-size: 10px; line-height: 1.5; display: block; }
+.dashboard .card, .dashboard .formCard, .dashboard .financeSection, .dashboard .financeForm { background: #fff; border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 3px 12px #243c6003; padding: 24px; }
+.dashboard .card { min-height: 0; }
+.dashboard .cardLabel { font-family: inherit; font-size: 10px; letter-spacing: .07em; margin-bottom: 12px; }
+.dashboard .cardTitle { font-family: inherit; font-size: 19px; line-height: 1.4; font-weight: 650; letter-spacing: -.45px; margin-bottom: 18px; }
+.dashboard :is(.row strong, .eventDetails h3, .proposalMain h3, .financeSectionHeader h3, .financeForm h3, .financeDueIdentity strong, .listItem strong) { font-family: inherit; font-size: 14px; font-weight: 650; letter-spacing: -.2px; line-height: 1.5; }
+.dashboard :is(.button, .buttonQuiet, .smallButton, .smallButtonQuiet) { border-radius: 7px; letter-spacing: 0; text-transform: none; font-size: 11px; font-weight: 600; }
+.dashboard :is(input, select, textarea) { border-radius: 7px; }
+.dashboard :is(button, a, input, select, textarea, summary):focus-visible { outline: 3px solid #337fcb; outline-offset: 3px; }
+.dashboard .empty { font-size: 12px; line-height: 1.8; }
+.dashboard .eventRow { border-radius: 10px; }
+.dashboard .welcomeCard { background: #005daa; color: white; position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: flex-start; }
+.dashboard .welcomeCard .cardLabel { color: #c9e3ff; }
+.dashboard .welcomeCard .cardTitle { color: white; font-size: 23px; max-width: 260px; position: relative; z-index: 1; }
+.welcomeCard > p:not(.cardLabel) { font-size: 12px; line-height: 1.8; color: #e0efff; margin: 0 0 24px; max-width: 230px; position: relative; z-index: 1; }
+.dashboard .welcomeCard .button { background: #fff; color: #005daa; margin-top: auto; z-index: 1; }
+.welcomeDecoration { position: absolute; right: -32px; bottom: 16px; font-size: 200px; line-height: 1; color: #ffffff12; }
+.dashboard .moduleGrid > .taskOverview { grid-column: span 1; }
+.dashboard .notificationPanel { border-radius: 12px; }
+.dashboard .financeMetric { background: #fff; border-radius: 10px; }
+.dashboard .back { font-family: inherit; letter-spacing: 0; text-transform: none; }
+@media (max-width: 1200px) {
+  .dashboard { grid-template-columns: 200px minmax(0, 1fr); }
+  .dashboardWithAdmin { grid-template-columns: 200px minmax(0, 1fr) 60px; }
+  .dashboardMain { padding-inline: 24px; }
+  .overviewMetrics { gap: 10px; }
+  .overviewMetric { padding: 15px; }
+  .dashboard .accountHeader { gap: 12px; }
+}
+@media (max-width: 1000px) {
+  .overviewMetrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dashboard .moduleGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dashboard .moduleGrid > .cardWide { grid-column: 1 / -1; }
+  .dashboard .moduleGrid > .taskOverview { grid-column: 1 / -1; }
+  .dashboard .welcomeCard { grid-column: 1 / -1; }
+  .dashboard .identity { display: none; }
+}
+@media (max-width: 760px) {
+  .dashboard { display: block; }
+  .sidebar { height: auto; position: relative; padding: 18px 18px 0; border-right: 0; border-bottom: 1px solid var(--line); overflow: visible; }
+  .clubBrand { font-size: 23px; }
+  .sideSection, .sidebarFooter { display: none; }
+  .sideNav { display: flex; overflow-x: auto; gap: 5px; padding: 16px 0 12px; }
+  .sideNav .tab, .sideNav .tabActive { padding: 10px 12px; flex-shrink: 0; }
+  .adminRail { align-items: center; border-left: 0; border-bottom: 1px solid var(--line); display: flex; gap: 10px; height: auto; padding: 6px 18px; position: relative; width: 100%; }
+  .adminToggle { flex-shrink: 0; margin-bottom: 0; }
+  .adminNav { display: flex; gap: 5px; }
+  .adminRailExpanded { align-items: stretch; box-shadow: none; flex-direction: column; gap: 5px; margin-left: 0; padding-block: 10px; }
+  .adminRailExpanded .adminNav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .adminRailExpanded .adminToggle { width: 100%; }
+  .adminRailExpanded .adminTab { gap: 9px; padding: 10px; }
+  .adminRailExpanded .adminTab .adminLabel { white-space: normal; }
+  .adminRail:not(.adminRailExpanded) .adminTab::after { right: auto; top: calc(100% + 6px); }
+  .dashboardMain { padding: 0 18px 24px; }
+  .dashboard .header { flex-direction: row; flex-wrap: wrap; padding: 20px 0; }
+  .dashboard .title { font-size: 22px; }
+  .dashboard .content { padding-top: 22px; }
+  .dashboard .workspaceIntro { flex-direction: row; gap: 14px; align-items: flex-start; }
+  .dashboard .workspaceIntro h2 { font-size: 25px; }
+  .dashboard .workspaceIntro > .buttonQuiet { flex-shrink: 0; padding: 10px; }
+  .dashboard .moduleGrid { grid-template-columns: minmax(0, 1fr); }
+  .dashboard .moduleGrid > * { grid-column: 1 / -1; }
+  .dashboard .card, .dashboard .formCard { padding: 20px; }
+  .dashboard .notificationPanel { position: fixed; top: 180px; right: 16px; }
+  .metricHeading { flex-wrap: wrap; font-size: 10px; }
+  .overviewMetric > strong { font-size: 30px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .overviewMetric { transition: none; }
+  .overviewMetric:hover { transform: none; }
+}
+
+.clubBrand img { width: 100%; height: auto; max-width: 188px; object-fit: contain; }
+
+.proposalReview { margin-top: 16px; font-size: 12px; color: var(--rotary-blue); }
+.proposalReview summary { cursor: pointer; }
+
+.organizationWorkspace { display:grid; gap:24px; min-width:0; }

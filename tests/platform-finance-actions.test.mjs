@@ -12,15 +12,22 @@ const actionsSource = ts.transpileModule(readFileSync(new URL("../app/plataforma
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
 }).outputText;
 
-function setup({ role = "admin", status = "active", signedIn = true, rpcError = null } = {}) {
+function setup({ role = "admin", status = "active", signedIn = true, rpcError = null, dashboardData = null } = {}) {
   const calls = [];
   const invalidations = [];
+  const queries = [];
   const client = {
     auth: { getUser: async () => ({ data: { user: signedIn ? { id: actorId } : null }, error: null }) },
     from(table) {
       const query = {
-        select() { return query; },
-        eq() { return query; },
+        select(fields) { queries.push([table, "select", fields]); return query; },
+        eq(...args) { queries.push([table, "eq", ...args]); return query; },
+        gte(...args) { queries.push([table, "gte", ...args]); return query; },
+        lt(...args) { queries.push([table, "lt", ...args]); return query; },
+        order(...args) { queries.push([table, "order", ...args]); return query; },
+        limit(...args) { queries.push([table, "limit", ...args]); return query; },
+        range(...args) { queries.push([table, "range", ...args]); return query; },
+        then(resolve, reject) { return Promise.resolve({ data: dashboardData?.[table] ?? [], error: null }).then(resolve, reject); },
         maybeSingle: async () => table === "memberships"
           ? { data: { membership_role: role, membership_status: status }, error: null }
           : { data: null, error: null },
@@ -30,11 +37,13 @@ function setup({ role = "admin", status = "active", signedIn = true, rpcError = 
     async rpc(name, args) {
       calls.push({ name, args });
       if (rpcError) return { data: null, error: rpcError };
-      return { data: name === "create_finance_monthly_dues" ? 7 : entryId, error: null };
+      if (dashboardData && name in dashboardData) return { data: dashboardData[name], error: null };
+      return { data: ["create_finance_monthly_dues", "create_finance_member_dues"].includes(name) ? 7 : entryId, error: null };
     },
   };
 
   const dependencies = {
+    "./members-actions": { updateMemberAccessAction: async () => { throw new Error("Membership access is outside this harness."); } },
     "next/cache": { revalidatePath: (path) => invalidations.push(path) },
     "@/lib/platform": { isMissingSchemaError: (error) => ["42P01", "42703", "PGRST202", "PGRST205"].includes(error?.code) },
     "@/lib/audit": { auditCursorFilter() {}, auditPageCursor() {}, defaultAuditSort: {}, normalizeAuditQuery() {} },
@@ -47,7 +56,7 @@ function setup({ role = "admin", status = "active", signedIn = true, rpcError = 
     assert.ok(dependencies[name], `Unexpected dependency ${name}`);
     return dependencies[name];
   }, actions);
-  return { actions, calls, invalidations };
+  return { actions, calls, invalidations, queries };
 }
 
 test("an authorized manager generates one idempotent monthly quota batch", async () => {
@@ -163,4 +172,54 @@ test("monthly payments use the atomic dues RPC and preserve the receipt referenc
       _receipt_reference: "REC-309",
     },
   }]);
+});
+
+
+test("selected individual dues send only selected members and preserve the amount per person", async () => {
+  const { actions, calls } = setup();
+  const result = await actions.createFinanceMonthlyDuesAction({ month: "2000-01", amountDue: "350.50", memberIds: [memberId, actorId] });
+  assert.equal(result.ok, true);
+  assert.deepEqual(calls, [{ name: "create_finance_member_dues", args: { _due_month: "2000-01-01", _amount_due: "350.50", _member_ids: [memberId, actorId] } }]);
+});
+
+test("individual assignment rejects empty duplicate malformed or excessive member selections", async () => {
+  const { actions, calls } = setup();
+  for (const memberIds of [[], [memberId, memberId], ["invalid"], [null], "all", Array(201).fill(memberId)]) {
+    const result = await actions.createFinanceMonthlyDuesAction({ month: "2000-01", amountDue: "500", memberIds });
+    assert.equal(result.code, "invalid");
+  }
+  assert.equal(calls.length, 0);
+});
+
+test("ledger filters reject invalid identifiers and pagination before financial reads", async () => {
+  const { actions, calls } = setup();
+  for (const filters of [{ memberId: "invalid" }, { activityId: "bad" }, { page: -1 }, { page: 0.5 }, { page: 10001 }]) {
+    const result = await actions.getFinanceDashboardAction("2000-01", filters);
+    assert.equal(result.code, "invalid");
+  }
+  assert.equal(calls.length, 0);
+});
+
+
+test("ledger pagination keeps full filtered totals and includes inactive members in historical options", async () => {
+  const { actions, calls, queries } = setup({ dashboardData: {
+    memberships: [
+      { user_id: memberId, membership_status: "suspended", profile: { display_name: "Socio histórico" } },
+      { user_id: actorId, membership_status: "active", profile: { display_name: "Socio activo" } },
+    ],
+    activities: [{ id: activityId, title: "Actividad terminada" }],
+    finance_entries: [],
+    get_finance_period_summary: [{ income_total: 1900, expense_total: 650, balance: 1250, dues_total: 1350, dues_paid: 700, dues_outstanding: 650, dues_count: 3 }],
+    get_finance_month_dues: [],
+    get_finance_scope_totals: [{ income_total: 1300, expense_total: 30, entry_count: 80 }],
+  } });
+  const result = await actions.getFinanceDashboardAction("2000-01", { memberId, activityId, page: 1 });
+  assert.equal(result.ok, true);
+  assert.equal(result.dashboard.page, 1);
+  assert.deepEqual(result.dashboard.scope, { income: "1300", expense: "30", count: 80 });
+  assert.deepEqual(result.dashboard.members.map(member => [member.name, member.active]), [["Socio histórico", false], ["Socio activo", true]]);
+  assert.ok(queries.some(query => query[0] === "finance_entries" && query[1] === "range" && query[2] === 50 && query[3] === 99));
+  assert.ok(queries.some(query => query[0] === "finance_entries" && query[1] === "eq" && query[2] === "member_id" && query[3] === memberId));
+  assert.ok(!queries.some(query => query[0] === "memberships" && query[1] === "eq" && query[2] === "membership_status"));
+  assert.deepEqual(calls.find(call => call.name === "get_finance_scope_totals").args, { _month_start: "2000-01-01", _member_id: memberId, _activity_id: activityId });
 });
