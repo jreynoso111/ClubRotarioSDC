@@ -102,7 +102,7 @@ export default async function Home() {
     : "agenda-section section-shell";
 
   return (
-    <main>
+    <main className="public-home">
       <CinematicIntro />
 
       <PublicHeader active="home" />

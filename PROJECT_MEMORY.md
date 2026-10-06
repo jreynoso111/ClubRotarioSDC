@@ -280,3 +280,17 @@ Las portadas con ruta que comienza por `/` son recursos locales; conservar esa d
 - Verificación: suite local 95/95, lint, TypeScript y `git diff --check` satisfactorios; Vercel completó compilación y verificación TypeScript. `/`, `/nosotros`, `/revista`, el artículo ilustrativo y `/solicitar-membresia` respondieron HTTP 200; `/plataforma` redirigió a inicio de sesión (307). En producción se revisaron visualmente el carrusel, la foto junto al texto, las imágenes relacionadas y el espacio de “Continúa leyendo”. Los logs de Vercel no mostraron errores en la última hora.
 - No se aplicó SQL durante el release: las migraciones financieras y de organigrama ya estaban verificadas en producción. El historial `supabase_migrations.schema_migrations` sigue ausente, por lo que se evitó `db push`.
 - Estado: código publicado en producción; este registro documenta el release. No se realizó ninguna acción adicional sobre las cuentas de los miembros.
+
+## Ritmo vertical compacto de portada · 2026-10-05
+
+- Petición del usuario: reducir el espacio vacío que se acumula al final y al principio de las secciones de la página principal.
+- Se limitaron los espacios de hero, banda, historias, agenda, invitación y bloque del club mediante reglas acotadas a `.public-home`; móvil y paisaje reciben medidas propias. No se alteraron los ritmos de `/nosotros`, `/revista` ni otras páginas.
+- Verificación local: `npm test` pasó 95/95, `npm run lint`, `npx tsc --noEmit` y `git diff --check` pasaron; `http://127.0.0.1:3001/` respondió HTTP 200 y sirvió la portada actualizada. No se pudo hacer una inspección visual del navegador en esta sesión.
+- Estado: ajuste local sin commit, push ni despliegue.
+
+## Un solo encabezado visual en Revista · 2026-10-05
+
+- Petición del usuario: conservar el banner ilustrado superior de `/revista` y retirar el encabezado secundario “Historias publicadas por el club / El archivo del club” junto con la tarjeta azul de archivo vacío.
+- Se quitó ese encabezado y el estado vacío. Las publicaciones del club y su paginación siguen apareciendo cuando existen; si todavía no hay publicaciones, se omite el bloque de archivo y la sección de referencias sube para ocupar el espacio.
+- Verificación local: `/revista` respondió HTTP 200; el HTML conserva “Revista Colonial” y “El servicio en primera plana”, y ya no contiene el encabezado secundario ni el estado azul. `npm test` pasó 95/95, lint, TypeScript y `git diff --check` pasaron. No se pudo hacer inspección visual del navegador en esta sesión.
+- Estado: ajuste local sin commit, push ni despliegue.

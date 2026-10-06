@@ -97,6 +97,9 @@ export default async function RevistaPage({ searchParams }: RevistaPageProps) {
   const hasClubStories = publicationPage.hasClubStories;
   const totalPages = hasClubStories ? Math.max(1, Math.ceil(publicationPage.total / publicationPage.pageSize)) : 1;
   const paginationItems = getPaginationItems(totalPages, publicationPage.page);
+  const guidesClassName = publications.length > 0
+    ? styles.guides
+    : `${styles.guides} ${styles.guidesCompact}`;
   const currentYear = new Date().getFullYear();
 
   return (
@@ -127,99 +130,71 @@ export default async function RevistaPage({ searchParams }: RevistaPageProps) {
           </div>
         </section>
 
-        <section className={styles.issue} id="archivo">
-          <div className={styles.sectionHeading}>
-            <div>
-              <SectionLabel>Historias publicadas por el club</SectionLabel>
-              <h2>El archivo <span>del club.</span></h2>
-            </div>
-            <p>
-              {hasClubStories
-                ? "Crónicas y voces publicadas por el equipo editorial del club."
-                : "Aquí verás las crónicas aprobadas. Las lecturas de muestra aparecen aparte para que se distingan de las publicaciones reales."}
-            </p>
-          </div>
-
-          {publications.length > 0 ? (
-            <>
-              <div className={styles.newspaperGrid}>
-                <StoryCard story={publications[0]} featured />
-                {publications.length > 1 ? (
-                  <div className={styles.newspaperStack}>
-                    {publications.slice(1, 4).map((publication) => (
-                      <StoryCard key={publication.id} story={publication} compact />
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-              {publications.length > 4 ? (
-                <div className={styles.newspaperArchive}>
-                  {publications.slice(4).map((publication) => (
+        {publications.length > 0 ? (
+          <section className={styles.issue} id="archivo" aria-label="Publicaciones de revista">
+            <div className={styles.newspaperGrid}>
+              <StoryCard story={publications[0]} featured />
+              {publications.length > 1 ? (
+                <div className={styles.newspaperStack}>
+                  {publications.slice(1, 4).map((publication) => (
                     <StoryCard key={publication.id} story={publication} compact />
                   ))}
                 </div>
               ) : null}
-            </>
-          ) : (
-            <div className={styles.emptyArchive}>
-              <div>
-                <span className={styles.emptyIndex}>01</span>
-                <h3>La primera historia del club está por escribirse.</h3>
-              </div>
-              <div>
-                <p>
-                  Aún no hay publicaciones propias. Cuando el equipo editorial publique una historia, aparecerá aquí con su contexto, sus voces y sus aprendizajes.
-                </p>
-                <a className={styles.readMore} href="mailto:club@rotariosantodomingo.org?subject=Historia%20para%20la%20revista">Compartir una historia <ArrowUpRight /></a>
-              </div>
             </div>
-          )}
-
-          {publications.length > 0 && totalPages > 1 ? (
-            <nav className={styles.pagination} aria-label="Paginación de publicaciones">
-              <div className={styles.paginationMeta}>
-                Página {publicationPage.page} de {totalPages}
+            {publications.length > 4 ? (
+              <div className={styles.newspaperArchive}>
+                {publications.slice(4).map((publication) => (
+                  <StoryCard key={publication.id} story={publication} compact />
+                ))}
               </div>
-              <div className={styles.paginationPages}>
-                {publicationPage.page > 1 ? (
-                  <Link className={styles.paginationButton} href={getPageHref(publicationPage.page - 1)} rel="prev">
-                    <span aria-hidden="true">←</span> Anteriores
-                  </Link>
-                ) : (
-                  <span className={`${styles.paginationButton} ${styles.paginationDisabled}`} aria-hidden="true">
-                    <span aria-hidden="true">←</span> Anteriores
-                  </span>
-                )}
-                <div className={styles.paginationNumbers}>
-                  {paginationItems.map((item, index) => item === "ellipsis" ? (
-                    <span className={styles.paginationEllipsis} key={`ellipsis-${index}`} aria-hidden="true">…</span>
-                  ) : (
-                    <Link
-                      className={`${styles.paginationNumber} ${item === publicationPage.page ? styles.paginationNumberActive : ""}`}
-                      href={getPageHref(item)}
-                      aria-current={item === publicationPage.page ? "page" : undefined}
-                      key={`page-${item}`}
-                    >
-                      {String(item).padStart(2, "0")}
-                    </Link>
-                  ))}
+            ) : null}
+            {totalPages > 1 ? (
+              <nav className={styles.pagination} aria-label="Paginación de publicaciones">
+                <div className={styles.paginationMeta}>
+                  Página {publicationPage.page} de {totalPages}
                 </div>
-                {publicationPage.page < totalPages ? (
-                  <Link className={styles.paginationButton} href={getPageHref(publicationPage.page + 1)} rel="next">
-                    Siguientes <span aria-hidden="true">→</span>
-                  </Link>
-                ) : (
-                  <span className={`${styles.paginationButton} ${styles.paginationDisabled}`} aria-hidden="true">
-                    Siguientes <span aria-hidden="true">→</span>
-                  </span>
-                )}
-              </div>
-            </nav>
-          ) : null}
-        </section>
+                <div className={styles.paginationPages}>
+                  {publicationPage.page > 1 ? (
+                    <Link className={styles.paginationButton} href={getPageHref(publicationPage.page - 1)} rel="prev">
+                      <span aria-hidden="true">←</span> Anteriores
+                    </Link>
+                  ) : (
+                    <span className={`${styles.paginationButton} ${styles.paginationDisabled}`} aria-hidden="true">
+                      <span aria-hidden="true">←</span> Anteriores
+                    </span>
+                  )}
+                  <div className={styles.paginationNumbers}>
+                    {paginationItems.map((item, index) => item === "ellipsis" ? (
+                      <span className={styles.paginationEllipsis} key={`ellipsis-${index}`} aria-hidden="true">…</span>
+                    ) : (
+                      <Link
+                        className={`${styles.paginationNumber} ${item === publicationPage.page ? styles.paginationNumberActive : ""}`}
+                        href={getPageHref(item)}
+                        aria-current={item === publicationPage.page ? "page" : undefined}
+                        key={`page-${item}`}
+                      >
+                        {String(item).padStart(2, "0")}
+                      </Link>
+                    ))}
+                  </div>
+                  {publicationPage.page < totalPages ? (
+                    <Link className={styles.paginationButton} href={getPageHref(publicationPage.page + 1)} rel="next">
+                      Siguientes <span aria-hidden="true">→</span>
+                    </Link>
+                  ) : (
+                    <span className={`${styles.paginationButton} ${styles.paginationDisabled}`} aria-hidden="true">
+                      <span aria-hidden="true">→</span>
+                    </span>
+                  )}
+                </div>
+              </nav>
+            ) : null}
+          </section>
+        ) : null}
 
         {guides.length > 0 ? (
-          <section className={styles.guides}>
+          <section className={guidesClassName}>
             <div className={styles.sectionHeading}>
               <div>
                 <SectionLabel>Lecturas y maquetas editoriales</SectionLabel>
