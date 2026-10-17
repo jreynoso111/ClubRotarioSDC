@@ -2,6 +2,7 @@ import "server-only";
 
 import { withPublicContentTimeout } from "@/lib/supabase/timeout";
 import { isSupabaseConfigured } from "@/utils/supabase/config";
+import { toPublicSupabaseUrl } from "@/utils/supabase/public-url";
 import { createClient } from "@/utils/supabase/server";
 import {
   emptyMembershipPhotoSlots,
@@ -42,7 +43,9 @@ export async function getPublishedMembershipPhotoSlots(): Promise<MembershipPhot
       return {
         ...definition,
         imagePath: row.image_path,
-        imageUrl: supabase.storage.from("club-public").getPublicUrl(row.image_path).data.publicUrl,
+        imageUrl: toPublicSupabaseUrl(
+          supabase.storage.from("club-public").getPublicUrl(row.image_path).data.publicUrl,
+        ),
         altText: row.alt_text,
         caption: row.caption,
         isPublished: true,

@@ -1,4 +1,7 @@
+import { mfaDependencies } from "./helpers/mfa-deps.mjs";
+import { toPublicSupabaseUrl } from "./helpers/supabase-public-url.mjs";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import ts from "typescript";
@@ -53,27 +56,30 @@ test("invalid email, phone, motivation, optional-field length and missing consen
   }
 });
 
-function setupPublicAction({ insertError = null, configured = true } = {}) {
+function setupPublicAction({ rpcError = null, configured = true, captcha = true, allowed = true } = {}) {
   const writes = [];
   const invalidations = [];
+  const captchaChecks = [];
   const client = {
-    from(table) {
-      return {
-        insert: async (value) => {
-          writes.push({ table, value });
-          return { error: insertError };
-        },
-      };
+    from() { throw new Error("Direct table inserts are no longer allowed."); },
+    rpc: async (name, value) => {
+      writes.push({ rpc: name, value });
+      return { error: rpcError };
     },
   };
   const actionModule = loadTypeScript("../app/solicitar-membresia/actions.ts", {
+    "node:crypto": { createHash },
     "next/cache": { revalidatePath: (path) => invalidations.push(path) },
+    "next/headers": { headers: async () => new Headers({ "cf-connecting-ip": "192.0.2.10" }) },
     "@/lib/membership-applications": helpers,
     "@/lib/platform": { isMissingSchemaError: (error) => ["42P01", "PGRST205"].includes(error?.code) },
+    "@/lib/rate-limit": { allowRequest: () => allowed },
+    "@/lib/turnstile-server": { verifyTurnstileToken: async (token, ip) => { captchaChecks.push([token, ip]); return captcha; } },
+    "@/utils/supabase/public-url": { toPublicSupabaseUrl },
     "@/utils/supabase/config": { isSupabaseConfigured: () => configured },
-    "@/utils/supabase/server": { createClient: async () => client },
+    ...mfaDependencies, "@/utils/supabase/server": { createClient: async () => client },
   });
-  return { action: actionModule.submitMembershipApplicationAction, writes, invalidations };
+  return { action: actionModule.submitMembershipApplicationAction, writes, invalidations, captchaChecks };
 }
 
 function formData(input = baseApplication) {
@@ -92,24 +98,43 @@ function formData(input = baseApplication) {
   return data;
 }
 
-test("the public form stores only validated applicant details and revalidates the platform", async () => {
-  const { action, writes, invalidations } = setupPublicAction();
-  const result = await action({ ok: false, message: "" }, formData());
+test("the public form submits only validated applicant details through the throttled RPC", async () => {
+  const { action, writes, invalidations, captchaChecks } = setupPublicAction();
+  const data = formData();
+  data.set("cf-turnstile-response", "token-1");
+  const result = await action({ ok: false, message: "" }, data);
 
   assert.equal(result.ok, true);
   assert.deepEqual(writes, [{
-    table: "membership_applications",
+    rpc: "submit_membership_application",
     value: {
-      full_name: "María Pérez",
-      email: "maria@example.org",
-      phone: "+1 (809) 555-0199",
-      occupation: "Educadora",
-      motivation: "Quiero aportar a proyectos de educación y servicio local.",
-      referral_source: "Ana",
-      consented_to_member_sharing: true,
+      _full_name: "María Pérez",
+      _email: "maria@example.org",
+      _phone: "+1 (809) 555-0199",
+      _occupation: "Educadora",
+      _motivation: "Quiero aportar a proyectos de educación y servicio local.",
+      _referral_source: "Ana",
+      _consent: true,
     },
   }]);
+  assert.deepEqual(captchaChecks, [["token-1", "192.0.2.10"]]);
   assert.deepEqual(invalidations, ["/plataforma"]);
+});
+
+test("failed CAPTCHA, local limits and the database throttle stop submissions", async () => {
+  const captcha = setupPublicAction({ captcha: false });
+  assert.equal((await captcha.action({ ok: false, message: "" }, formData())).ok, false);
+  assert.equal(captcha.writes.length, 0);
+
+  const limited = setupPublicAction({ allowed: false });
+  assert.equal((await limited.action({ ok: false, message: "" }, formData())).ok, false);
+  assert.equal(limited.writes.length, 0);
+
+  const throttled = setupPublicAction({ rpcError: { code: "PT429" } });
+  const result = await throttled.action({ ok: false, message: "" }, formData());
+  assert.equal(result.ok, false);
+  assert.match(result.message, /muchas solicitudes/);
+  assert.deepEqual(throttled.invalidations, []);
 });
 
 test("invalid data and missing consent never reach the database", async () => {
@@ -151,7 +176,8 @@ function setupPlatformActions({ role = "member", status = "active", signedIn = t
     updated_at: "2026-09-30T12:00:00Z",
   }];
   const client = {
-    auth: { getUser: async () => ({ data: { user: signedIn ? { id: userId } : null }, error: null }) },
+    rpc: async name => { assert.equal(name, "has_privileged_session"); return { data: true, error: null }; },
+    auth: { getClaims: async () => ({ data: { claims: { aal: "aal2", amr: [{ method: "totp", timestamp: Math.floor(Date.now() / 1000) }] } }, error: null }), mfa: { listFactors: async () => ({ data: { all: [], totp: [{ id: "factor" }] }, error: null }) }, getUser: async () => ({ data: { user: signedIn ? { id: userId } : null }, error: null }) },
     from(table) {
       if (table === "memberships") {
         const query = {
@@ -182,8 +208,9 @@ function setupPlatformActions({ role = "member", status = "active", signedIn = t
     "@/lib/platform": { isMissingSchemaError: (error) => ["42P01", "42703", "PGRST202", "PGRST205"].includes(error?.code) },
     "@/lib/audit": { auditCursorFilter() {}, auditPageCursor() {}, defaultAuditSort: {}, normalizeAuditQuery() {} },
     "@/lib/editorial-content": { isStoryAssetPath() { return true; }, parseEditorialContent() { return null; } },
+    "@/utils/supabase/public-url": { toPublicSupabaseUrl },
     "@/utils/supabase/config": { isSupabaseConfigured: () => true },
-    "@/utils/supabase/server": { createClient: async () => client },
+    ...mfaDependencies, "@/utils/supabase/server": { createClient: async () => client },
   });
   return { actions: source, writes, invalidations, applicationId, userId };
 }

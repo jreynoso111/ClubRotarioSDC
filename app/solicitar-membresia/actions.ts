@@ -1,11 +1,15 @@
 "use server";
 
+import { createHash } from "node:crypto";
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 
 import { parseMembershipApplication } from "@/lib/membership-applications";
 import { isMissingSchemaError } from "@/lib/platform";
 import { isSupabaseConfigured } from "@/utils/supabase/config";
 import { createClient } from "@/utils/supabase/server";
+import { allowRequest } from "@/lib/rate-limit";
+import { verifyTurnstileToken } from "@/lib/turnstile-server";
 
 export type MembershipApplicationFormState = {
   ok: boolean;
@@ -35,18 +39,31 @@ export async function submitMembershipApplicationAction(
     return { ok: false, message: "El formulario no está disponible por el momento. Inténtalo más tarde." };
   }
 
+  const remoteIp = (await headers()).get("cf-connecting-ip");
+  const networkKey = createHash("sha256").update(remoteIp || "unknown").digest("hex");
+  if (!allowRequest("membership-applications", "global", 40, 3600000) || !allowRequest("membership-applications", networkKey, 3, 3600000)) {
+    return { ok: false, message: "Recibimos muchas solicitudes en poco tiempo. Inténtalo de nuevo más tarde." };
+  }
+  if (!(await verifyTurnstileToken(formData.get("cf-turnstile-response"), remoteIp))) {
+    return { ok: false, message: "No pudimos confirmar la verificación de seguridad. Complétala e inténtalo de nuevo." };
+  }
+
   try {
     const supabase = await createClient();
-    const { error } = await supabase.from("membership_applications").insert({
-      full_name: parsed.value.fullName,
-      email: parsed.value.email,
-      phone: parsed.value.phone,
-      occupation: parsed.value.occupation,
-      motivation: parsed.value.motivation,
-      referral_source: parsed.value.referralSource,
-      consented_to_member_sharing: true,
+    // Direct table INSERT is revoked; this RPC validates consent and applies a club-wide limit.
+    const { error } = await supabase.rpc("submit_membership_application", {
+      _full_name: parsed.value.fullName,
+      _email: parsed.value.email,
+      _phone: parsed.value.phone,
+      _occupation: parsed.value.occupation,
+      _motivation: parsed.value.motivation,
+      _referral_source: parsed.value.referralSource,
+      _consent: true,
     });
 
+    if (error?.code === "PT429") {
+      return { ok: false, message: "Recibimos muchas solicitudes en poco tiempo. Inténtalo de nuevo más tarde." };
+    }
     if (error?.code === "23505") {
       return { ok: false, message: "Ya hay una solicitud en curso con ese correo. El club se comunicará contigo." };
     }

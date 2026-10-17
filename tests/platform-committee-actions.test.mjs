@@ -1,3 +1,5 @@
+import { mfaDependencies } from "./helpers/mfa-deps.mjs";
+import { toPublicSupabaseUrl } from "./helpers/supabase-public-url.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -20,7 +22,7 @@ function setup(role = "admin", activeMemberIds = [memberId], membershipStatus = 
   const invalidations = [];
 
   const client = {
-    auth: { getUser: async () => ({ data: { user: { id: actorId } }, error: null }) },
+    auth: { getClaims: async () => ({ data: { claims: { aal: "aal2", amr: [{ method: "totp", timestamp: Math.floor(Date.now() / 1000) }] } }, error: null }), mfa: { listFactors: async () => ({ data: { all: [], totp: [{ id: "factor" }] }, error: null }) }, getUser: async () => ({ data: { user: { id: actorId } }, error: null }) },
     from(table) {
       const filters = [];
       const query = {
@@ -53,7 +55,7 @@ function setup(role = "admin", activeMemberIds = [memberId], membershipStatus = 
       };
       return query;
     },
-    async rpc(name, args) {
+    async rpc(name, args) { if (name === "has_privileged_session") return { data: true, error: null };
       calls.push({ name, args });
       return { data: committeeId, error: null };
     },
@@ -65,8 +67,9 @@ function setup(role = "admin", activeMemberIds = [memberId], membershipStatus = 
     "@/lib/platform": { isMissingSchemaError: () => false },
     "@/lib/audit": { auditCursorFilter() {}, auditPageCursor() {}, defaultAuditSort: {}, normalizeAuditQuery() {} },
     "@/lib/editorial-content": { isStoryAssetPath() { return true; }, parseEditorialContent() { return null; } },
+    "@/utils/supabase/public-url": { toPublicSupabaseUrl },
     "@/utils/supabase/config": { isSupabaseConfigured: () => true },
-    "@/utils/supabase/server": { createClient: async () => client },
+    ...mfaDependencies, "@/utils/supabase/server": { createClient: async () => client },
   };
   const actions = {};
   new Function("require", "exports", actionsSource)((name) => dependencies[name], actions);

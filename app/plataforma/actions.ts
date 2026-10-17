@@ -5,7 +5,10 @@ import { updateMemberAccessAction } from "./members-actions";
 
 import { isMissingSchemaError, type ProposalVoteChoice } from "@/lib/platform";
 import { isSupabaseConfigured } from "@/utils/supabase/config";
+import { toPublicSupabaseUrl } from "@/utils/supabase/public-url";
 import { createClient } from "@/utils/supabase/server";
+import { isPrivilegedRole, secondFactorRequiredMessage } from "@/lib/mfa-policy";
+import { sessionHasRecentSecondFactor } from "@/lib/mfa-session";
 import { auditCursorFilter, auditPageCursor, defaultAuditSort, normalizeAuditQuery } from "@/lib/audit";
 import type { AuditCursor, AuditDetail, AuditDetailResult, AuditEntry, AuditFilters, AuditPageResult, AuditSort } from "@/lib/audit";
 import { isStoryAssetPath, MAX_EDITORIAL_CONTENT_LENGTH, parseEditorialContent } from "@/lib/editorial-content";
@@ -159,9 +162,17 @@ async function requireActor(requiredRoles: PlatformRole[] = []):
     return { error: failure("Tu membresía está suspendida y no puede realizar esta acción.", "suspended") };
   }
 
-  const role = roleFrom(record.membership_role);
+  let role = roleFrom(record.membership_role);
   if (requiredRoles.length > 0 && !requiredRoles.includes(role)) {
     return { error: failure("Tu rol actual no tiene permiso para realizar esta acción.", "forbidden") };
+  }
+  // The database grants admin/club_manager powers only with a recent second
+  // factor; without it the account acts as an ordinary active member.
+  if (isPrivilegedRole(role) && !(await sessionHasRecentSecondFactor(supabase))) {
+    if (requiredRoles.length > 0 && !requiredRoles.includes("member")) {
+      return { error: failure(secondFactorRequiredMessage, "forbidden") };
+    }
+    role = "member";
   }
 
   return { actor: { supabase, userId: userData.user.id, role } };
@@ -1219,7 +1230,9 @@ export async function getMembershipPhotoSlotsAction(): Promise<MembershipPhotoSl
       order: row.display_order,
       imagePath: row.image_path,
       imageUrl: row.image_path
-        ? actor!.supabase.storage.from("club-public").getPublicUrl(row.image_path).data.publicUrl
+        ? toPublicSupabaseUrl(
+            actor!.supabase.storage.from("club-public").getPublicUrl(row.image_path).data.publicUrl,
+          )
         : null,
       altText: row.alt_text,
       caption: row.caption,

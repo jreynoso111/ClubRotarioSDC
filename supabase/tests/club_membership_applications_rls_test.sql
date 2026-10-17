@@ -1,4 +1,16 @@
 begin;
+
+-- Synthetic sessions belong only to users inserted by this rolled-back suite.
+create function pg_temp.club_fixture_session() returns trigger language plpgsql as $$
+begin
+  insert into auth.sessions(id, user_id, created_at, updated_at, aal)
+  values(new.id, new.id, now(), now(), 'aal2');
+  return new;
+end; $$;
+create trigger club_fixture_session after insert on auth.users
+for each row execute function pg_temp.club_fixture_session();
+
+select set_config('request.jwt.claims', jsonb_build_object('aal', 'aal2', 'amr', jsonb_build_array(jsonb_build_object('method', 'totp', 'timestamp', extract(epoch from now())::bigint)))::text, true); -- privileged fixtures act with a recent second factor (privileged_mfa_test.sql covers its absence)
 select plan(17);
 
 select ok(
@@ -10,12 +22,12 @@ select ok(
   'membership application rows are protected by RLS'
 );
 select ok(
-  has_column_privilege('anon', 'public.membership_applications', 'full_name', 'INSERT')
-    and has_column_privilege('anon', 'public.membership_applications', 'consented_to_member_sharing', 'INSERT')
+  not has_table_privilege('anon', 'public.membership_applications', 'INSERT')
+    and has_function_privilege('anon', 'public.submit_membership_application(text,text,text,text,text,text,boolean)', 'EXECUTE')
     and not has_table_privilege('anon', 'public.membership_applications', 'SELECT')
     and not has_table_privilege('anon', 'public.membership_applications', 'UPDATE')
     and not has_table_privilege('anon', 'public.membership_applications', 'DELETE'),
-  'anonymous visitors can submit but cannot read or change applications'
+  'anonymous visitors submit only through the throttled intake function and cannot read or change applications'
 );
 select ok(
   has_table_privilege('authenticated', 'public.membership_applications', 'SELECT')
@@ -28,12 +40,13 @@ select is(
    where schemaname = 'public'
      and tablename = 'membership_applications'
      and policyname in (
-       'membership_applications_submit',
        'membership_applications_read_active_members',
        'membership_applications_review_management'
-     )),
-  3,
-  'submission, active-member read, and management review have separate policies'
+     ))
+   + (select count(*)::integer from pg_policies
+      where schemaname = 'public' and tablename = 'membership_applications' and cmd = 'INSERT'),
+  2,
+  'active-member read and management review have policies; no direct INSERT policy remains'
 );
 select ok(
   exists (select 1 from pg_indexes where schemaname = 'public' and indexname = 'membership_applications_one_open_request_per_email'),
@@ -82,21 +95,17 @@ where user_id = (select suspended_id from application_fixture);
 set local role anon;
 select set_config('request.jwt.claim.role', 'anon', true);
 select lives_ok($$
-  insert into public.membership_applications (
-    full_name, email, phone, motivation, consented_to_member_sharing
-  ) values (
-    'Persona Interesada', 'persona@example.org', '+1 809 555 0123',
-    'Quiero aportar tiempo y experiencia a las causas locales.', true
+  select public.submit_membership_application(
+    'Persona Interesada', 'persona@example.org', '+1 809 555 0123', null,
+    'Quiero aportar tiempo y experiencia a las causas locales.', null, true
   )
 $$, 'anonymous applicant can submit the required fields');
 select throws_ok($$
-  insert into public.membership_applications (
-    full_name, email, phone, motivation, consented_to_member_sharing
-  ) values (
-    'Sin Consentimiento', 'no-consent@example.org', '+1 809 555 0144',
-    'Quiero conocer más sobre el servicio rotario.', false
+  select public.submit_membership_application(
+    'Sin Consentimiento', 'no-consent@example.org', '+1 809 555 0144', null,
+    'Quiero conocer más sobre el servicio rotario.', null, false
   )
-$$, '42501', null, 'RLS rejects submissions without member-sharing consent');
+$$, '42501', null, 'intake rejects submissions without member-sharing consent');
 select throws_ok(
   'select count(*) from public.membership_applications',
   '42501', null,
@@ -111,6 +120,7 @@ grant select on application_fixture to authenticated;
 set local role authenticated;
 select set_config('request.jwt.claim.role', 'authenticated', true);
 select set_config('request.jwt.claim.sub', (select member_id::text from application_fixture), true);
+select set_config('request.jwt.claims', (coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb || jsonb_build_object('session_id', auth.uid()))::text, true);
 select is(
   (select count(*)::integer from public.membership_applications),
   1,
@@ -128,6 +138,7 @@ select is(
   'a regular member can see an application but cannot change its review status'
 ) from updated;
 select set_config('request.jwt.claim.sub', (select manager_id::text from application_fixture), true);
+select set_config('request.jwt.claims', (coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb || jsonb_build_object('session_id', auth.uid()))::text, true);
 select lives_ok($$
   update public.membership_applications
   set status = 'contacted', reviewed_by = auth.uid()
@@ -139,12 +150,14 @@ select is(
   'review changes are attributed to the authenticated manager'
 );
 select set_config('request.jwt.claim.sub', (select pending_id::text from application_fixture), true);
+select set_config('request.jwt.claims', (coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb || jsonb_build_object('session_id', auth.uid()))::text, true);
 select is(
   (select count(*)::integer from public.membership_applications),
   0,
   'pending accounts cannot see applicant data'
 );
 select set_config('request.jwt.claim.sub', (select suspended_id::text from application_fixture), true);
+select set_config('request.jwt.claims', (coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb || jsonb_build_object('session_id', auth.uid()))::text, true);
 select is(
   (select count(*)::integer from public.membership_applications),
   0,

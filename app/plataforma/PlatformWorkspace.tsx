@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import type { FormEvent, ReactNode } from "react";
@@ -37,8 +38,9 @@ import { PlatformAudit } from "./PlatformAudit";
 import { StoryComposerDialog } from "./StoryComposerDialog";
 import { MembershipPhotoManager } from "./MembershipPhotoManager";
 import styles from "./platform.module.css";
+const PlatformDiagnostics = dynamic(() => import("./PlatformDiagnostics").then(module => module.PlatformDiagnostics), { loading: () => <p role="status">Cargando diagnóstico…</p> });
 
-type Tab = "resumen" | "propuestas" | "agenda" | "actividades" | "finanzas" | "solicitudes" | "organizacion" | "revista" | "fotografias" | "mensajes" | "auditoria";
+type Tab = "resumen" | "propuestas" | "agenda" | "actividades" | "finanzas" | "solicitudes" | "organizacion" | "revista" | "fotografias" | "mensajes" | "auditoria" | "diagnostico";
 
 const tabs: Array<{ id: Tab; label: string }> = [
   { id: "resumen", label: "Resumen" },
@@ -52,9 +54,10 @@ const tabs: Array<{ id: Tab; label: string }> = [
   { id: "fotografias", label: "Fotos de la web" },
   { id: "mensajes", label: "Mensajes" },
   { id: "auditoria", label: "Auditoría" },
+  { id: "diagnostico", label: "Diagnóstico" },
 ];
 
-const administrationTabs: Tab[] = ["revista", "fotografias", "auditoria"];
+const administrationTabs: Tab[] = ["revista", "fotografias", "auditoria", "diagnostico"];
 
 function ModuleIcon({ module }: { module: Tab }) {
   const paths: Record<Tab, string> = {
@@ -69,6 +72,7 @@ function ModuleIcon({ module }: { module: Tab }) {
     fotografias: "M3 6h5l2-3h4l2 3h5v15H3z M15 13a3 3 0 1 1-6 0 3 3 0 0 1 6 0",
     mensajes: "M3 4h18v14H9l-6 3z M7 9h10 M7 13h6",
     auditoria: "M12 3l8 3v6c0 5-8 9-8 9s-8-4-8-9V6z M8 12l3 3 5-6",
+    diagnostico: "M3 12h4l3-8 4 16 3-8h4",
   };
   return <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[module]} /></svg>;
 }
@@ -85,6 +89,7 @@ const descriptions: Record<Tab, string> = {
   fotografias: "Identifica la ubicación de cada imagen y edita las fotos de la página de ingreso.",
   mensajes: "Consulta tus avisos y conversaciones con los miembros del club.",
   auditoria: "Revisa quién cambió cada registro y compara sus valores anteriores y actuales.",
+  diagnostico: "Analiza los errores de acceso y de la aplicación, y comprueba el estado del sistema.",
 };
 
 const roleLabels: Record<string, string> = {
@@ -289,8 +294,10 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
 
   const unreadNotifications = snapshot.notifications.filter((item) => !item.readAt).length;
   const unreadMessages = snapshot.messages.filter((item) => item.direction === "inbox" && !item.readAt).length;
-  const isAdministrator = snapshot.membership?.role === "admin";
+  const needsSecondFactor = snapshot.security.state === "enroll" || snapshot.security.state === "verify";
+  const isAdministrator = snapshot.membership?.role === "admin" && !needsSecondFactor;
   const availableTabs = tabs.filter(item =>
+    (item.id !== "diagnostico" || snapshot.capabilities.canAudit) &&
     (item.id !== "auditoria" || snapshot.capabilities.canAudit) &&
     (item.id !== "fotografias" || snapshot.capabilities.canEdit)
   );
@@ -336,6 +343,11 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
         </div>
       </div>
     </header>
+    {needsSecondFactor && <div className={styles.notice} role="status">
+      <h2>{snapshot.security.state === "enroll" ? "Activa la verificación en dos pasos." : "Confirma tu verificación en dos pasos."}</h2>
+      <p className={styles.noticeMessage}>Las funciones de administración y finanzas de tu rol están en pausa hasta que {snapshot.security.state === "enroll" ? "vincules una aplicación de autenticación" : "introduzcas el código de tu aplicación de autenticación"}. Mientras tanto, usas la plataforma como miembro.</p>
+      <p><Link href="/auth/mfa?next=/plataforma">{snapshot.security.state === "enroll" ? "Configurar ahora" : "Verificar ahora"} →</Link></p>
+    </div>}
 
     <section className={styles.content}>
       <div className={styles.workspaceIntro}><div><p className={styles.cardLabel}>Club Rotario / Gestión</p><h2>{tab === "resumen" ? "Vista general" : tabs.find(item => item.id === tab)?.label}</h2><p className={styles.sectionDescription}>{descriptions[tab]}</p></div><button className={styles.buttonQuiet} onClick={() => selectTab(tab === "agenda" ? "resumen" : "agenda")}>{tab === "agenda" ? "Ver resumen" : "Ver agenda"} ↗</button></div>
@@ -343,6 +355,7 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
       <ActionFeedback message={feedback} error={feedbackError} />
 
       {tab === "auditoria" && snapshot.capabilities.canAudit && <PlatformAudit initialResult={auditResult} initialLoading={pending && !auditResult} />}
+      {tab === "diagnostico" && snapshot.capabilities.canAudit && <PlatformDiagnostics />}
 
       {tab === "resumen" && <>
         <div className={styles.overviewMetrics}>

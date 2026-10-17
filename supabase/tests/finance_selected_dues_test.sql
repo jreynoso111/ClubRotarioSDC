@@ -1,4 +1,16 @@
 begin;
+
+-- Synthetic sessions belong only to users inserted by this rolled-back suite.
+create function pg_temp.club_fixture_session() returns trigger language plpgsql as $$
+begin
+  insert into auth.sessions(id, user_id, created_at, updated_at, aal)
+  values(new.id, new.id, now(), now(), 'aal2');
+  return new;
+end; $$;
+create trigger club_fixture_session after insert on auth.users
+for each row execute function pg_temp.club_fixture_session();
+
+select set_config('request.jwt.claims', jsonb_build_object('aal', 'aal2', 'amr', jsonb_build_array(jsonb_build_object('method', 'totp', 'timestamp', extract(epoch from now())::bigint)))::text, true); -- privileged fixtures act with a recent second factor (privileged_mfa_test.sql covers its absence)
 select plan(29);
 
 -- Every identifier is private to this rollback-only suite. The historical month
@@ -92,6 +104,7 @@ select ok(
 set local role authenticated;
 select set_config('request.jwt.claim.role', 'authenticated', true);
 select set_config('request.jwt.claim.sub', (select manager_id::text from finance_selection_fixture), true);
+select set_config('request.jwt.claims', (coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb || jsonb_build_object('session_id', auth.uid()))::text, true);
 
 select is(
   public.create_finance_member_dues(
@@ -284,6 +297,7 @@ select ok(
 );
 
 select set_config('request.jwt.claim.sub', (select member_id::text from finance_selection_fixture), true);
+select set_config('request.jwt.claims', (coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb || jsonb_build_object('session_id', auth.uid()))::text, true);
 select throws_ok(
   format('select public.create_finance_member_dues(%L::date,350.00,array[%L::uuid])',
     (select due_month from finance_selection_fixture),
@@ -325,6 +339,7 @@ select ok(
 );
 
 select set_config('request.jwt.claim.sub', (select suspended_id::text from finance_selection_fixture), true);
+select set_config('request.jwt.claims', (coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb || jsonb_build_object('session_id', auth.uid()))::text, true);
 select throws_ok(
   format('select public.create_finance_member_dues(%L::date,350.00,array[%L::uuid])',
     (select due_month from finance_selection_fixture),
@@ -347,6 +362,7 @@ reset role;
 set local role anon;
 select set_config('request.jwt.claim.role', 'anon', true);
 select set_config('request.jwt.claim.sub', '', true);
+select set_config('request.jwt.claims', (coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb || jsonb_build_object('session_id', auth.uid()))::text, true);
 select throws_ok(
   $$select public.create_finance_member_dues(date '2001-01-01',350.00,array[]::uuid[])$$,
   '42501', null,

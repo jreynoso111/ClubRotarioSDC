@@ -1,3 +1,5 @@
+import { mfaDependencies } from "./helpers/mfa-deps.mjs";
+import { toPublicSupabaseUrl } from "./helpers/supabase-public-url.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -17,7 +19,7 @@ function setup({ role = "admin", status = "active", signedIn = true, rpcError = 
   const invalidations = [];
   const queries = [];
   const client = {
-    auth: { getUser: async () => ({ data: { user: signedIn ? { id: actorId } : null }, error: null }) },
+    auth: { getClaims: async () => ({ data: { claims: { aal: "aal2", amr: [{ method: "totp", timestamp: Math.floor(Date.now() / 1000) }] } }, error: null }), mfa: { listFactors: async () => ({ data: { all: [], totp: [{ id: "factor" }] }, error: null }) }, getUser: async () => ({ data: { user: signedIn ? { id: actorId } : null }, error: null }) },
     from(table) {
       const query = {
         select(fields) { queries.push([table, "select", fields]); return query; },
@@ -34,7 +36,7 @@ function setup({ role = "admin", status = "active", signedIn = true, rpcError = 
       };
       return query;
     },
-    async rpc(name, args) {
+    async rpc(name, args) { if (name === "has_privileged_session") return { data: true, error: null };
       calls.push({ name, args });
       if (rpcError) return { data: null, error: rpcError };
       if (dashboardData && name in dashboardData) return { data: dashboardData[name], error: null };
@@ -48,8 +50,9 @@ function setup({ role = "admin", status = "active", signedIn = true, rpcError = 
     "@/lib/platform": { isMissingSchemaError: (error) => ["42P01", "42703", "PGRST202", "PGRST205"].includes(error?.code) },
     "@/lib/audit": { auditCursorFilter() {}, auditPageCursor() {}, defaultAuditSort: {}, normalizeAuditQuery() {} },
     "@/lib/editorial-content": { isStoryAssetPath() { return true; }, parseEditorialContent() { return null; } },
+    "@/utils/supabase/public-url": { toPublicSupabaseUrl },
     "@/utils/supabase/config": { isSupabaseConfigured: () => true },
-    "@/utils/supabase/server": { createClient: async () => client },
+    ...mfaDependencies, "@/utils/supabase/server": { createClient: async () => client },
   };
   const actions = {};
   new Function("require", "exports", actionsSource)((name) => {

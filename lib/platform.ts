@@ -2,6 +2,8 @@ import "server-only";
 
 import { isSupabaseConfigured } from "@/utils/supabase/config";
 import { createClient } from "@/utils/supabase/server";
+import { privilegedSecurityState, type PrivilegedSecurityState } from "@/lib/mfa-policy";
+import { sessionHasRecentSecondFactor } from "@/lib/mfa-session";
 
 export type PlatformRole =
   | "member"
@@ -66,6 +68,8 @@ export type PlatformSnapshot = {
     message: string | null;
   };
   dataWarnings: string[];
+  // admin/club_manager need a recent second factor; until then they act as members.
+  security: { state: PrivilegedSecurityState };
 };
 
 export type PlatformEvent = {
@@ -426,7 +430,20 @@ function emptySnapshot(
       message: null,
     },
     dataWarnings: [],
+    security: { state: "not_required" },
   };
+}
+
+async function readPrivilegedSecurityState(supabase: Awaited<ReturnType<typeof createClient>>, role: PlatformRole): Promise<PrivilegedSecurityState> {
+  if (role !== "admin" && role !== "club_manager") return "not_required";
+  try {
+    const [claimsResult, factorsResult] = await Promise.all([supabase.auth.getClaims(), supabase.auth.mfa.listFactors()]);
+    const hasVerifiedFactor = !factorsResult.error && (factorsResult.data?.totp?.length ?? 0) > 0;
+    const state = privilegedSecurityState(role, claimsResult.error ? null : claimsResult.data?.claims, hasVerifiedFactor);
+    return state === "verified" && !(await sessionHasRecentSecondFactor(supabase)) ? "verify" : state;
+  } catch {
+    return "verify";
+  }
 }
 
 export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
@@ -500,15 +517,18 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
   const membership = membershipResult.data;
   const role = asRole(membership.membership_role);
   const isActive = membership.membership_status === "active";
+  const securityState = isActive ? await readPrivilegedSecurityState(supabase, role) : "not_required";
+  // Mirror the database: without a recent second factor, privileged roles act as members.
+  const effectiveRole: PlatformRole = securityState === "enroll" || securityState === "verify" ? "member" : role;
   const capabilities = {
-    canCoordinate: isActive && ["coordinator", "club_manager", "admin"].includes(role),
-    canEdit: isActive && ["editor", "club_manager", "admin"].includes(role),
-    canManageClub: isActive && ["club_manager", "admin"].includes(role),
-    canManageFinances: isActive && ["club_manager", "admin"].includes(role),
-    canManageCommittees: isActive && role === "admin",
-    canManageMembership: isActive && ["club_manager", "admin"].includes(role),
-    canBroadcast: isActive && ["coordinator", "club_manager", "admin"].includes(role),
-    canAudit: isActive && role === "admin",
+    canCoordinate: isActive && ["coordinator", "club_manager", "admin"].includes(effectiveRole),
+    canEdit: isActive && ["editor", "club_manager", "admin"].includes(effectiveRole),
+    canManageClub: isActive && ["club_manager", "admin"].includes(effectiveRole),
+    canManageFinances: isActive && ["club_manager", "admin"].includes(effectiveRole),
+    canManageCommittees: isActive && effectiveRole === "admin",
+    canManageMembership: isActive && ["club_manager", "admin"].includes(effectiveRole),
+    canBroadcast: isActive && ["coordinator", "club_manager", "admin"].includes(effectiveRole),
+    canAudit: isActive && effectiveRole === "admin",
   };
   const baseSnapshot = emptySnapshot(
     isActive ? "active" : membership.membership_status,
@@ -527,6 +547,7 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
     notes: membership.notes,
   };
   baseSnapshot.capabilities = capabilities;
+  baseSnapshot.security = { state: securityState };
 
   if (!isActive) {
     return baseSnapshot;
@@ -940,5 +961,6 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
       message: messagingMessage,
     },
     dataWarnings: warnings,
+    security: { state: securityState },
   };
 }

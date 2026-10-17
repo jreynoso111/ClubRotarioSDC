@@ -64,6 +64,7 @@ const blocks = suites.map((file) => {
 });
 
 const query = `-- ClubRotario: integration verification, with no committed fixtures or extension changes.
+begin;
 do $club_verification$
 declare
   report jsonb := '[]'::jsonb;
@@ -73,6 +74,7 @@ ${blocks.join("\n")}
   perform set_config('clubrotario.verification', report::text, true);
 end $club_verification$;
 select current_setting('clubrotario.verification')::jsonb as verification;
+commit;
 `;
 writeFileSync(output, query);
 console.log(`Prepared ${suites.length} suites: ${output}`);

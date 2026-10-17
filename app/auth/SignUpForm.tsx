@@ -1,13 +1,18 @@
 "use client";
 
 import type { FormEvent } from "react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { createClient } from "@/utils/supabase/client";
+import { createEmailClient } from "@/utils/supabase/email-client";
+import { getPublicSiteOrigin } from "@/utils/site-url";
 
 import styles from "./auth.module.css";
+import { diagnosticFeedback } from "@/lib/diagnostics-client";
+import { endBrowserSession } from "@/lib/auth-session-exit";
+import { TurnstileWidget, turnstileSiteKey, type TurnstileHandle } from "@/components/security/TurnstileWidget";
 
 export function SignUpForm() {
   const router = useRouter();
@@ -17,11 +22,14 @@ export function SignUpForm() {
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState("");
+  const captcha = useRef<TurnstileHandle>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setErrorMessage("");
     setSuccessMessage("");
+    if (turnstileSiteKey && !captchaToken) { setErrorMessage("Completa la verificación de seguridad antes de continuar."); return; }
     setIsSubmitting(true);
 
     if (fullName.trim().length < 2) {
@@ -30,27 +38,33 @@ export function SignUpForm() {
       return;
     }
     try {
-      const { data, error } = await createClient().auth.signUp({
+      const { data, error } = await createEmailClient().auth.signUp({
         email: email.trim(),
         password,
-        options: { data: { display_name: fullName.trim() }, emailRedirectTo: `${window.location.origin}/auth/callback` },
+        options: { data: { display_name: fullName.trim() }, emailRedirectTo: `${getPublicSiteOrigin()}/auth/complete`, captchaToken: captchaToken || undefined },
       });
+      captcha.current?.reset();
 
       if (error) {
-        setErrorMessage("No pudimos crear la cuenta. Revisa los datos e inténtalo de nuevo.");
+        setErrorMessage(await diagnosticFeedback("signup", error, "No pudimos crear la cuenta. Revisa los datos e inténtalo de nuevo."));
         setIsSubmitting(false);
         return;
       }
 
       if (data.session) {
-        router.replace("/plataforma");
-        router.refresh();
+        const { error: sessionError } = await createClient().auth.setSession(data.session);
+        if (sessionError) {
+          setErrorMessage(await diagnosticFeedback("signup", sessionError, "Tu cuenta se creó. Inicia sesión para continuar."));
+          return;
+        }
+        await endBrowserSession();
+        router.replace("/auth/sign-in?notice=confirmed");
         return;
       }
 
-      setSuccessMessage("Revisa tu correo para continuar. Si ya tenías una cuenta, puedes iniciar sesión o recuperar tu contraseña.");
+      setSuccessMessage("Si el registro es nuevo, confirma tu correo con el enlace recibido. La cuenta quedará pendiente de aprobación por un administrador o responsable autorizado; confirmar el correo no activa el acceso. Si ya tenías cuenta, inicia sesión o recupera tu contraseña.");
     } catch {
-      setErrorMessage("No pudimos conectar. Comprueba tu conexión e inténtalo de nuevo.");
+      setErrorMessage(await diagnosticFeedback("signup", { code: "network_error" }, "No pudimos conectar. Comprueba tu conexión e inténtalo de nuevo."));
     } finally {
       setIsSubmitting(false);
     }
@@ -103,6 +117,7 @@ export function SignUpForm() {
             onChange={(event) => setPassword(event.target.value)}
           />
         </label>
+        <TurnstileWidget ref={captcha} action="signup" onToken={setCaptchaToken} />
         {errorMessage ? <p role="alert" className={styles.error}>{errorMessage}</p> : null}
         {successMessage ? <p role="status" className={styles.success}>{successMessage}</p> : null}
         <button className={styles.button} type="submit" disabled={isSubmitting}>

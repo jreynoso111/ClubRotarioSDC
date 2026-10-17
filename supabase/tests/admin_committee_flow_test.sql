@@ -1,4 +1,16 @@
 begin;
+
+-- Synthetic sessions belong only to users inserted by this rolled-back suite.
+create function pg_temp.club_fixture_session() returns trigger language plpgsql as $$
+begin
+  insert into auth.sessions(id, user_id, created_at, updated_at, aal)
+  values(new.id, new.id, now(), now(), 'aal2');
+  return new;
+end; $$;
+create trigger club_fixture_session after insert on auth.users
+for each row execute function pg_temp.club_fixture_session();
+
+select set_config('request.jwt.claims', jsonb_build_object('aal', 'aal2', 'amr', jsonb_build_array(jsonb_build_object('method', 'totp', 'timestamp', extract(epoch from now())::bigint)))::text, true); -- privileged fixtures act with a recent second factor (privileged_mfa_test.sql covers its absence)
 select plan(13);
 
 create temporary table committee_flow_fixture (admin_id uuid, member_id uuid,
@@ -23,6 +35,7 @@ grant select, update on committee_flow_fixture to authenticated;
 set local role authenticated;
 select set_config('request.jwt.claim.role', 'authenticated', true);
 select set_config('request.jwt.claim.sub', (select admin_id::text from committee_flow_fixture), true);
+select set_config('request.jwt.claims', (coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb || jsonb_build_object('session_id', auth.uid()))::text, true);
 select lives_ok($$update committee_flow_fixture set committee_id = public.create_committee_with_members(
   'Comite temporal', 'committee-flow-' || admin_id::text, 'Solo durante la verificacion',
   array[admin_id, member_id], array['chair', 'secretary'])$$,
@@ -41,19 +54,23 @@ select throws_ok($$select public.create_committee_with_members('Suspendidos',
   from committee_flow_fixture$$, '22023', null, 'suspended members cannot join a new committee');
 
 select set_config('request.jwt.claim.sub', (select manager_id::text from committee_flow_fixture), true);
+select set_config('request.jwt.claims', (coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb || jsonb_build_object('session_id', auth.uid()))::text, true);
 select throws_ok($$select public.create_committee_with_members('No autorizado',
   'committee-manager-' || manager_id::text, null, '{}'::uuid[], '{}'::text[]) from committee_flow_fixture$$,
   '42501', null, 'club managers cannot create committees');
 select set_config('request.jwt.claim.sub', (select member_id::text from committee_flow_fixture), true);
+select set_config('request.jwt.claims', (coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb || jsonb_build_object('session_id', auth.uid()))::text, true);
 select throws_ok($$select public.create_committee_with_members('No autorizado',
   'committee-member-' || member_id::text, null, '{}'::uuid[], '{}'::text[]) from committee_flow_fixture$$,
   '42501', null, 'regular members cannot create committees');
 select set_config('request.jwt.claim.sub', (select suspended_id::text from committee_flow_fixture), true);
+select set_config('request.jwt.claims', (coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb || jsonb_build_object('session_id', auth.uid()))::text, true);
 select throws_ok($$select public.create_committee_with_members('No autorizado',
   'committee-inactive-' || suspended_id::text, null, '{}'::uuid[], '{}'::text[]) from committee_flow_fixture$$,
   '42501', null, 'suspended administrators lose committee management access');
 
 select set_config('request.jwt.claim.sub', (select admin_id::text from committee_flow_fixture), true);
+select set_config('request.jwt.claims', (coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb || jsonb_build_object('session_id', auth.uid()))::text, true);
 update public.committee_members set committee_role = 'treasurer'
 where committee_id = (select committee_id from committee_flow_fixture)
   and user_id = (select member_id from committee_flow_fixture);
@@ -75,6 +92,7 @@ select ok(exists (select 1 from public.audit_log where table_name = 'committees'
   and before_data->>'is_active' = 'true' and after_data->>'is_active' = 'false'),
   'committee completion retains an actor-attributed before and after audit record');
 select set_config('request.jwt.claim.sub', (select member_id::text from committee_flow_fixture), true);
+select set_config('request.jwt.claims', (coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb || jsonb_build_object('session_id', auth.uid()))::text, true);
 select is((select count(*)::integer from public.committees where id = (select committee_id from committee_flow_fixture)), 0,
   'regular members do not see completed committee archives');
 reset role;

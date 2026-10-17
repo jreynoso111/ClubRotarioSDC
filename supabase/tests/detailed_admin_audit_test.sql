@@ -2,9 +2,29 @@
 -- All fixtures and their history roll back together. No existing data is changed.
 begin;
 
+-- Synthetic sessions belong only to users inserted by this rolled-back suite.
+create function pg_temp.club_fixture_session() returns trigger language plpgsql as $$
+begin
+  insert into auth.sessions(id, user_id, created_at, updated_at, aal)
+  values(new.id, new.id, now(), now(), 'aal2');
+  return new;
+end; $$;
+create trigger club_fixture_session after insert on auth.users
+for each row execute function pg_temp.club_fixture_session();
+
+
 do $$ begin
-  assert (select count(*) from pg_trigger where tgname = 'zz_club_audit' and tgenabled = 'O') = 19,
-    'All 16 platform tables, Storage and two Auth tables must be covered';
+  assert not exists (
+    select 1 from pg_class c join pg_namespace n on n.oid = c.relnamespace
+    where c.relkind = 'r' and (
+      (n.nspname = 'public' and c.relname not in ('audit_log', 'proposal_votes'))
+      or (n.nspname = 'auth' and c.relname in ('users', 'sessions'))
+      or (n.nspname = 'storage' and c.relname = 'objects')
+    ) and not exists (
+      select 1 from pg_trigger t where t.tgrelid = c.oid
+      and t.tgname = 'zz_club_audit' and t.tgenabled = 'O'
+    )
+  ), 'All non-ballot platform tables, Storage objects and Auth users/sessions must be audited';
   assert not has_function_privilege('authenticated', 'private.capture_club_audit_change()', 'EXECUTE'),
     'The log writer must not be callable by users';
   assert not has_table_privilege('authenticated', 'public.audit_log', 'INSERT'), 'No user can forge history';
@@ -20,7 +40,7 @@ update public.memberships set membership_status = 'active'
 where user_id = 'a2222222-2222-4222-8222-222222222222';
 
 set local role authenticated;
-select set_config('request.jwt.claims', '{"sub":"a1111111-1111-4111-8111-111111111111","role":"authenticated"}', true);
+select set_config('request.jwt.claims', jsonb_build_object('session_id', 'a1111111-1111-4111-8111-111111111111', 'sub', 'a1111111-1111-4111-8111-111111111111', 'role', 'authenticated', 'aal', 'aal2', 'amr', jsonb_build_array(jsonb_build_object('method', 'totp', 'timestamp', extract(epoch from now())::bigint)))::text, true);
 select set_config('request.headers', '{"user-agent":"Audit test browser","authorization":"never-copy-this-token","apikey":"never-copy-this-key"}', true);
 
 insert into public.events (id, title, slug, starts_at, status, is_public, venue_name)
@@ -61,7 +81,7 @@ do $$ begin
   exception when insufficient_privilege then null; end;
 end $$;
 
-select set_config('request.jwt.claims', '{"sub":"a1111111-1111-4111-8111-111111111111","role":"authenticated"}', true);
+select set_config('request.jwt.claims', jsonb_build_object('session_id', 'a1111111-1111-4111-8111-111111111111', 'sub', 'a1111111-1111-4111-8111-111111111111', 'role', 'authenticated', 'aal', 'aal2', 'amr', jsonb_build_array(jsonb_build_object('method', 'totp', 'timestamp', extract(epoch from now())::bigint)))::text, true);
 delete from public.events where id = 'b1111111-1111-4111-8111-111111111111';
 do $$ begin
   assert exists (select 1 from public.audit_log where table_name = 'events' and operation = 'DELETE'
@@ -81,6 +101,9 @@ values ('c1111111-1111-4111-8111-111111111111', 'a2222222-2222-4222-8222-2222222
 update auth.users set encrypted_password = 'secret-new-password-hash', last_sign_in_at = now()
 where id = 'a2222222-2222-4222-8222-222222222222';
 delete from auth.sessions where id = 'c1111111-1111-4111-8111-111111111111';
+-- Storage now protects direct SQL deletes. This transaction contains only a
+-- synthetic object with no backing file, and is rolled back in full below.
+set local storage.allow_delete_query = 'true';
 insert into storage.objects (id, bucket_id, name, metadata, user_metadata)
 values ('d1111111-1111-4111-8111-111111111111', 'club-public', 'audit-test.png',
   '{"size":128,"mimetype":"image/png","token":"secret-storage-token"}', '{"password":"secret-file-password"}');

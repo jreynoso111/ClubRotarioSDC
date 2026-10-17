@@ -1,0 +1,11 @@
+{
+  "note": "Excepciones temporales solo para el árbol completo (nunca producción). Cada entrada: URL del aviso, motivo y fecha de vencimiento (YYYY-MM-DD).",
+  "exceptions": [
+    {
+      "advisory": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm",
+      "package": "braces",
+      "reason": "Sin versión corregida publicada (npm latest 3.0.3; el aviso indica versión parcheada desconocida). Solo dependencia de desarrollo: eslint-config-next > @next/eslint-plugin-next > fast-glob > micromatch > braces. Los patrones los escribe el propio repositorio; ninguna entrada de red llega a braces y no se incluye en el build de producción.",
+      "expires": "2026-11-17"
+    }
+  ]
+}

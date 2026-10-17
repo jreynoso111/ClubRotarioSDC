@@ -1,3 +1,4 @@
+import { mfaDependencies } from "./helpers/mfa-deps.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -28,7 +29,7 @@ function setup({ role = "admin", status = "active", signedIn = true, rpcError = 
   const pages = [];
   const invalidations = [];
   const client = {
-    auth: { getUser: async () => ({ data: { user: signedIn ? { id: actorId, user_metadata: { role: "admin" } } : null }, error: null }) },
+    auth: { getClaims: async () => ({ data: { claims: { aal: "aal2", amr: [{ method: "totp", timestamp: Math.floor(Date.now() / 1000) }] } }, error: null }), mfa: { listFactors: async () => ({ data: { all: [], totp: [{ id: "factor" }] }, error: null }) }, getUser: async () => ({ data: { user: signedIn ? { id: actorId, user_metadata: { role: "admin" } } : null }, error: null }) },
     from(table) {
       const query = {
         select() { return query; }, eq() { return query; }, order() { return query; }, limit() { return query; },
@@ -44,10 +45,10 @@ function setup({ role = "admin", status = "active", signedIn = true, rpcError = 
       };
       return query;
     },
-    async rpc(name, args) { calls.push({ name, args }); return { data: name === "create_club_leadership_term" ? termId : positionId, error: rpcError }; },
+    async rpc(name, args) { if (name === "has_privileged_session") return { data: true, error: null }; calls.push({ name, args }); return { data: name === "create_club_leadership_term" ? termId : positionId, error: rpcError }; },
   };
   const dependencies = { "server-only": {}, "next/cache": { revalidatePath: path => invalidations.push(path) },
-    "@/utils/supabase/config": { isSupabaseConfigured: () => true }, "@/utils/supabase/server": { createClient: async () => client },
+    "@/utils/supabase/config": { isSupabaseConfigured: () => true }, ...mfaDependencies, "@/utils/supabase/server": { createClient: async () => client },
     "@/lib/organization": organization };
   dependencies["./module-auth"] = compile("../app/plataforma/module-auth.ts", dependencies);
   return { actions: compile("../app/plataforma/organization-actions.ts", dependencies), calls, pages, invalidations };

@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
+
+import { TurnstileWidget, type TurnstileHandle } from "@/components/security/TurnstileWidget";
 
 import {
   submitMembershipApplicationAction,
@@ -13,6 +15,10 @@ const initialState: MembershipApplicationFormState = { ok: false, message: "" };
 
 export function MembershipApplicationForm() {
   const [state, formAction, pending] = useActionState(submitMembershipApplicationAction, initialState);
+  const [captchaToken, setCaptchaToken] = useState("");
+  const captcha = useRef<TurnstileHandle>(null);
+  // Turnstile tokens are single use: request a new one after every server reply.
+  useEffect(() => { if (state.message && !state.ok) captcha.current?.reset(); }, [state]);
 
   if (state.ok) {
     return (
@@ -49,6 +55,8 @@ export function MembershipApplicationForm() {
         <span>Autorizo que estos datos se compartan con los miembros activos del Club Rotario Santo Domingo Colonial y su presidencia para evaluar mi interés.</span>
       </label>
 
+      <input type="hidden" name="cf-turnstile-response" value={captchaToken} />
+      <TurnstileWidget ref={captcha} action="membership_application" onToken={setCaptchaToken} />
       {state.message ? <p className={styles.error} role="alert">{state.message}</p> : null}
       <button className={styles.submit} type="submit" disabled={pending}>
         {pending ? "Enviando solicitud…" : "Enviar solicitud"}<span aria-hidden="true">↗</span>

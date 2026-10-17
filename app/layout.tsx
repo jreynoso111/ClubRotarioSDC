@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist_Mono, Open_Sans } from "next/font/google";
 import type { ReactNode } from "react";
+import { connection } from "next/server";
 import "./globals.css";
 
 const openSans = Open_Sans({
@@ -22,7 +23,9 @@ export const metadata: Metadata = {
     "Personas de acción que conectan experiencia, tiempo y aliados para servir a Santo Domingo Colonial.",
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  // A per-request CSP nonce must also be present on the framework scripts.
+  await connection();
   return (
     <html
       lang="es"

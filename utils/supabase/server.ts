@@ -1,15 +1,20 @@
 import "server-only";
 
 import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 
 import { getSupabaseConfig } from "@/utils/supabase/config";
+import { diagnosticFetch } from "@/lib/diagnostics-store";
 
 export async function createClient() {
   const cookieStore = await cookies();
-  const { url, publishableKey } = getSupabaseConfig();
+  const { url, publishableKey, cookieName } = getSupabaseConfig();
+  const serverUrl = process.env.SUPABASE_SERVER_URL?.trim() || url;
+  const secure = (await headers()).get("x-forwarded-proto") === "https";
 
-  return createServerClient(url, publishableKey, {
+  return createServerClient(serverUrl, publishableKey, {
+    global: { fetch: diagnosticFetch },
+    cookieOptions: { name: cookieName, secure },
     cookies: {
       getAll() {
         return cookieStore.getAll();

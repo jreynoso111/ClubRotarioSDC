@@ -1,4 +1,16 @@
 begin;
+
+-- Synthetic sessions belong only to users inserted by this rolled-back suite.
+create function pg_temp.club_fixture_session() returns trigger language plpgsql as $$
+begin
+  insert into auth.sessions(id, user_id, created_at, updated_at, aal)
+  values(new.id, new.id, now(), now(), 'aal2');
+  return new;
+end; $$;
+create trigger club_fixture_session after insert on auth.users
+for each row execute function pg_temp.club_fixture_session();
+
+select set_config('request.jwt.claims', jsonb_build_object('aal', 'aal2', 'amr', jsonb_build_array(jsonb_build_object('method', 'totp', 'timestamp', extract(epoch from now())::bigint)))::text, true); -- privileged fixtures act with a recent second factor (privileged_mfa_test.sql covers its absence)
 select plan(40);
 
 create temporary table leadership_fixture (
@@ -33,6 +45,7 @@ select ok(not (select prosecdef from pg_proc where oid = to_regprocedure('public
 set local role authenticated;
 select set_config('request.jwt.claim.role', 'authenticated', true);
 select set_config('request.jwt.claim.sub', (select admin_id::text from leadership_fixture), true);
+select set_config('request.jwt.claims', (coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb || jsonb_build_object('session_id', auth.uid()))::text, true);
 select lives_ok($$update leadership_fixture set term_id = public.create_club_leadership_term(historical_year, 'Verificación temporal', null)$$, 'active admin creates a Rotary period');
 select is((select count(*)::integer from public.club_leadership_positions where term_id = (select term_id from leadership_fixture)), 7, 'starting structure includes seven editable cargos');
 select ok((select bool_and(member_id is null and access_role = 'member') from public.club_leadership_positions where term_id = (select term_id from leadership_fixture)), 'all cargos start vacant with normal member access');
@@ -70,13 +83,16 @@ select ok(exists(select 1 from public.audit_log where table_name = 'club_leaders
 select ok(exists(select 1 from public.audit_log where table_name = 'memberships' and record_id = (select member_id::text from leadership_fixture) and actor_id = (select admin_id from leadership_fixture) and before_data->>'membership_role' = 'member' and after_data->>'membership_role' = 'coordinator'), 'explicit access application produces before and after membership audit');
 
 select set_config('request.jwt.claim.sub', (select manager_id::text from leadership_fixture), true);
+select set_config('request.jwt.claims', (coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb || jsonb_build_object('session_id', auth.uid()))::text, true);
 select throws_ok($$select public.create_club_leadership_term(2101,'No autorizado',null)$$, '42501', null, 'club managers cannot define periods');
 select throws_ok($$select public.save_club_leadership_position(null,current_id,'No autorizado','',null,member_id,0,true,'admin',true,null) from leadership_fixture$$, '42501', null, 'club managers cannot configure or apply cargo privileges');
 select set_config('request.jwt.claim.sub', (select member_id::text from leadership_fixture), true);
+select set_config('request.jwt.claims', (coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb || jsonb_build_object('session_id', auth.uid()))::text, true);
 select is((select count(*)::integer from public.club_leadership_positions where term_id = (select term_id from leadership_fixture)), 7, 'active members can consult a historical org chart');
 with updated as (update public.club_leadership_positions set access_role = 'admin' where id = (select president_id from leadership_fixture) returning id)
 select is(count(*)::integer, 0, 'non-admin direct updates are rejected by row policies') from updated;
 select set_config('request.jwt.claim.sub', (select suspended_id::text from leadership_fixture), true);
+select set_config('request.jwt.claims', (coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb || jsonb_build_object('session_id', auth.uid()))::text, true);
 select is((select count(*)::integer from public.club_leadership_terms), 0, 'suspended accounts cannot read organizational periods');
 select throws_ok($$select public.create_club_leadership_term(2101,'No autorizado',null)$$, '42501', null, 'suspended administrators cannot create a period');
 reset role;

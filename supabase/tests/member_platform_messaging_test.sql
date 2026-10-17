@@ -4,6 +4,18 @@
 
 begin;
 
+-- Synthetic sessions belong only to users inserted by this rolled-back suite.
+create function pg_temp.club_fixture_session() returns trigger language plpgsql as $$
+begin
+  insert into auth.sessions(id, user_id, created_at, updated_at, aal)
+  values(new.id, new.id, now(), now(), 'aal2');
+  return new;
+end; $$;
+create trigger club_fixture_session after insert on auth.users
+for each row execute function pg_temp.club_fixture_session();
+
+
+select set_config('request.jwt.claims', jsonb_build_object('aal', 'aal2', 'amr', jsonb_build_array(jsonb_build_object('method', 'totp', 'timestamp', extract(epoch from now())::bigint)))::text, true); -- privileged fixtures act with a recent second factor (privileged_mfa_test.sql covers its absence)
 create temporary table member_platform_fixture (
   active_sender uuid not null,
   active_recipient uuid not null,
@@ -59,6 +71,7 @@ select set_config(
   (select active_sender::text from member_platform_fixture),
   true
 );
+select set_config('request.jwt.claims', (coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb || jsonb_build_object('session_id', auth.uid()))::text, true);
 
 select public.send_internal_message(
   array[(select active_recipient from member_platform_fixture)],
@@ -88,6 +101,7 @@ select set_config(
   (select active_recipient::text from member_platform_fixture),
   true
 );
+select set_config('request.jwt.claims', (coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb || jsonb_build_object('session_id', auth.uid()))::text, true);
 
 do $$
 declare
@@ -115,6 +129,7 @@ select set_config(
   (select pending_member::text from member_platform_fixture),
   true
 );
+select set_config('request.jwt.claims', (coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb || jsonb_build_object('session_id', auth.uid()))::text, true);
 
 do $$
 begin
@@ -140,6 +155,7 @@ select set_config(
   (select suspended_member::text from member_platform_fixture),
   true
 );
+select set_config('request.jwt.claims', (coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb || jsonb_build_object('session_id', auth.uid()))::text, true);
 
 do $$
 begin
@@ -166,6 +182,7 @@ select set_config(
   (select active_sender::text from member_platform_fixture),
   true
 );
+select set_config('request.jwt.claims', (coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb || jsonb_build_object('session_id', auth.uid()))::text, true);
 
 do $$
 begin

@@ -1,3 +1,5 @@
+import { mfaDependencies } from "./helpers/mfa-deps.mjs";
+import { toPublicSupabaseUrl } from "./helpers/supabase-public-url.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -25,7 +27,7 @@ function setup({ role = "member", membershipStatus = "active", proposalStatus = 
   const invalidations = [];
   const calls = [];
   const client = {
-    auth: { getUser: async () => ({ data: { user: { id: actorId } }, error: null }) },
+    auth: { getClaims: async () => ({ data: { claims: { aal: "aal2", amr: [{ method: "totp", timestamp: Math.floor(Date.now() / 1000) }] } }, error: null }), mfa: { listFactors: async () => ({ data: { all: [], totp: [{ id: "factor" }] }, error: null }) }, getUser: async () => ({ data: { user: { id: actorId } }, error: null }) },
     from(table) {
       let update = null;
       const filters = [];
@@ -47,7 +49,7 @@ function setup({ role = "member", membershipStatus = "active", proposalStatus = 
       };
       return query;
     },
-    async rpc(name, input) {
+    async rpc(name, input) { if (name === "has_privileged_session") return { data: true, error: null };
       calls.push({ name, input });
       assert.equal(name, "submit_proposal");
       if (input._proposal_id === record.id && record.created_by === actorId && ["draft", "rejected"].includes(record.status)) {
@@ -60,8 +62,9 @@ function setup({ role = "member", membershipStatus = "active", proposalStatus = 
   const dependencies = {
     "server-only": {},
     "next/cache": { revalidatePath: (path) => invalidations.push(path) },
+    "@/utils/supabase/public-url": { toPublicSupabaseUrl },
     "@/utils/supabase/config": { isSupabaseConfigured: () => true },
-    "@/utils/supabase/server": { createClient: async () => client },
+    ...mfaDependencies, "@/utils/supabase/server": { createClient: async () => client },
     "@/lib/platform": { isMissingSchemaError: () => false },
     "@/lib/audit": {},
     "@/lib/editorial-content": {},

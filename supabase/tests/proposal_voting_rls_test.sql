@@ -1,4 +1,16 @@
 begin;
+
+-- Synthetic sessions belong only to users inserted by this rolled-back suite.
+create function pg_temp.club_fixture_session() returns trigger language plpgsql as $$
+begin
+  insert into auth.sessions(id, user_id, created_at, updated_at, aal)
+  values(new.id, new.id, now(), now(), 'aal2');
+  return new;
+end; $$;
+create trigger club_fixture_session after insert on auth.users
+for each row execute function pg_temp.club_fixture_session();
+
+select set_config('request.jwt.claims', jsonb_build_object('aal', 'aal2', 'amr', jsonb_build_array(jsonb_build_object('method', 'totp', 'timestamp', extract(epoch from now())::bigint)))::text, true); -- privileged fixtures act with a recent second factor (privileged_mfa_test.sql covers its absence)
 select plan(15);
 
 select ok(
@@ -121,6 +133,7 @@ from proposal_voting_fixture;
 set local role authenticated;
 select set_config('request.jwt.claim.role', 'authenticated', true);
 select set_config('request.jwt.claim.sub', (select coordinator_id::text from proposal_voting_fixture), true);
+select set_config('request.jwt.claims', (coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb || jsonb_build_object('session_id', auth.uid()))::text, true);
 
 update public.proposals set voting_open = true
 where id = (select proposal_id from proposal_voting_fixture);
@@ -131,6 +144,7 @@ select ok(
 );
 
 select set_config('request.jwt.claim.sub', (select first_voter::text from proposal_voting_fixture), true);
+select set_config('request.jwt.claims', (coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb || jsonb_build_object('session_id', auth.uid()))::text, true);
 
 select is(
   (select count(*)::integer from public.proposals where id = (select proposal_id from proposal_voting_fixture)),
@@ -163,6 +177,7 @@ select is(
 );
 
 select set_config('request.jwt.claim.sub', (select second_voter::text from proposal_voting_fixture), true);
+select set_config('request.jwt.claims', (coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb || jsonb_build_object('session_id', auth.uid()))::text, true);
 
 select is(
   (select count(*)::integer from public.proposal_votes),
@@ -174,10 +189,12 @@ insert into public.proposal_votes (proposal_id, user_id, vote_choice)
 select proposal_id, second_voter, 'against' from proposal_voting_fixture;
 
 select set_config('request.jwt.claim.sub', (select coordinator_id::text from proposal_voting_fixture), true);
+select set_config('request.jwt.claims', (coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb || jsonb_build_object('session_id', auth.uid()))::text, true);
 update public.proposals set voting_open = false
 where id = (select proposal_id from proposal_voting_fixture);
 
 select set_config('request.jwt.claim.sub', (select first_voter::text from proposal_voting_fixture), true);
+select set_config('request.jwt.claims', (coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb || jsonb_build_object('session_id', auth.uid()))::text, true);
 
 select is(
   (select concat(votes_for, ':', votes_against, ':', votes_abstaining)
@@ -199,6 +216,7 @@ select ok(
 set local role authenticated;
 select set_config('request.jwt.claim.role', 'authenticated', true);
 select set_config('request.jwt.claim.sub', (select suspended_id::text from proposal_voting_fixture), true);
+select set_config('request.jwt.claims', (coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb || jsonb_build_object('session_id', auth.uid()))::text, true);
 
 do $$
 begin

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { isSupabaseConfigured } from "@/utils/supabase/config";
+import { toPublicSupabaseUrl } from "@/utils/supabase/public-url";
 import { createClient } from "@/utils/supabase/server";
 
 import { withPublicContentTimeout } from "./timeout";
@@ -187,7 +188,9 @@ export async function getPublicFeed(): Promise<{
         : story.cover_image_path?.startsWith("http")
           ? story.cover_image_path
           : story.cover_image_path
-            ? supabase.storage.from("club-public").getPublicUrl(story.cover_image_path).data.publicUrl
+            ? toPublicSupabaseUrl(
+                supabase.storage.from("club-public").getPublicUrl(story.cover_image_path).data.publicUrl,
+              )
             : undefined;
       return mapStory(story, index, imageUrl);
     });

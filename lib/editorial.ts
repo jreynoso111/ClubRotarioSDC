@@ -3,6 +3,7 @@ import "server-only";
 import { cache } from "react";
 
 import { isSupabaseConfigured } from "@/utils/supabase/config";
+import { toPublicSupabaseUrl } from "@/utils/supabase/public-url";
 import { createClient } from "@/utils/supabase/server";
 
 import { withPublicContentTimeout } from "@/lib/supabase/timeout";
@@ -370,7 +371,9 @@ function publicImageUrl(supabase: Awaited<ReturnType<typeof createClient>>, path
   if (path.startsWith("/")) return undefined;
   if (path.startsWith("https://")) return path;
   if (path.startsWith("http://")) return undefined;
-  return supabase.storage.from("club-public").getPublicUrl(path).data.publicUrl;
+  return toPublicSupabaseUrl(
+    supabase.storage.from("club-public").getPublicUrl(path).data.publicUrl,
+  );
 }
 
 function mapStory(

@@ -1,3 +1,5 @@
+import { mfaDependencies } from "./helpers/mfa-deps.mjs";
+import { toPublicSupabaseUrl } from "./helpers/supabase-public-url.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -26,7 +28,8 @@ function setup({ role = "editor", status = "active", signedIn = true } = {}) {
     { slot_key: "membership-fellowship", display_order: 3, image_path: null, alt_text: "", caption: null, is_published: false, updated_at: "2026-09-30T12:00:00Z" },
   ];
   const client = {
-    auth: { getUser: async () => ({ data: { user: signedIn ? { id: actorId } : null }, error: null }) },
+    rpc: async name => { assert.equal(name, "has_privileged_session"); return { data: true, error: null }; },
+    auth: { getClaims: async () => ({ data: { claims: { aal: "aal2", amr: [{ method: "totp", timestamp: Math.floor(Date.now() / 1000) }] } }, error: null }), mfa: { listFactors: async () => ({ data: { all: [], totp: [{ id: "factor" }] }, error: null }) }, getUser: async () => ({ data: { user: signedIn ? { id: actorId } : null }, error: null }) },
     from(table) {
       let operation = "select";
       let value = null;
@@ -63,8 +66,9 @@ function setup({ role = "editor", status = "active", signedIn = true } = {}) {
     "@/lib/platform": { isMissingSchemaError: () => false },
     "@/lib/audit": { auditCursorFilter() {}, auditPageCursor() {}, defaultAuditSort: {}, normalizeAuditQuery() {} },
     "@/lib/editorial-content": { isStoryAssetPath() { return true; }, parseEditorialContent() { return null; } },
+    "@/utils/supabase/public-url": { toPublicSupabaseUrl },
     "@/utils/supabase/config": { isSupabaseConfigured: () => true },
-    "@/utils/supabase/server": { createClient: async () => client },
+    ...mfaDependencies, "@/utils/supabase/server": { createClient: async () => client },
   };
   const actions = {};
   new Function("require", "exports", compiledActions)((name) => {

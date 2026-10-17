@@ -1,4 +1,16 @@
 begin;
+
+-- Synthetic sessions belong only to users inserted by this rolled-back suite.
+create function pg_temp.club_fixture_session() returns trigger language plpgsql as $$
+begin
+  insert into auth.sessions(id, user_id, created_at, updated_at, aal)
+  values(new.id, new.id, now(), now(), 'aal2');
+  return new;
+end; $$;
+create trigger club_fixture_session after insert on auth.users
+for each row execute function pg_temp.club_fixture_session();
+
+select set_config('request.jwt.claims', jsonb_build_object('aal', 'aal2', 'amr', jsonb_build_array(jsonb_build_object('method', 'totp', 'timestamp', extract(epoch from now())::bigint)))::text, true); -- privileged fixtures act with a recent second factor (privileged_mfa_test.sql covers its absence)
 select plan(20);
 
 select is((select count(*)::integer from public.site_photo_slots), 3,
@@ -45,6 +57,7 @@ reset role;
 set local role authenticated;
 select set_config('request.jwt.claim.role', 'authenticated', true);
 select set_config('request.jwt.claim.sub', (select member_id::text from photo_fixture), true);
+select set_config('request.jwt.claims', (coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb || jsonb_build_object('session_id', auth.uid()))::text, true);
 select is((select count(*)::integer from public.site_photo_slots where slot_key = 'membership-community'), 0,
   'regular members cannot read unpublished photo content');
 with updated as (update public.site_photo_slots set caption = 'Not allowed', updated_by = auth.uid()
@@ -52,10 +65,12 @@ with updated as (update public.site_photo_slots set caption = 'Not allowed', upd
 select is(count(*)::integer, 0, 'regular members cannot edit gallery content') from updated;
 
 select set_config('request.jwt.claim.sub', (select suspended_id::text from photo_fixture), true);
+select set_config('request.jwt.claims', (coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb || jsonb_build_object('session_id', auth.uid()))::text, true);
 select is((select count(*)::integer from public.site_photo_slots where slot_key = 'membership-community'), 0,
   'suspended editors cannot read unpublished photos');
 
 select set_config('request.jwt.claim.sub', (select editor_id::text from photo_fixture), true);
+select set_config('request.jwt.claims', (coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb || jsonb_build_object('session_id', auth.uid()))::text, true);
 select is((select count(*)::integer from public.site_photo_slots where slot_key = 'membership-community'), 1,
   'active editors can read the draft they manage');
 select throws_ok($$update public.site_photo_slots set is_published = true, updated_by = auth.uid()
@@ -86,6 +101,7 @@ select ok(exists (select 1 from public.audit_log
 set local role anon;
 select set_config('request.jwt.claim.role', 'anon', true);
 select set_config('request.jwt.claim.sub', '', true);
+select set_config('request.jwt.claims', (coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb || jsonb_build_object('session_id', auth.uid()))::text, true);
 select is((select count(*)::integer from public.site_photo_slots where slot_key = 'membership-community'), 1,
   'published content is readable by visitors');
 select throws_ok($$update public.site_photo_slots set caption = 'Not allowed'

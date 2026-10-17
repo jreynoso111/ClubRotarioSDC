@@ -3,6 +3,8 @@ import "server-only";
 import type { PlatformRole } from "@/lib/platform";
 import { isSupabaseConfigured } from "@/utils/supabase/config";
 import { createClient } from "@/utils/supabase/server";
+import { isPrivilegedRole, secondFactorRequiredMessage } from "@/lib/mfa-policy";
+import { sessionHasRecentSecondFactor } from "@/lib/mfa-session";
 import type { PlatformActionResult } from "./actions";
 
 export function moduleFailure(message: string, code: PlatformActionResult["code"] = "backend_error"): PlatformActionResult {
@@ -24,7 +26,13 @@ export async function requireModuleActor(roles: PlatformRole[]) {
     if (membershipError) return { error: moduleFailure("No se pudo verificar tu membresía.") };
     if (membership?.membership_status !== "active") return { error: moduleFailure("Esta acción requiere una membresía activa.", "forbidden") };
     if (!roles.includes(membership.membership_role as PlatformRole)) return { error: moduleFailure("Tu rol no permite realizar esta acción.", "forbidden") };
-    return { actor: { supabase, userId: data.user.id, role: membership.membership_role as PlatformRole } };
+    let role = membership.membership_role as PlatformRole;
+    // Without a recent second factor, admin/club_manager act as ordinary members (same rule as the database).
+    if (isPrivilegedRole(role) && !(await sessionHasRecentSecondFactor(supabase))) {
+      if (!roles.includes("member")) return { error: moduleFailure(secondFactorRequiredMessage, "forbidden") };
+      role = "member";
+    }
+    return { actor: { supabase, userId: data.user.id, role } };
   } catch {
     return { error: moduleFailure("No se pudo conectar con el club. Inténtalo de nuevo.") };
   }
