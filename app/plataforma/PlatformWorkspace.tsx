@@ -37,6 +37,7 @@ import { PlatformEvents } from "./PlatformEvents";
 import { PlatformAudit } from "./PlatformAudit";
 import { StoryComposerDialog } from "./StoryComposerDialog";
 import { MembershipPhotoManager } from "./MembershipPhotoManager";
+import { MfaNotice } from "./MfaNotice";
 import styles from "./platform.module.css";
 const PlatformDiagnostics = dynamic(() => import("./PlatformDiagnostics").then(module => module.PlatformDiagnostics), { loading: () => <p role="status">Cargando diagnóstico…</p> });
 
@@ -343,11 +344,7 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
         </div>
       </div>
     </header>
-    {needsSecondFactor && <div className={styles.notice} role="status">
-      <h2>{snapshot.security.state === "enroll" ? "Activa la verificación en dos pasos." : "Confirma tu verificación en dos pasos."}</h2>
-      <p className={styles.noticeMessage}>Las funciones de administración y finanzas de tu rol están en pausa hasta que {snapshot.security.state === "enroll" ? "vincules una aplicación de autenticación" : "introduzcas el código de tu aplicación de autenticación"}. Mientras tanto, usas la plataforma como miembro.</p>
-      <p><Link href="/auth/mfa?next=/plataforma">{snapshot.security.state === "enroll" ? "Configurar ahora" : "Verificar ahora"} →</Link></p>
-    </div>}
+    {needsSecondFactor && <MfaNotice state={snapshot.security.state === "enroll" ? "enroll" : "verify"} />}
 
     <section className={styles.content}>
       <div className={styles.workspaceIntro}><div><p className={styles.cardLabel}>Club Rotario / Gestión</p><h2>{tab === "resumen" ? "Vista general" : tabs.find(item => item.id === tab)?.label}</h2><p className={styles.sectionDescription}>{descriptions[tab]}</p></div><button className={styles.buttonQuiet} onClick={() => selectTab(tab === "agenda" ? "resumen" : "agenda")}>{tab === "agenda" ? "Ver resumen" : "Ver agenda"} ↗</button></div>
