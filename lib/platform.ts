@@ -49,6 +49,7 @@ export type PlatformSnapshot = {
   };
   events: PlatformEvent[];
   eventRsvps: Record<string, string>;
+  eventAttendance: Record<string, PlatformEventAttendee[]>;
   proposals: PlatformProposal[];
   proposalVotingSchema: {
     state: PlatformSchemaState;
@@ -70,6 +71,12 @@ export type PlatformSnapshot = {
   dataWarnings: string[];
   // admin/club_manager need a recent second factor; until then they act as members.
   security: { state: PrivilegedSecurityState };
+};
+
+export type PlatformEventAttendee = {
+  userId: string;
+  name: string;
+  status: "going" | "maybe";
 };
 
 export type PlatformEvent = {
@@ -411,6 +418,7 @@ function emptySnapshot(
     },
     events: [],
     eventRsvps: {},
+    eventAttendance: {},
     proposals: [],
     proposalVotingSchema: {
       state: "unavailable",
@@ -689,6 +697,19 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
     }
     for (const rsvp of rsvpResult.data ?? []) eventRsvps[rsvp.event_id] = rsvp.rsvp_status;
   }
+  const eventAttendance: Record<string, PlatformEventAttendee[]> = {};
+  const attendanceEventIds = events.filter((event) => event.status === "published").map((event) => event.id);
+  if (attendanceEventIds.length > 0) {
+    const attendanceResult = await readQuery<Array<{ event_id: string; user_id: string; display_name: string; rsvp_status: "going" | "maybe" }>>(
+      supabase.rpc("get_event_attendance", { _event_ids: attendanceEventIds }),
+    );
+    if (attendanceResult.error && !isMissingSchemaError(attendanceResult.error)) {
+      warnings.push(`lista de asistencia: ${describeError(attendanceResult.error)}`);
+    }
+    for (const row of attendanceResult.data ?? []) {
+      (eventAttendance[row.event_id] ??= []).push({ userId: row.user_id, name: row.display_name, status: row.rsvp_status });
+    }
+  }
 
   const directory = ((directoryResult.data ?? []) as ProfileRow[]).map((row) => ({
     userId: row.id,
@@ -882,6 +903,7 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
     ...baseSnapshot,
     events,
     eventRsvps,
+    eventAttendance,
     proposals: ((proposalsResult.data ?? []) as ProposalRow[]).map((proposal) => ({
       id: proposal.id,
       title: proposal.title,

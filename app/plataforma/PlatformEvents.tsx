@@ -167,9 +167,12 @@ export function PlatformEvents({ snapshot, summary = false, onOpenAgenda }: {
     {events.map(event => {
       const rsvp = snapshot.eventRsvps[event.id];
       const openForAttendance = event.status === "published" && !event.isPast;
-      const rowClass = openForAttendance
-        ? `${styles.eventRow} ${styles.eventRowUpcoming}`
-        : styles.eventRow;
+      const attendance = snapshot.eventAttendance[event.id] ?? [];
+      const goingCount = attendance.filter(person => person.status === "going").length;
+      const rowState = !openForAttendance ? "" : rsvp === "going" ? styles.eventRowGoing
+        : rsvp === "declined" ? styles.eventRowDeclined : styles.eventRowUpcoming;
+      const rowClass = rowState ? `${styles.eventRow} ${rowState}` : styles.eventRow;
+      const respond = (status: "going" | "maybe" | "declined") => run(() => rsvpEventAction(event.id, status));
       return <section key={event.id} className={rowClass} aria-label={event.title}>
         <div className={styles.eventDetails}>
           <span className={styles.eventMeta}>{event.isPast && event.status === "published" ? "Finalizado" : eventStatusLabels[event.status]} · {kindLabels[event.kind]}</span>
@@ -179,15 +182,23 @@ export function PlatformEvents({ snapshot, summary = false, onOpenAgenda }: {
           {!summary && event.summary && <p>{event.summary}</p>}
         </div>
         {openForAttendance && <div className={styles.eventAttendanceActions}>
-          {rsvp === "going" ? <span className={styles.attendanceConfirmed}>Asistencia confirmada</span>
-            : <button type="button" className={styles.smallButton} disabled={pending} onClick={() => run(() => rsvpEventAction(event.id, "going"))}>Confirmar asistencia</button>}
-          {rsvp === "maybe" && <span className={styles.eventMeta}>Quizá asistirás</span>}
-          {rsvp === "declined" && <span className={styles.eventMeta}>No asistirás</span>}
-          {rsvp !== "going" && rsvp !== "maybe" && <button type="button" className={styles.smallButtonQuiet} disabled={pending} onClick={() => run(() => rsvpEventAction(event.id, "maybe"))}>Quizá asista</button>}
-          {(rsvp === "going" || rsvp === "maybe") && <button type="button" className={styles.smallButtonQuiet} disabled={pending} onClick={() => run(() => rsvpEventAction(event.id, "declined"))}>Cancelar mi asistencia</button>}
+          <span className={rsvp === "going" ? styles.rsvpGoing : rsvp === "declined" ? styles.rsvpDeclined : styles.rsvpPending}>
+            {rsvp === "going" ? "Asistirás" : rsvp === "declined" ? "No asistirás" : rsvp === "maybe" ? "Quizá asistas" : "Pendiente de respuesta"}
+          </span>
+          {rsvp !== "going" && <button type="button" className={styles.smallButton} disabled={pending} onClick={() => respond("going")}>Confirmar asistencia</button>}
+          {!rsvp && <button type="button" className={styles.smallButtonQuiet} disabled={pending} onClick={() => respond("maybe")}>Quizá</button>}
+          {rsvp !== "declined" && <button type="button" className={styles.smallButtonQuiet} disabled={pending} onClick={() => respond("declined")}>{rsvp === "going" ? "Ya no podré ir" : "No asistiré"}</button>}
+        </div>}
+        {event.status === "published" && <div className={styles.eventAttendees}>
+          <button type="button" className={styles.eventAttendeesToggle} disabled={pending || attendance.length === 0}
+            onClick={() => canViewAttendees ? openAttendees(event) : setDialog({ kind: "attendees", event, attendees: attendance })}>
+            {goingCount === 0 ? "Nadie ha confirmado todavía" : `${goingCount} ${goingCount === 1 ? "confirmado" : "confirmados"}`}
+            {attendance.length > goingCount && ` · ${attendance.length - goingCount} quizá`}
+            {attendance.length > 0 && " · Ver lista"}
+          </button>
         </div>}
         {(canEditEvents || canViewAttendees) && <div className={styles.eventManageActions}>
-          {canViewAttendees && <button type="button" className={styles.smallButtonQuiet} disabled={pending} onClick={() => openAttendees(event)} aria-label={`Ver asistentes de ${event.title}`}>Ver asistentes</button>}
+          {canViewAttendees && event.status !== "published" && <button type="button" className={styles.smallButtonQuiet} disabled={pending} onClick={() => openAttendees(event)} aria-label={`Ver asistentes de ${event.title}`}>Ver asistentes</button>}
           {canEditEvents && <button type="button" className={styles.smallButtonQuiet} disabled={pending} onClick={() => openEditor(event)} aria-label={`Editar ${event.title}`}>Editar</button>}
           {canDeleteEvents && <button type="button" className={`${styles.smallButtonQuiet} ${styles.eventDeleteButton}`} disabled={pending} onClick={() => { setFeedback(null); setDialog({ kind: "delete", event }); }} aria-label={`Eliminar ${event.title}`}>Eliminar</button>}
         </div>}
@@ -212,13 +223,13 @@ export function PlatformEvents({ snapshot, summary = false, onOpenAgenda }: {
     {dialog?.kind === "attendees" && <EventDialog title="Lista de asistencia" onClose={() => setDialog(null)}>
       <div className={styles.eventDialogBody}>
         <div className={styles.attendanceHeader}><p className={styles.attendanceEventTitle}>{dialog.event.title}</p>
-          <button type="button" className={styles.smallButtonQuiet} disabled={pending} onClick={() => openAttendees(dialog.event)}>Actualizar lista</button>
+          {canViewAttendees && <button type="button" className={styles.smallButtonQuiet} disabled={pending} onClick={() => openAttendees(dialog.event)}>Actualizar lista</button>}
         </div>
         {dialog.error ? <p role="alert" className={styles.feedbackError}>{dialog.error}</p>
           : dialog.attendees === null ? <p role="status">Cargando asistentes…</p>
           : <>
             <p className={styles.attendanceTotal}>{dialog.attendees.filter(person => person.status === "going").length} {dialog.attendees.filter(person => person.status === "going").length === 1 ? "asistente confirmado" : "asistentes confirmados"}</p>
-            {([ ["going", "Confirmados"], ["maybe", "Por confirmar"], ["declined", "No asistirán"] ] as const).map(([status, label]) => {
+            {([ ["going", "Confirmados"], ["maybe", "Quizá asistan"], ...(canViewAttendees ? [["declined", "No asistirán"] as const] : []) ] as const).map(([status, label]) => {
               const group = dialog.attendees!.filter(person => person.status === status);
               return <section className={styles.attendanceGroup} key={status}>
                 <h3>{label} <span>{group.length}</span></h3>
