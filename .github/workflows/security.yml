@@ -22,8 +22,29 @@ jobs:
       - run: npm run build
       - name: Auditoría de producción
         run: npm audit --omit=dev --audit-level=moderate
-      - name: Auditoría completa (sin excepciones silenciosas)
-        run: npm audit --audit-level=high
+      - name: Auditoría completa (umbral alto; excepciones fechadas en security/audit-exceptions.json)
+        run: node scripts/audit-gate.mjs
+  database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: ci-only-password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: ci-only-password
+      PGDATABASE: club_ci
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - name: Migraciones y pruebas SQL (RLS, MFA, solicitudes) en Postgres desechable
+        run: bash scripts/run-db-tests.sh
   secrets:
     runs-on: ubuntu-latest
     timeout-minutes: 5
