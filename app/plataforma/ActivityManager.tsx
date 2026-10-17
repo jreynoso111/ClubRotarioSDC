@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { PlatformActivity, PlatformDirectoryMember, PlatformTask } from "@/lib/platform";
 import { updateTaskStatusAction, type PlatformActionResult } from "./actions";
 import { createManagedActivityAction, createTaskAction, getActivityWorkspaceAction, updateActivityAction, updateTaskAction, type ActivityWorkspace } from "./module-actions";
+import { formatClubDate } from "@/lib/club-date";
 import styles from "./management.module.css";
 
 const activityStates = { planned: "Planificada", active: "En ejecución", completed: "Terminada", cancelled: "Cancelada" };
@@ -12,7 +13,7 @@ const taskStates = { todo: "Por hacer", in_progress: "En curso", blocked: "Bloqu
 const priorities = { low: "Baja", normal: "Normal", high: "Alta", urgent: "Urgente" };
 type TaskStatus = keyof typeof taskStates;
 function dateLabel(value: string | null) {
-  return value ? new Intl.DateTimeFormat("es-DO", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Santo_Domingo" }).format(new Date(value)) : "Por definir";
+  return value ? formatClubDate(value) : "Por definir";
 }
 function localDate(value: string | null) {
   if (!value) return "";

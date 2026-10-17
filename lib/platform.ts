@@ -190,6 +190,7 @@ export type PlatformMessage = {
   readAt: string | null;
   direction: "inbox" | "sent";
   audienceType: string;
+  recipientNames: string[];
 };
 
 export type PlatformDirectoryMember = {
@@ -829,6 +830,19 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
     receivedRows = (receivedResult.data ?? []) as MessageRow[];
   }
   const readByMessage = new Map(recipientRows.map((row) => [row.message_id, row.read_at]));
+  // Senders may read their own recipient list (internal_message_recipients_select_sender).
+  const sentRows = (sentResult.data ?? []) as MessageRow[];
+  const recipientsByMessage = new Map<string, string[]>();
+  const directSentIds = sentRows.filter((message) => message.audience_type === "direct").map((message) => message.id);
+  if (directSentIds.length > 0 && messagingState === "ready") {
+    const sentRecipients = await readQuery<Array<{ message_id: string; user_id: string }>>(
+      supabase.from("internal_message_recipients").select("message_id,user_id").in("message_id", directSentIds),
+    );
+    if (sentRecipients.error) warnings.push(`destinatarios: ${describeError(sentRecipients.error)}`);
+    for (const row of sentRecipients.data ?? []) {
+      recipientsByMessage.set(row.message_id, [...(recipientsByMessage.get(row.message_id) ?? []), names.get(row.user_id) ?? "Miembro del club"]);
+    }
+  }
   const messages: PlatformMessage[] = [
     ...receivedRows.map((message) => ({
       id: message.id,
@@ -840,8 +854,9 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
       readAt: readByMessage.get(message.id) ?? null,
       direction: "inbox" as const,
       audienceType: message.audience_type,
+      recipientNames: [],
     })),
-    ...((sentResult.data ?? []) as MessageRow[]).map((message) => ({
+    ...sentRows.map((message) => ({
       id: message.id,
       subject: message.subject,
       body: message.body,
@@ -851,6 +866,7 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
       readAt: null,
       direction: "sent" as const,
       audienceType: message.audience_type,
+      recipientNames: message.audience_type === "direct" ? recipientsByMessage.get(message.id) ?? [] : ["Todo el club"],
     })),
   ].sort((left, right) => right.createdAt.localeCompare(left.createdAt));
 

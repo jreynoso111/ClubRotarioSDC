@@ -38,6 +38,7 @@ import { PlatformAudit } from "./PlatformAudit";
 import { StoryComposerDialog } from "./StoryComposerDialog";
 import { MembershipPhotoManager } from "./MembershipPhotoManager";
 import { MfaNotice } from "./MfaNotice";
+import { formatClubDate } from "@/lib/club-date";
 import styles from "./platform.module.css";
 const PlatformDiagnostics = dynamic(() => import("./PlatformDiagnostics").then(module => module.PlatformDiagnostics), { loading: () => <p role="status">Cargando diagnóstico…</p> });
 
@@ -121,11 +122,7 @@ const statusLabels: Record<string, string> = {
 
 function formatDate(value: string | null | undefined, withTime = false) {
   if (!value) return "Fecha por confirmar";
-  return new Intl.DateTimeFormat("es-DO", {
-    dateStyle: "medium",
-    ...(withTime ? { timeStyle: "short" as const } : {}),
-    timeZone: "America/Santo_Domingo",
-  }).format(new Date(value));
+  return formatClubDate(value, withTime);
 }
 
 function ActionFeedback({ message, error }: { message: string; error: boolean }) {
@@ -286,7 +283,9 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
         <p className={styles.cardLabel}>Estado de la cuenta</p>
         <h2>{snapshot.access === "suspended" ? "Tu membresía está suspendida." : "Tu solicitud está en revisión."}</h2>
         <p>{snapshot.accessMessage}</p>
-        <p className={styles.noticeMessage}>La plataforma se abrirá cuando el club confirme tu membresía. Mientras tanto, puedes volver a conocer su historia y sus próximas publicaciones.</p>
+        <p className={styles.noticeMessage}>{snapshot.access === "suspended"
+          ? "Mientras la suspensión siga vigente no tendrás acceso a los módulos del club. Para revisarla, comunícate con la directiva del club."
+          : "La plataforma se abrirá cuando el club confirme tu membresía. Si tienes dudas sobre tu solicitud, comunícate con la persona que te invitó o con la directiva del club."}</p>
         <Link className={styles.button} href="/nosotros">Conocer el club →</Link>
       </div></section>
       <Link className={styles.back} href="/">← Volver al sitio público</Link>
@@ -294,6 +293,9 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
   }
 
   const unreadNotifications = snapshot.notifications.filter((item) => !item.readAt).length;
+  // Coordination follows every open task; everyone else sees the ones assigned to them.
+  const overviewTasks = snapshot.tasks.filter(task => !["done", "cancelled"].includes(task.status)
+    && (snapshot.capabilities.canCoordinate || task.assigneeId === user?.id));
   const unreadMessages = snapshot.messages.filter((item) => item.direction === "inbox" && !item.readAt).length;
   const needsSecondFactor = snapshot.security.state === "enroll" || snapshot.security.state === "verify";
   const isAdministrator = snapshot.membership?.role === "admin" && !needsSecondFactor;
@@ -358,7 +360,7 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
         <div className={styles.overviewMetrics}>
           {([
             ["propuestas", snapshot.proposals.length, "Propuestas visibles", "Ideas para transformar el club"],
-            ["resumen", snapshot.tasks.filter(task => !["done", "cancelled"].includes(task.status)).length, "Tareas abiertas", "Compromisos por completar"],
+            ["resumen", overviewTasks.length, snapshot.capabilities.canCoordinate ? "Tareas abiertas" : "Mis tareas abiertas", "Compromisos por completar"],
             ["organizacion", snapshot.committees.filter(committee => committee.isActive).length, "Comités activos", "Equipos que hacen la diferencia"],
             ["mensajes", unreadMessages + unreadNotifications, "Sin leer", "Mensajes y notificaciones"],
           ] as const).map(([module, value, label, detail]) => <button type="button" key={label} className={styles.overviewMetric} onClick={() => { if (module === "resumen") document.getElementById("overview-tasks")?.scrollIntoView({ behavior: "smooth", block: "center" }); else selectTab(module); }}><span className={styles.metricLabel}>{label}</span><strong>{value}</strong><small>{detail}</small><span className={styles.metricLink} aria-hidden="true">→</span></button>)}
@@ -367,7 +369,7 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
         <PlatformEvents snapshot={snapshot} summary onOpenAgenda={() => setTab("agenda")} />
         <article className={`${styles.card} ${styles.welcomeCard}`}><p className={styles.cardLabel}>Personas de acción</p><h2 className={styles.cardTitle}>Tu próxima idea puede hacer la diferencia.</h2><p>Comparte una propuesta y empieza a construir junto al club.</p><button type="button" className={styles.button} onClick={() => selectTab("propuestas")}>Crear una propuesta</button></article>
         <article className={`${styles.card} ${styles.cardWide}`}><p className={styles.cardLabel}>Actividad reciente</p><h2 className={styles.cardTitle}>Lo que se está moviendo.</h2>{snapshot.activities.slice(0, 4).map(activity => <div className={styles.row} key={activity.id}><div><strong>{activity.title}</strong><small>{statusLabels[activity.status] ?? activity.status} · {activity.location ?? "Ubicación por confirmar"}</small></div></div>)}{snapshot.activities.length === 0 && <EmptyState>Las actividades aparecerán cuando coordinación las registre.</EmptyState>}</article>
-        <article id="overview-tasks" className={`${styles.card} ${styles.taskOverview}`}><p className={styles.cardLabel}>Tareas abiertas</p><h2 className={styles.cardTitle}>Cada compromiso tiene un siguiente paso.</h2>{snapshot.tasks.filter(task => !["done", "cancelled"].includes(task.status)).slice(0, 5).map(task => <div className={styles.row} key={task.id}><div><strong>{task.title}</strong><small>{statusLabels[task.status] ?? task.status} · {task.dueAt ? `Vence ${formatDate(task.dueAt)}` : "Sin fecha límite"}</small></div><button type="button" className={styles.smallButtonQuiet} disabled={pending || !(snapshot.capabilities.canCoordinate || task.assigneeId === user?.id)} onClick={() => run(updateTaskStatusAction(task.id, task.status === "in_progress" ? "done" : "in_progress"))}>{task.status === "in_progress" ? "Marcar lista" : "Empezar"}</button></div>)}{snapshot.tasks.filter(task => !["done", "cancelled"].includes(task.status)).length === 0 && <EmptyState>Las tareas de propuestas y actividades aparecerán aquí.</EmptyState>}</article>
+        <article id="overview-tasks" className={`${styles.card} ${styles.taskOverview}`}><p className={styles.cardLabel}>{snapshot.capabilities.canCoordinate ? "Tareas abiertas" : "Mis tareas abiertas"}</p><h2 className={styles.cardTitle}>Cada compromiso tiene un siguiente paso.</h2>{overviewTasks.slice(0, 5).map(task => <div className={styles.row} key={task.id}><div><strong>{task.title}</strong><small>{statusLabels[task.status] ?? task.status} · {task.dueAt ? `Vence ${formatDate(task.dueAt)}` : "Sin fecha límite"}</small></div><button type="button" className={styles.smallButtonQuiet} disabled={pending} onClick={() => run(updateTaskStatusAction(task.id, task.status === "in_progress" ? "done" : "in_progress"))}>{task.status === "in_progress" ? "Marcar lista" : "Empezar"}</button></div>)}{overviewTasks.length === 0 && <EmptyState>{snapshot.capabilities.canCoordinate ? "Las tareas de propuestas y actividades aparecerán aquí." : "Cuando te asignen una tarea aparecerá aquí."}</EmptyState>}</article>
       </section></>}
 
       {tab === "propuestas" && <section className={styles.moduleGrid}>
@@ -442,7 +444,7 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
       </section>}
 
       {tab === "mensajes" && <section className={styles.moduleGrid}>
-        <article className={`${styles.card} ${styles.cardWide}`}><p className={styles.cardLabel}>Avisos y conversaciones</p><h2 className={styles.cardTitle}>Lo importante, cerca.</h2>{snapshot.notifications.slice(0, 8).map(notification => <div className={styles.row} key={notification.id}><div><strong>{notification.title}</strong><small>{formatDate(notification.createdAt, true)} · {notification.readAt ? "Leído" : "Sin leer"}</small><span>{notification.body}</span></div>{!notification.readAt ? <button type="button" className={styles.smallButtonQuiet} disabled={pending} onClick={() => run(markNotificationReadAction(notification.id))}>Marcar leído</button> : null}</div>)}{snapshot.notifications.length === 0 && <EmptyState>No hay avisos nuevos.</EmptyState>}{snapshot.messages.slice(0, 8).map(message => <div className={styles.message} key={`${message.direction}-${message.id}`}><div><span className={styles.messageTag}>{message.direction === "inbox" ? "Recibido" : "Enviado"}</span><strong>{message.subject}</strong><small>{message.senderName} · {formatDate(message.createdAt, true)}</small></div><p>{message.body}</p>{message.direction === "inbox" && !message.readAt ? <button type="button" className={styles.smallButtonQuiet} disabled={pending} onClick={() => run(markMessageReadAction(message.id))}>Marcar leído</button> : null}</div>)}{snapshot.messages.length === 0 && snapshot.messagingSchema.state === "ready" && <EmptyState>Tu buzón todavía está vacío.</EmptyState>}{snapshot.messagingSchema.state !== "ready" && <p className={styles.noticeMessage}>{snapshot.messagingSchema.message}</p>}</article>
+        <article className={`${styles.card} ${styles.cardWide}`}><p className={styles.cardLabel}>Avisos y conversaciones</p><h2 className={styles.cardTitle}>Lo importante, cerca.</h2>{snapshot.notifications.slice(0, 8).map(notification => <div className={styles.row} key={notification.id}><div><strong>{notification.title}</strong><small>{formatDate(notification.createdAt, true)} · {notification.readAt ? "Leído" : "Sin leer"}</small><span>{notification.body}</span></div>{!notification.readAt ? <button type="button" className={styles.smallButtonQuiet} disabled={pending} onClick={() => run(markNotificationReadAction(notification.id))}>Marcar leído</button> : null}</div>)}{snapshot.notifications.length === 0 && <EmptyState>No hay avisos nuevos.</EmptyState>}{snapshot.messages.slice(0, 8).map(message => <div className={styles.message} key={`${message.direction}-${message.id}`}><div><span className={styles.messageTag}>{message.direction === "inbox" ? "Recibido" : "Enviado"}</span><strong>{message.subject}</strong><small>{message.direction === "sent" ? `Para ${message.recipientNames.join(", ") || "destinatario no disponible"}` : message.senderName} · {formatDate(message.createdAt, true)}</small></div><p>{message.body}</p>{message.direction === "inbox" && !message.readAt ? <button type="button" className={styles.smallButtonQuiet} disabled={pending} onClick={() => run(markMessageReadAction(message.id))}>Marcar leído</button> : null}</div>)}{snapshot.messages.length === 0 && snapshot.messagingSchema.state === "ready" && <EmptyState>Tu buzón todavía está vacío.</EmptyState>}{snapshot.messagingSchema.state !== "ready" && <p className={styles.noticeMessage}>{snapshot.messagingSchema.message}</p>}</article>
         <form className={styles.formCard} onSubmit={handleMessage}><p className={styles.cardLabel}>Nuevo mensaje</p><h2 className={styles.cardTitle}>Mantén el vínculo.</h2><label>Destinatario<select name="recipientUserId" required defaultValue=""><option value="" disabled>Selecciona una persona</option>{snapshot.capabilities.canBroadcast && <option value="all">Aviso a todo el club</option>}{(snapshot.capabilities.canManageMembership ? snapshot.committeeCandidates : snapshot.memberDirectory).filter(member => member.userId !== user?.id).map(member => <option key={member.userId} value={member.userId}>{member.name}</option>)}</select></label><label>Asunto<input name="subject" required minLength={3} maxLength={180} /></label><label>Mensaje<textarea name="body" required minLength={1} maxLength={8000} /></label><button className={styles.button} disabled={pending || snapshot.messagingSchema.state !== "ready"}>{pending ? "Enviando…" : "Enviar mensaje"}</button></form>
       </section>}
 

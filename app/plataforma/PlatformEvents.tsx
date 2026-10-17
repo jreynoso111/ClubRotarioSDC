@@ -7,6 +7,7 @@ import {
   createEventAction, updateEventAction, deleteEventAction, getEventAttendeesAction, rsvpEventAction,
   type EventInput, type EventAttendee, type PlatformActionResult,
 } from "./actions";
+import { formatClubDate } from "@/lib/club-date";
 import styles from "./platform.module.css";
 
 const kindLabels: Record<string, string> = {
@@ -17,9 +18,7 @@ const eventStatusLabels: Record<string, string> = {
 };
 
 function formatDate(value: string) {
-  return new Intl.DateTimeFormat("es-DO", {
-    dateStyle: "medium", timeStyle: "short", timeZone: "America/Santo_Domingo",
-  }).format(new Date(value));
+  return formatClubDate(value);
 }
 
 function localDate(value: string | null) {
@@ -186,8 +185,8 @@ export function PlatformEvents({ snapshot, summary = false, onOpenAgenda }: {
             {rsvp === "going" ? "Asistirás" : rsvp === "declined" ? "No asistirás" : rsvp === "maybe" ? "Quizá asistas" : "Pendiente de respuesta"}
           </span>
           {rsvp !== "going" && <button type="button" className={styles.smallButton} disabled={pending} onClick={() => respond("going")}>Confirmar asistencia</button>}
-          {!rsvp && <button type="button" className={styles.smallButtonQuiet} disabled={pending} onClick={() => respond("maybe")}>Quizá</button>}
-          {rsvp !== "declined" && <button type="button" className={styles.smallButtonQuiet} disabled={pending} onClick={() => respond("declined")}>{rsvp === "going" ? "Ya no podré ir" : "No asistiré"}</button>}
+          {rsvp !== "maybe" && <button type="button" className={styles.smallButtonQuiet} disabled={pending} onClick={() => respond("maybe")}>Quizá</button>}
+          {rsvp !== "declined" && <button type="button" className={styles.smallButtonQuiet} disabled={pending} onClick={() => respond("declined")}>No asistiré</button>}
         </div>}
         {event.status === "published" && <div className={styles.eventAttendees}>
           <button type="button" className={styles.eventAttendeesToggle} disabled={pending || attendance.length === 0}
