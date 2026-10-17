@@ -213,6 +213,7 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
   const [tab, setTab] = useState<Tab>("resumen");
   const [administrationExpanded, setAdministrationExpanded] = useState(false);
   const [feedback, setFeedback] = useState("");
+  const [savingProposal, setSavingProposal] = useState(false);
   const [feedbackError, setFeedbackError] = useState(false);
   const [pending, startTransition] = useTransition();
   const [auditResult, setAuditResult] = useState<AuditPageResult | null>(null);
@@ -238,7 +239,7 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
   }
 
   function run(action: Promise<PlatformActionResult>, onSuccess?: () => void) {
-    if (action !== undefined) setSavingProposal(false);
+    setSavingProposal(false);
     startTransition(async () => {
       try {
         const result = await action;
@@ -256,12 +257,13 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
     event.preventDefault();
     const form = event.currentTarget;
     const data = new FormData(form);
-    setSavingProposal(true);
     run(createProposalAction({
       title: String(data.get("title") ?? ""),
       summary: String(data.get("summary") ?? ""),
       details: String(data.get("details") ?? ""),
     }), () => form.reset());
+    // After run(): it clears the flag for every other action.
+    setSavingProposal(true);
   }
 
   function handleMessage(event: FormEvent<HTMLFormElement>) {

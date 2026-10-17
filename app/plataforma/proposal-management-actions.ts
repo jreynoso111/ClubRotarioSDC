@@ -46,6 +46,23 @@ export async function editProposalDraftAction(input: {
   return { ok: true, message: corrected ? "La corrección quedó como borrador. Ya puedes enviarla de nuevo a revisión." : "El borrador quedó actualizado." };
 }
 
+export async function deleteProposalDraftAction(proposalId: string): Promise<PlatformActionResult> {
+  const { actor, error } = await requireModuleActor(["member", "coordinator", "editor", "club_manager", "admin"]);
+  if (error || !actor) return error!;
+  if (!validUuid(proposalId)) return moduleFailure("La propuesta indicada no es válida.", "invalid");
+  // Only the author's own drafts: submitted proposals keep their review and ballot history.
+  const { data, error: deleteError } = await actor.supabase.from("proposals")
+    .delete()
+    .eq("id", proposalId)
+    .eq("created_by", actor.userId)
+    .eq("status", "draft")
+    .select("id")
+    .maybeSingle();
+  if (deleteError || !data) return moduleFailure("Solo puedes eliminar tus propias propuestas en borrador.", "forbidden");
+  revalidatePath("/plataforma");
+  return { ok: true, message: "El borrador fue eliminado." };
+}
+
 export async function reviewProposalAction(input: {
   proposalId: string;
   status: "in_review" | "approved" | "rejected" | "archived";
@@ -75,5 +92,10 @@ export async function reviewProposalAction(input: {
     .maybeSingle();
   if (writeError || !data) return moduleFailure("La propuesta cambió. Actualiza la página e inténtalo nuevamente.");
   revalidatePath("/plataforma");
-  return { ok: true, message: "La decisión quedó registrada en la propuesta." };
+  return { ok: true, message: {
+    in_review: "La propuesta quedó en revisión.",
+    approved: "La propuesta quedó aprobada.",
+    rejected: "La propuesta fue devuelta al autor con tus observaciones.",
+    archived: "La propuesta quedó archivada.",
+  }[input.status] };
 }

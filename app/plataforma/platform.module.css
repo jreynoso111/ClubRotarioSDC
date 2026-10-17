@@ -429,22 +429,28 @@
 .proposalItemHeader { align-items: flex-start; display: flex; gap: 18px; justify-content: space-between; }
 .proposalMain { display: grid; gap: 7px; min-width: 0; }
 .proposalMain h3 { font-family: Georgia, "Times New Roman", serif; font-size: 22px; font-weight: 400; letter-spacing: -.035em; line-height: 1.05; margin: 0; overflow-wrap: anywhere; }
-.proposalMain p { color: var(--ink-soft); font-size: 11px; line-height: 1.5; margin: 0; overflow-wrap: anywhere; }
-.proposalMain .proposalMeta { color: var(--teal); font-family: var(--font-geist-mono); font-size: 8px; letter-spacing: .06em; text-transform: uppercase; }
+.proposalMain p { color: var(--ink-soft); font-size: 13px; line-height: 1.55; margin: 0; overflow-wrap: anywhere; }
+.proposalMain .proposalMeta { color: var(--teal); font-family: var(--font-geist-mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; }
+.proposalStatus { background: rgba(0, 103, 200, .08); border: 1px solid rgba(0, 103, 200, .22); color: var(--rotary-blue); font-family: var(--font-geist-mono); font-size: 10px; font-weight: 800; justify-self: start; letter-spacing: .08em; padding: 3px 8px; text-transform: uppercase; }
+.proposalStatus_draft { background: rgba(23, 33, 58, .05); border-color: var(--line); color: var(--ink-soft); }
+.proposalStatus_approved { background: rgba(0, 128, 96, .1); border-color: rgba(0, 128, 96, .3); color: #00684e; }
+.proposalStatus_rejected { background: rgba(247, 168, 27, .16); border-color: rgba(247, 168, 27, .5); color: #8a5a00; }
+.proposalStatus_archived { background: transparent; border-color: var(--line); color: var(--ink-soft); }
+.proposalNotes { background: rgba(247, 168, 27, .1); border-left: 3px solid var(--rotary-gold); color: var(--ink); font-size: 13px; line-height: 1.5; margin: 12px 0 0; padding: 9px 12px; }
 .proposalControls { align-items: flex-end; display: flex; flex: 0 0 auto; flex-direction: column; gap: 7px; }
 .proposalVoting { background: rgba(0, 103, 200, .055); border-left: 3px solid var(--rotary-blue); display: grid; gap: 10px; margin-top: 15px; padding: 13px 15px; }
 .proposalVotingHeader { align-items: center; display: flex; gap: 12px; justify-content: space-between; }
 .proposalVotingHeader .cardLabel { color: var(--rotary-blue); margin: 0; }
 .proposalVoteOpen, .proposalVoteClosed { color: var(--teal); font-family: var(--font-geist-mono); font-size: 8px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
 .proposalVoteClosed { color: var(--ink-soft); }
-.proposalVotingHelp { color: var(--ink-soft); font-size: 10px; line-height: 1.5; margin: 0; }
+.proposalVotingHelp { color: var(--ink-soft); font-size: 12px; line-height: 1.5; margin: 0; }
 .proposalVoteChoices { display: flex; flex-wrap: wrap; gap: 7px; }
-.proposalVoteChoice { background: var(--paper); border: 1px solid var(--line); color: var(--ink); cursor: pointer; font-size: 9px; font-weight: 800; letter-spacing: .05em; padding: 9px 12px; text-transform: uppercase; }
+.proposalVoteChoice { background: var(--paper); border: 1px solid var(--line); color: var(--ink); cursor: pointer; font-size: 11px; font-weight: 800; letter-spacing: .05em; padding: 10px 14px; text-transform: uppercase; }
 .proposalVoteChoiceSelected { background: var(--rotary-blue); border-color: var(--rotary-blue); color: var(--paper); }
 .proposalVoteChoice:disabled { cursor: wait; opacity: .55; }
 .proposalVoteTally { display: grid; gap: 8px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .proposalVoteTally > div { align-items: baseline; background: rgba(255, 253, 248, .76); border: 1px solid var(--line); display: flex; gap: 10px; justify-content: space-between; padding: 9px 11px; }
-.proposalVoteTally span { color: var(--ink-soft); font-size: 9px; }
+.proposalVoteTally span { color: var(--ink-soft); font-size: 12px; }
 .proposalVoteTally strong { color: var(--rotary-blue); font-family: var(--font-geist-mono); font-size: 16px; }
 .proposalModuleNotice { background: rgba(247, 168, 27, .14); border-left: 3px solid var(--rotary-gold); color: var(--ink-soft); font-size: 10px; line-height: 1.5; margin: 12px 0 0; padding: 10px 12px; }
 .financeModule { display: grid; gap: 20px; min-width: 0; }

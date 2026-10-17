@@ -6,11 +6,22 @@ import type { PlatformProposal, ProposalVoteChoice } from "@/lib/platform";
 
 import styles from "./platform.module.css";
 
-const voteChoices: Array<{ value: ProposalVoteChoice; label: string }> = [
-  { value: "for", label: "A favor" },
-  { value: "against", label: "En contra" },
-  { value: "abstain", label: "Abstenerme" },
+const voteChoices: Array<{ value: ProposalVoteChoice; label: string; recorded: string }> = [
+  { value: "for", label: "A favor", recorded: "A favor" },
+  { value: "against", label: "En contra", recorded: "En contra" },
+  { value: "abstain", label: "Abstenerme", recorded: "Abstención" },
 ];
+const statusChips: Record<string, string> = {
+  draft: "Borrador", submitted: "Enviada", in_review: "En revisión", approved: "Aprobada", rejected: "Devuelta", archived: "Archivada",
+};
+type ReviewDecision = "in_review" | "approved" | "rejected" | "archived";
+
+function notesLabel(status: string) {
+  if (status === "rejected") return "Motivo de la devolución";
+  if (status === "approved" || status === "archived") return "Notas de la decisión";
+  if (status === "submitted") return "Observaciones de la revisión anterior";
+  return "Notas de revisión";
+}
 
 export function ProposalCard({
   proposal,
@@ -23,6 +34,7 @@ export function ProposalCard({
   onVote,
   onEdit,
   onReview,
+  onDelete,
 }: {
   proposal: PlatformProposal;
   metadata: string;
@@ -33,11 +45,14 @@ export function ProposalCard({
   onToggleVoting: (enabled: boolean) => void;
   onVote: (choice: ProposalVoteChoice) => void;
   onEdit: (input: {title:string;summary:string;details:string}, onSuccess:()=>void) => void;
-  onReview: (input: {status:"in_review"|"approved"|"rejected"|"archived";notes:string}) => void;
+  onReview: (input: {status:ReviewDecision;notes:string}) => void;
+  onDelete: () => void;
 }) {
   const [editing,setEditing]=useState(false);
+  const [decision,setDecision]=useState<ReviewDecision>(proposal.status === "approved" || proposal.status === "rejected" || proposal.status === "archived" ? proposal.status : "in_review");
   function edit(event:FormEvent<HTMLFormElement>) { event.preventDefault();const data=new FormData(event.currentTarget);onEdit({title:String(data.get("title")),summary:String(data.get("summary")),details:String(data.get("details"))},()=>setEditing(false)); }
-  function review(event:FormEvent<HTMLFormElement>) {event.preventDefault();const data=new FormData(event.currentTarget);onReview({status:String(data.get("decision")) as "in_review"|"approved"|"rejected"|"archived",notes:String(data.get("notes"))});}
+  function review(event:FormEvent<HTMLFormElement>) {event.preventDefault();const data=new FormData(event.currentTarget);onReview({status:decision,notes:String(data.get("notes"))});}
+  const recordedVote = voteChoices.find((choice) => choice.value === proposal.voting.myVote)?.recorded;
   const canSubmit = proposal.status === "draft" && proposal.createdBy === currentUserId;
   const canCorrect = proposal.status === "rejected" && proposal.createdBy === currentUserId;
   const canVoteOnProposal = proposal.status === "submitted" || proposal.status === "in_review";
@@ -46,6 +61,7 @@ export function ProposalCard({
   return <article className={styles.proposalItem} aria-labelledby={`proposal-${proposal.id}`}>
     <div className={styles.proposalItemHeader}>
       <div className={styles.proposalMain}>
+        <span className={`${styles.proposalStatus} ${styles[`proposalStatus_${proposal.status}`] ?? ""}`}>{statusChips[proposal.status] ?? proposal.status}</span>
         <h3 id={`proposal-${proposal.id}`}>{proposal.title}</h3>
         <p className={styles.proposalMeta}>{metadata}</p>
         <p>{proposal.summary}</p>
@@ -54,6 +70,8 @@ export function ProposalCard({
       <div className={styles.proposalControls}>
         {canSubmit || canCorrect ? <button type="button" className={styles.smallButtonQuiet} disabled={pending} onClick={()=>setEditing(value=>!value)}>{editing ? "Cerrar edición" : canCorrect ? "Corregir propuesta" : "Editar borrador"}</button> : null}
         {canSubmit ? <button type="button" className={styles.smallButton} disabled={pending || editing} onClick={onSubmit}>{proposal.reviewNotes ? "Enviar corrección a revisión" : "Enviar a revisión"}</button> : null}
+        {canSubmit ? <button type="button" className={styles.smallButtonQuiet} disabled={pending || editing}
+          onClick={() => { if (window.confirm(`¿Eliminar el borrador «${proposal.title}»? Esta acción no se puede deshacer.`)) onDelete(); }}>Eliminar borrador</button> : null}
         {canManageVoting && canVoteOnProposal ? <button type="button"
           className={proposal.voting.isOpen ? styles.smallButtonQuiet : styles.smallButton}
           disabled={pending}
@@ -70,8 +88,8 @@ export function ProposalCard({
       <label>Detalles<textarea name="details" maxLength={4000} defaultValue={proposal.details}/></label>
       <button className={styles.smallButton} disabled={pending}>{canCorrect ? "Guardar corrección como borrador" : "Guardar cambios"}</button>
     </form> : null}
-    {proposal.reviewNotes ? <p className={styles.empty}>Notas de revisión: {proposal.reviewNotes}</p> : null}
-    {canManageVoting && proposal.status !== "draft" && proposal.status !== "archived" ? <details className={styles.proposalReview}><summary>Revisar y registrar decisión</summary><form className={styles.formCard} onSubmit={review}><label>Decisión<select name="decision" defaultValue={proposal.status === "approved" || proposal.status === "rejected" ? proposal.status : "in_review"}><option value="in_review">En revisión</option><option value="approved">Aprobar</option><option value="rejected">Rechazar</option><option value="archived">Archivar</option></select></label><label>Motivo / notas<textarea name="notes" maxLength={4000} defaultValue={proposal.reviewNotes ?? ""} placeholder="Explica la decisión; obligatorio al rechazar."/></label><button className={styles.smallButton} disabled={pending || proposal.voting.isOpen}>Guardar decisión</button>{proposal.voting.isOpen ? <p className={styles.empty}>Cierra la votación antes de registrar una decisión.</p> : null}</form></details> : null}
+    {proposal.reviewNotes ? <p className={styles.proposalNotes}><strong>{notesLabel(proposal.status)}:</strong> {proposal.reviewNotes}</p> : null}
+    {proposal.status === "submitted" && proposal.createdBy === currentUserId ? <p className={styles.proposalVotingHelp}>Pendiente de revisión por coordinación.</p> : null}
     {showBallot ? <section className={styles.proposalVoting} aria-label={`Votación de ${proposal.title}`}>
       <div className={styles.proposalVotingHeader}>
         <p className={styles.cardLabel}>Votación del club</p>
@@ -82,7 +100,7 @@ export function ProposalCard({
       {proposal.voting.isOpen ? <>
         <p className={styles.proposalVotingHelp}>
           {proposal.voting.myVote
-            ? `Tu voto actual: ${voteChoices.find((choice) => choice.value === proposal.voting.myVote)?.label}. Puedes cambiarlo mientras siga abierta.`
+            ? `Tu voto actual: ${recordedVote}. Puedes cambiarlo mientras siga abierta.`
             : "Emite tu voto. Puedes cambiarlo mientras la votación siga abierta; los resultados se mostrarán al cerrarla."}
         </p>
         <div className={styles.proposalVoteChoices} role="group" aria-label={`Tu voto para ${proposal.title}`}>
@@ -104,11 +122,15 @@ export function ProposalCard({
         </div>
         <p className={styles.proposalVotingHelp}>
           {proposal.voting.myVote
-            ? `Tu voto registrado: ${voteChoices.find((choice) => choice.value === proposal.voting.myVote)?.label}.`
+            ? `Tu voto registrado: ${recordedVote}.`
             : "La votación está cerrada. Los resultados muestran el conteo total, sin identificar votos individuales."}
         </p>
         {canManageVoting && canVoteOnProposal ? <p className={styles.proposalVotingHelp}>Al reabrir esta votación se conservarán los votos registrados. Los miembros podrán cambiar su voto mientras esté abierta.</p> : null}
       </>}
     </section> : null}
+    {canManageVoting && proposal.status !== "draft" && proposal.status !== "archived" ? <details className={styles.proposalReview}><summary>Revisar y registrar decisión</summary><form className={styles.formCard} onSubmit={review}>
+      <label>Decisión<select name="decision" value={decision} onChange={(event) => setDecision(event.target.value as ReviewDecision)}><option value="in_review">Marcar en revisión</option><option value="approved">Aprobar</option><option value="rejected">Devolver al autor</option><option value="archived">Archivar</option></select></label>
+      <label>{decision === "rejected" ? "Motivo de la devolución (obligatorio)" : "Notas para el autor"}<textarea name="notes" maxLength={4000} required={decision === "rejected"} minLength={decision === "rejected" ? 10 : undefined} defaultValue={proposal.reviewNotes ?? ""} placeholder={decision === "rejected" ? "Explica qué debe corregir el autor (mínimo 10 caracteres)." : "Opcional."}/></label>
+      <button className={styles.smallButton} disabled={pending || proposal.voting.isOpen}>Guardar decisión</button>{proposal.voting.isOpen ? <p className={styles.empty}>Cierra la votación antes de registrar una decisión.</p> : null}</form></details> : null}
   </article>;
 }
