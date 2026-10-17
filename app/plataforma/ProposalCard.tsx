@@ -139,7 +139,7 @@ export function ProposalCard({
       </div>
       {notice ? <p className={styles.proposalRoundNotice}>{notice}</p> : null}
       {proposal.voting.voters !== null && proposal.voting.eligibleVoters !== null
-        ? <p className={styles.proposalVotingHelp}><strong>Participación:</strong> {proposal.voting.voters} de {proposal.voting.eligibleVoters} miembros activos han votado.</p> : null}
+        ? <p className={styles.proposalVotingHelp}><strong>Participación:</strong> {proposal.voting.voters} de {proposal.voting.eligibleVoters} miembros activos {proposal.voting.voters === 1 ? "ha votado" : "han votado"}.</p> : null}
       {proposal.voting.isOpen ? <>
         <p className={styles.proposalVotingHelp}>
           {proposal.voting.myVote
