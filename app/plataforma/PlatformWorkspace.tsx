@@ -398,7 +398,7 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
         </form>
       </section>}
 
-      {tab === "agenda" && <section className={styles.moduleGrid}><PlatformEvents snapshot={snapshot} /></section>}
+      {tab === "agenda" && <PlatformEvents snapshot={snapshot} />}
 
       {tab === "actividades" && <ActivityManager activities={snapshot.activities} tasks={snapshot.tasks}
         members={snapshot.capabilities.canManageMembership ? snapshot.committeeCandidates : snapshot.memberDirectory} currentUserId={user?.id ?? ""} canManage={snapshot.capabilities.canCoordinate} />}
