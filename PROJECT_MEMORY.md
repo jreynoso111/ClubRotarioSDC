@@ -587,3 +587,9 @@ pm\codegraph.cmd`; no está en el PATH normal de Windows. Fuera de Codex, invoca
 - Nueva migración `20261017170000_member_event_attendance.sql`: RPC `public.get_event_attendance(uuid[])`, definer con `search_path` vacío, solo miembros activos, solo eventos publicados, solo going/maybe, máx. 100 ids. Prueba `member_event_attendance_test.sql`: 202/202 aserciones en postgres:16 temporal. **Pendiente de aprobación: NO aplicada al Supabase local de producción.** Hasta aplicarla, la app degrada a «Nadie ha confirmado todavía».
 - Publicado `.next-releases/20261017-120935` (34 comprobaciones).
 - **Incidente (~12:12–12:17 hora local):** el primer despliegue falló en la verificación pública y el sitio dio 502 unos minutos. Causa: un `git checkout -- tsconfig.json` previo recreó el archivo y perdió el ACE explícito de lectura de `ClubRotarioWebSvc`; `next start` como servicio salía con código 1. Se restauró `ReadAndExecute` en `tsconfig.json` y se reinició la tarea. **No usar `git checkout`/`restore` en archivos que lee el servicio; para revertir, sobrescribir el contenido en el mismo archivo.**
+
+## Aviso MFA rediseñado · 2026-10-17
+
+- Nuevo componente `app/plataforma/MfaNotice.tsx` + `mfa-notice.module.css`: icono de escudo, título, texto y botón principal «Activar ahora»/«Verificar ahora», más «Recordármelo luego» que lo reduce a una barra compacta durante la sesión (sessionStorage).
+- Contra la ceguera al banner: el título rota entre tres variantes por visita y, desde la 4.ª visita (contador en localStorage), el tono pasa de ámbar «Seguridad de la cuenta» a carmesí «Acción requerida». Entrada animada, un barrido de luz y dos pulsos del icono por carga; nada en bucle y todo desactivado con `prefers-reduced-motion`.
+- Verificado: TypeScript, lint, 119/119 pruebas y maqueta visual. Publicado `.next-releases/20261017-122724` (34 comprobaciones). La migración de asistencia a eventos sigue pendiente de aprobación.
