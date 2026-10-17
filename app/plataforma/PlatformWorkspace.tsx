@@ -26,7 +26,7 @@ import {
   updateTaskStatusAction,
   type PlatformActionResult,
 } from "./actions";
-import { editProposalDraftAction, reviewProposalAction } from "./proposal-management-actions";
+import { deleteProposalDraftAction, editProposalDraftAction, reviewProposalAction } from "./proposal-management-actions";
 import { OrganizationManager } from "./OrganizationManager";
 import { ActivityManager } from "./ActivityManager";
 import { FinanceModule } from "./FinanceModule";
@@ -59,7 +59,7 @@ const tabs: Array<{ id: Tab; label: string }> = [
   { id: "diagnostico", label: "Diagnóstico" },
 ];
 
-const administrationTabs: Tab[] = ["revista", "fotografias", "auditoria", "diagnostico"];
+const administrationTabs: Tab[] = ["fotografias", "auditoria", "diagnostico"];
 
 function ModuleIcon({ module }: { module: Tab }) {
   const paths: Record<Tab, string> = {
@@ -238,6 +238,7 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
   }
 
   function run(action: Promise<PlatformActionResult>, onSuccess?: () => void) {
+    if (action !== undefined) setSavingProposal(false);
     startTransition(async () => {
       try {
         const result = await action;
@@ -255,6 +256,7 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
     event.preventDefault();
     const form = event.currentTarget;
     const data = new FormData(form);
+    setSavingProposal(true);
     run(createProposalAction({
       title: String(data.get("title") ?? ""),
       summary: String(data.get("summary") ?? ""),
@@ -351,7 +353,7 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
     <section className={styles.content}>
       <div className={styles.workspaceIntro}><div><p className={styles.cardLabel}>Club Rotario / Gestión</p><h2>{tab === "resumen" ? "Vista general" : tabs.find(item => item.id === tab)?.label}</h2><p className={styles.sectionDescription}>{descriptions[tab]}</p></div><button className={styles.buttonQuiet} onClick={() => selectTab(tab === "agenda" ? "resumen" : "agenda")}>{tab === "agenda" ? "Ver resumen" : "Ver agenda"} ↗</button></div>
 
-      <ActionFeedback message={feedback} error={feedbackError} />
+      <ActionFeedback message={pending && feedback && !feedbackError ? "Actualizando la información…" : feedback} error={feedbackError} />
 
       {tab === "auditoria" && snapshot.capabilities.canAudit && <PlatformAudit initialResult={auditResult} initialLoading={pending && !auditResult} />}
       {tab === "diagnostico" && snapshot.capabilities.canAudit && <PlatformDiagnostics />}
@@ -379,7 +381,7 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
             ? <p className={styles.proposalModuleNotice} role="status">{snapshot.proposalVotingSchema.message}</p>
             : null}
           {snapshot.proposals.map(proposal => <ProposalCard key={proposal.id} proposal={proposal}
-            metadata={`${statusLabels[proposal.status] ?? proposal.status} · ${formatDate(proposal.createdAt)} · Autor: ${proposal.authorName}`}
+            metadata={`${formatDate(proposal.createdAt)} · Autor: ${proposal.authorName}`}
             currentUserId={user?.id ?? ""}
             canManageVoting={snapshot.proposalVotingSchema.state === "ready" && (snapshot.capabilities.canCoordinate || snapshot.capabilities.canManageClub)}
             pending={pending}
@@ -387,7 +389,8 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
             onToggleVoting={enabled => run(setProposalVotingAction(proposal.id, enabled))}
             onVote={(choice: ProposalVoteChoice) => run(castProposalVoteAction(proposal.id, choice))}
             onEdit={(input,onSuccess)=>run(editProposalDraftAction({proposalId:proposal.id,...input}),onSuccess)}
-            onReview={input=>run(reviewProposalAction({proposalId:proposal.id,...input}))} />)}
+            onReview={input=>run(reviewProposalAction({proposalId:proposal.id,...input}))}
+            onDelete={() => run(deleteProposalDraftAction(proposal.id))} />)}
           {snapshot.proposals.length === 0 && <EmptyState>Todavía no hay propuestas visibles. Puedes abrir la primera conversación en el formulario.</EmptyState>}
         </article>
         <form className={styles.formCard} onSubmit={handleProposal}>
@@ -396,7 +399,7 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
           <label>Título<input name="title" required minLength={3} maxLength={180} placeholder="Ej. Recuperar una plaza" /></label>
           <label>Resumen<textarea name="summary" required minLength={10} maxLength={1200} placeholder="¿Qué necesidad atiende y por qué ahora?" /></label>
           <label>Detalles<textarea name="details" maxLength={4000} placeholder="Aliados, pasos iniciales, recursos…" /></label>
-          <button className={styles.button} disabled={pending}>{pending ? "Guardando…" : "Guardar borrador"}</button>
+          <button className={styles.button} disabled={pending}>{pending && savingProposal ? "Guardando…" : "Guardar borrador"}</button>
         </form>
       </section>}
 
