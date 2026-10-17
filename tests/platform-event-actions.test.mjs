@@ -162,3 +162,12 @@ test("an unmatched update or delete cannot report success", async () => {
   assert.equal((await actions.updateEventAction(eventId, input)).ok, false);
   assert.equal((await actions.deleteEventAction(eventId)).ok, false);
 });
+
+test("cancelling a public event keeps it public so its shared link explains the cancellation", async () => {
+  const { actions, writes } = setup({ role: "coordinator" });
+  assert.equal((await actions.updateEventAction(eventId, { ...input, status: "cancelled", isPublic: true })).ok, true);
+  assert.equal(writes.find(write => write.operation === "update").value.is_public, true);
+  const draft = setup({ role: "coordinator" });
+  await draft.actions.updateEventAction(eventId, { ...input, status: "draft", isPublic: true });
+  assert.equal(draft.writes.find(write => write.operation === "update").value.is_public, false);
+});

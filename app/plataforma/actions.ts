@@ -702,7 +702,8 @@ function eventFields(input: EventInput) {
     tone: kind === "servicio" ? "sun" : kind === "reunion" ? "coral" : "lime",
     starts_at: startsAt, ends_at: endsAt,
     venue_name: venueName, venue_address: venueAddress, location_url: locationUrl,
-    capacity: numericCapacity, status, is_public: status === "published" && isPublic,
+    // A cancelled public event keeps its public page so shared links explain the cancellation.
+    capacity: numericCapacity, status, is_public: (status === "published" || status === "cancelled") && isPublic,
   } };
 }
 
