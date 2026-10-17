@@ -666,6 +666,16 @@
 .eventRowGoing { background: rgba(31, 133, 96, .07); border-color: rgba(31, 133, 96, .26); border-left-color: #1f8560; }
 .eventRowDeclined { background: rgba(18, 47, 73, .03); border-left-color: rgba(18, 47, 73, .3); }
 .eventRowDeclined .eventDetails { opacity: .72; }
+.eventRowCancelled { background: rgba(18, 47, 73, .03); border-left-color: #b4232c; }
+.eventRowCancelled h3 { text-decoration: line-through; text-decoration-thickness: 1px; }
+.eventCancelledNotice { color: #8c1d24; font-size: 12px; font-weight: 700; margin: 4px 0 0; }
+.eventMore { font-size: 12px; margin-top: 4px; }
+.eventMore summary { color: var(--rotary-blue); cursor: pointer; }
+.eventMore p { white-space: pre-line; }
+.eventPastWarning { background: rgba(247, 168, 27, .14); border-left: 3px solid var(--rotary-gold); color: var(--ink); font-size: 12px; margin: 0; padding: 8px 11px; }
+.eventFormStatus { background: rgba(0, 103, 200, .05); border: 1px solid rgba(0, 103, 200, .15); display: grid; gap: 10px; padding: 12px; }
+.eventAttendedCount { color: var(--teal); font-size: 12px; font-weight: 700; margin-left: 10px; }
+.attendanceChecklist { display: grid; gap: 6px; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); margin: 10px 0; max-height: 50vh; overflow-y: auto; }
 .rsvpPending, .rsvpGoing, .rsvpDeclined { border-radius: 999px; font-size: 11px; font-weight: 700; margin-right: 4px; padding: 6px 11px; }
 .rsvpPending { background: rgba(247, 168, 27, .2); color: #7c5714; }
 .rsvpGoing { background: rgba(31, 133, 96, .13); color: #17694b; }
@@ -907,7 +917,7 @@
   font-family: var(--font-open-sans), sans-serif;
 }
 .dashboardWithAdmin { grid-template-columns: 224px minmax(0, 1fr) 60px; }
-.sidebar { background: #fff; border-right: 1px solid var(--line); display: flex; flex-direction: column; padding: 32px 18px 24px; position: sticky; top: 0; height: 100dvh; overflow-y: auto; }
+.sidebar { background: #fff; border-right: 1px solid var(--line); display: flex; flex-direction: column; padding: 32px 18px 24px; position: sticky; top: 0; height: 100dvh; overflow-x: hidden; overflow-y: auto; }
 .clubBrand { align-items: center; display: flex; gap: 10px; color: #005daa; font-size: 27px; font-weight: 750; letter-spacing: -1px; text-decoration: none; }
 .clubBrand small { color: var(--ink-soft); display: block; font-size: 9px; font-weight: 600; letter-spacing: 0; }
 .brandMark { display: grid; place-items: center; background: #eef5fc; border-radius: 12px; width: 42px; height: 46px; position: relative; font-size: 28px; }

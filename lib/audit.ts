@@ -1,6 +1,6 @@
 export const auditModules = {
   all: { label: "Todos los módulos", tables: [] },
-  events: { label: "Eventos y asistencia", tables: ["events", "event_rsvps"] },
+  events: { label: "Eventos y asistencia", tables: ["events", "event_rsvps", "event_attendance"] },
   stories: { label: "Revista", tables: ["stories"] },
   membership: { label: "Miembros y solicitudes", tables: ["profiles", "memberships", "access_requests", "membership_applications"] },
   proposals: { label: "Propuestas", tables: ["proposals", "proposal_votes", "proposal_history"] },
@@ -63,7 +63,7 @@ export type AuditPageResult = { ok: boolean; message: string; page?: AuditPage }
 export type AuditDetailResult = { ok: boolean; message: string; detail?: AuditDetail };
 
 export const auditTableLabels: Record<string, string> = {
-  events: "Evento", event_rsvps: "Asistencia", stories: "Publicación", site_settings: "Configuración",
+  events: "Evento", event_rsvps: "Asistencia", event_attendance: "Asistencia real", stories: "Publicación", site_settings: "Configuración",
   profiles: "Perfil", memberships: "Membresía", access_requests: "Solicitud de acceso", proposals: "Propuesta",
   committees: "Comité", committee_members: "Integrante de comité", activities: "Actividad", tasks: "Tarea",
   internal_messages: "Mensaje", internal_message_recipients: "Entrega de mensaje", notifications: "Aviso",
@@ -114,6 +114,7 @@ export const auditFieldLabels: Record<string, string> = {
 
 export function auditActionLabel(entry: Pick<AuditEntry, "table_name" | "operation">) {
   if (entry.table_name === "sessions") return entry.operation === "INSERT" ? "Sesión iniciada" : "Sesión cerrada";
+  if (entry.table_name === "event_attendance") return entry.operation === "DELETE" ? "Asistencia real retirada" : "Asistencia real registrada";
   if (entry.table_name === "event_rsvps") return entry.operation === "DELETE" ? "Asistencia eliminada" : "Asistencia registrada";
   return { INSERT: "Creación", UPDATE: "Edición", DELETE: "Eliminación", ENABLE: "Activación" }[entry.operation];
 }

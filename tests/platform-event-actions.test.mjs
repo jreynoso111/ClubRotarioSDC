@@ -20,11 +20,15 @@ new Function("exports", ts.transpileModule(readFileSync(new URL("../lib/editoria
 const input = { title: "Encuentro del club", kind: "encuentro", startsAt: "2040-10-09T18:30:00-04:00", status: "draft" };
 
 // Substitute only the request context and database transport; exercise the actual server actions.
-function setup({ role = "admin", status = "active", signedIn = true, eventStatus = "published", past = false, missing = false } = {}) {
+function setup({ role = "admin", status = "active", signedIn = true, eventStatus = "published", past = false, missing = false, storedRsvp = "going", duplicateSlugs = 0 } = {}) {
   const writes = [];
   const invalidations = [];
   const client = {
-    rpc: async name => { assert.equal(name, "has_privileged_session"); return { data: true, error: null }; },
+    rpc: async name => {
+      if (name === "get_event_attendance") return { data: [{ user_id: actorId, display_name: "Ana", rsvp_status: "going" }], error: null };
+      if (name === "get_event_attendance_summary") return { data: [{ event_id: eventId, going: 1, maybe: 0, waitlisted: 0, declined: 2, unanswered: 5, attended: null }], error: null };
+      assert.equal(name, "has_privileged_session"); return { data: true, error: null };
+    },
     auth: { getClaims: async () => ({ data: { claims: { aal: "aal2", amr: [{ method: "totp", timestamp: Math.floor(Date.now() / 1000) }] } }, error: null }), mfa: { listFactors: async () => ({ data: { all: [], totp: [{ id: "factor" }] }, error: null }) }, getUser: async () => ({ data: { user: signedIn ? { id: actorId } : null }, error: null }) },
     from(table) {
       let write = false;
@@ -37,6 +41,10 @@ function setup({ role = "admin", status = "active", signedIn = true, eventStatus
         async range() { return { data: [], error: null }; },
         async maybeSingle() {
           if (table === "memberships") return { data: { membership_role: role, membership_status: status }, error: null };
+          if (table === "event_rsvps") return { data: { rsvp_status: storedRsvp }, error: null };
+          if (table === "events" && write && writes.at(-1)?.operation === "insert" && duplicateSlugs > 0) {
+            duplicateSlugs -= 1; return { data: null, error: { code: "23505", message: "duplicate key" } };
+          }
           assert.equal(table, "events");
           return { data: missing ? null : write ? { id: eventId } : {
             id: eventId, status: eventStatus, starts_at: past ? "2000-01-01T00:00:00Z" : "2040-10-09T22:30:00Z", ends_at: null,
@@ -87,22 +95,39 @@ test("signed-out and inactive users cannot submit an RSVP or change events", asy
   }
 });
 
-test("event-management roles retain their existing permissions", async () => {
-  for (const role of ["coordinator", "editor", "club_manager", "admin"]) {
+test("coordination and management run the agenda; editors run the magazine", async () => {
+  for (const role of ["coordinator", "club_manager", "admin"]) {
     const { actions } = setup({ role });
     assert.equal((await actions.createEventAction(input)).ok, true);
     assert.equal((await actions.updateEventAction(eventId, input)).ok, true);
     const canDelete = role === "club_manager" || role === "admin";
     assert.equal((await actions.deleteEventAction(eventId)).ok, canDelete);
-    assert.equal((await actions.getEventAttendeesAction(eventId)).ok, role !== "editor");
+    const attendees = await actions.getEventAttendeesAction(eventId);
+    assert.equal(attendees.ok, true);
+    assert.deepEqual(attendees.counts && [attendees.counts.declined, attendees.counts.unanswered], [2, 5]);
   }
+  const { actions, writes } = setup({ role: "editor" });
+  assert.equal((await actions.createEventAction(input)).code, "forbidden");
+  assert.equal((await actions.updateEventAction(eventId, input)).code, "forbidden");
+  assert.equal(writes.length, 0);
 });
 
-test("a coordinator cannot publish a new event or promote a draft", async () => {
-  const { actions, writes } = setup({ role: "coordinator", eventStatus: "draft" });
-  assert.equal((await actions.createEventAction({ ...input, status: "published" })).code, "forbidden");
-  assert.equal((await actions.updateEventAction(eventId, { ...input, status: "published" })).code, "forbidden");
-  assert.equal(writes.length, 0);
+test("a coordinator can publish a new event and promote a draft", async () => {
+  const { actions } = setup({ role: "coordinator", eventStatus: "draft" });
+  assert.equal((await actions.createEventAction({ ...input, status: "published" })).ok, true);
+  assert.equal((await actions.updateEventAction(eventId, { ...input, status: "published" })).ok, true);
+});
+
+test("a full event places the confirmation on the waitlist and says so", async () => {
+  const { actions } = setup({ role: "member", storedRsvp: "waitlisted" });
+  assert.match((await actions.rsvpEventAction(eventId, "going")).message, /lista de espera/);
+});
+
+test("a repeated title gets the date in its link instead of failing", async () => {
+  const { actions, writes } = setup({ duplicateSlugs: 1 });
+  assert.equal((await actions.createEventAction(input)).ok, true);
+  const slugs = writes.filter(write => write.operation === "insert").map(write => write.value.slug);
+  assert.deepEqual(slugs, ["encuentro-del-club", "encuentro-del-club-2040-10-09"]);
 });
 
 test("invalid dates, titles, capacity and location URLs never reach a write", async () => {

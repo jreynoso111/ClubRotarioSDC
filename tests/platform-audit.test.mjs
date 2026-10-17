@@ -79,7 +79,7 @@ test("module, search and inclusive Santo Domingo dates become safe server filter
   const { actions, calls } = setup();
   const filters = { ...audit.defaultAuditFilters, module: "events", operation: "UPDATE", search: "  Juan  ", from: "2026-09-30", until: "2026-09-30" };
   assert.equal((await actions.getAuditPageAction(filters)).ok, true);
-  assert.deepEqual(calls.find(call => call.method === "in").args, ["table_name", ["events", "event_rsvps"]]);
+  assert.deepEqual(calls.find(call => call.method === "in").args, ["table_name", ["events", "event_rsvps", "event_attendance"]]);
   assert.deepEqual(calls.find(call => call.method === "gte").args, ["occurred_at", "2026-09-30T04:00:00.000Z"]);
   assert.deepEqual(calls.find(call => call.method === "lt").args, ["occurred_at", "2026-10-01T04:00:00.000Z"]);
   assert.deepEqual(calls.find(call => call.method === "textSearch").args, ["search_document", "Juan", { type: "websearch", config: "simple" }]);

@@ -50,6 +50,8 @@ export type PublicEvent = {
   capacity: number | null;
   coverImagePath: string | null;
   coverImageUrl?: string;
+  // Cancelled events keep their public page so shared links explain what happened.
+  cancelled: boolean;
 };
 
 const storyTypeLabels: Record<string, string> = {
@@ -364,6 +366,7 @@ type EventRecord = {
   location_url: string | null;
   capacity: number | null;
   cover_image_path: string | null;
+  status?: string;
 };
 
 function publicImageUrl(supabase: Awaited<ReturnType<typeof createClient>>, path: string | null) {
@@ -424,6 +427,7 @@ function mapEvent(
     capacity: record.capacity,
     coverImagePath: record.cover_image_path,
     coverImageUrl: publicImageUrl(supabase, record.cover_image_path),
+    cancelled: record.status === "cancelled",
   };
 }
 
@@ -625,10 +629,10 @@ export const getPublicEvent = cache(async (slug: string): Promise<PublicEvent | 
       supabase
         .from("events")
         .select(
-          "id,title,slug,summary,description,kind,tone,starts_at,ends_at,venue_name,venue_address,location_url,capacity,cover_image_path",
+          "id,title,slug,summary,description,kind,tone,starts_at,ends_at,venue_name,venue_address,location_url,capacity,cover_image_path,status",
         )
         .eq("slug", slug)
-        .eq("status", "published")
+        .in("status", ["published", "cancelled"])
         .eq("is_public", true)
         .maybeSingle(),
       null,

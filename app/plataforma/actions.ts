@@ -178,9 +178,13 @@ async function requireActor(requiredRoles: PlatformRole[] = []):
   return { actor: { supabase, userId: userData.user.id, role } };
 }
 
+// Magazine publishing.
 function canPublish(role: PlatformRole) {
   return role === "editor" || role === "club_manager" || role === "admin";
 }
+
+// Coordination runs the agenda; editors run the magazine.
+const eventRoles: PlatformRole[] = ["coordinator", "club_manager", "admin"];
 
 const membershipPhotoSlotKeys = [
   "membership-community",
@@ -629,7 +633,13 @@ export async function rsvpEventAction(
   );
   if (upsertError) return errorFor(upsertError);
 
+  // The database may place a confirmation on the waitlist when the event is full.
+  const { data: stored } = await actor!.supabase.from("event_rsvps").select("rsvp_status")
+    .eq("event_id", eventId).eq("user_id", actor!.userId).maybeSingle();
   revalidatePath("/plataforma");
+  if (status === "going" && stored?.rsvp_status === "waitlisted") {
+    return success("El evento está lleno: quedaste en la lista de espera. Te avisaremos si se libera una plaza.");
+  }
   return success(
     status === "going"
       ? "Tu asistencia quedó confirmada."
@@ -704,37 +714,37 @@ function revalidateEvents() {
 }
 
 export async function createEventAction(input: EventInput): Promise<PlatformActionResult> {
-  const { actor, error } = await requireActor(["coordinator", "editor", "club_manager", "admin"]);
+  const { actor, error } = await requireActor(eventRoles);
   if (error) return error;
   const fields = eventFields(input);
   if (fields.error) return fields.error;
   if (!["draft", "published"].includes(fields.data.status)) {
     return failure("Crea el evento como borrador o publicado.", "invalid");
   }
-  if (fields.data.status === "published" && !canPublish(actor!.role)) {
-    return failure("Tu rol puede preparar el evento, pero un editor o gestor debe publicarlo.", "forbidden");
+
+  const base = slugify(fields.data.title);
+  if (!base) return failure("El título no permite crear un enlace válido.", "invalid");
+  // Recurring titles ("Reunión semanal") get the date, then a counter, in their link.
+  const day = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Santo_Domingo", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(fields.data.starts_at));
+  const candidates = [base, `${base}-${day}`.slice(0, 120), ...[2, 3, 4, 5].map(n => `${base}-${day}-${n}`.slice(0, 120))];
+  let data: { id: string } | null = null;
+  let insertError: { code?: string } | null = null;
+  for (const slug of candidates) {
+    const result = await actor!.supabase.from("events")
+      .insert({ ...fields.data, slug, created_by: actor!.userId })
+      .select("id").maybeSingle();
+    data = result.data; insertError = result.error;
+    if (insertError?.code !== "23505") break;
   }
-
-  const slug = slugify(fields.data.title);
-  if (!slug) return failure("El título no permite crear un enlace válido.", "invalid");
-
-  const { data, error: insertError } = await actor!.supabase
-    .from("events")
-    .insert({
-      ...fields.data,
-      slug,
-      created_by: actor!.userId,
-    })
-    .select("id")
-    .maybeSingle();
-  if (insertError || !data) return errorFor(insertError);
+  if (insertError?.code === "23505") return failure("Ya existen varios eventos con este título y fecha. Cambia el título.", "invalid");
+  if (insertError || !data) return errorFor(insertError as Parameters<typeof errorFor>[0]);
 
   revalidateEvents();
   return success(fields.data.status === "published" ? "El evento fue publicado." : "El evento quedó guardado como borrador.", data.id);
 }
 
 export async function updateEventAction(eventId: string, input: EventInput): Promise<PlatformActionResult> {
-  const { actor, error } = await requireActor(["coordinator", "editor", "club_manager", "admin"]);
+  const { actor, error } = await requireActor(eventRoles);
   if (error) return error;
   if (!isUuid(eventId)) return failure("El evento indicado no es válido.", "invalid");
   const fields = eventFields(input);
@@ -743,9 +753,6 @@ export async function updateEventAction(eventId: string, input: EventInput): Pro
   const existing = await actor!.supabase.from("events").select("id,status").eq("id", eventId).maybeSingle();
   if (existing.error) return errorFor(existing.error);
   if (!existing.data) return failure("El evento ya no está disponible. Actualiza la agenda.", "invalid");
-  if (fields.data.status === "published" && existing.data.status !== "published" && !canPublish(actor!.role)) {
-    return failure("Un editor o gestor debe publicar este evento.", "forbidden");
-  }
 
   // Keep the slug so shared event links remain valid after editing its title.
   const result = await actor!.supabase.from("events").update(fields.data).eq("id", eventId).select("id").maybeSingle();
@@ -769,33 +776,67 @@ export async function deleteEventAction(eventId: string): Promise<PlatformAction
 export type EventAttendee = {
   userId: string;
   name: string;
-  status: "going" | "maybe" | "declined";
+  status: "going" | "maybe" | "waitlisted";
 };
 
-export async function getEventAttendeesAction(eventId: string): Promise<PlatformActionResult & { attendees?: EventAttendee[] }> {
-  const { actor, error } = await requireActor(["coordinator", "club_manager", "admin"]);
+export type EventAttendanceCounts = {
+  going: number; maybe: number; waitlisted: number; declined: number; unanswered: number; attended: number | null;
+};
+
+// Names for confirmed, waitlisted and undecided members; counts for declined and unanswered.
+export async function getEventAttendeesAction(eventId: string): Promise<PlatformActionResult & { attendees?: EventAttendee[]; counts?: EventAttendanceCounts }> {
+  const { actor, error } = await requireActor(eventRoles);
   if (error) return error;
   if (!isUuid(eventId)) return failure("El evento indicado no es válido.", "invalid");
-  const existing = await actor!.supabase.from("events").select("id").eq("id", eventId).maybeSingle();
-  if (existing.error) return errorFor(existing.error);
-  if (!existing.data) return failure("El evento ya no está disponible.", "invalid");
-  const attendees: EventAttendee[] = [];
-  for (let offset = 0; ; offset += 500) {
-    const result = await actor!.supabase.from("event_rsvps")
-      .select("user_id,rsvp_status,profile:profiles!event_rsvps_user_id_fkey(display_name)")
-      .eq("event_id", eventId).order("user_id").range(offset, offset + 499);
-    if (result.error) return errorFor(result.error);
-    const rows = (result.data ?? []) as unknown as Array<{
-      user_id: string; rsvp_status: EventAttendee["status"];
-      profile: { display_name: string | null } | null;
-    }>;
-    attendees.push(...rows.map(row => ({
-      userId: row.user_id, name: row.profile?.display_name?.trim() || "Miembro del club", status: row.rsvp_status,
-    })));
-    if (rows.length < 500) break;
+  const [names, summary] = await Promise.all([
+    actor!.supabase.rpc("get_event_attendance", { _event_ids: [eventId] }),
+    actor!.supabase.rpc("get_event_attendance_summary", { _event_ids: [eventId] }),
+  ]);
+  if (names.error) return errorFor(names.error);
+  if (summary.error) return errorFor(summary.error);
+  const row = ((summary.data ?? []) as EventAttendanceCounts[])[0];
+  if (!row) return failure("El evento ya no está disponible.", "invalid");
+  const attendees = ((names.data ?? []) as Array<{ user_id: string; display_name: string; rsvp_status: EventAttendee["status"] }>)
+    .map(person => ({ userId: person.user_id, name: person.display_name, status: person.rsvp_status }));
+  return { ...success("Lista de asistencia cargada."), attendees, counts: row };
+}
+
+export async function getEventAttendanceRecordAction(eventId: string): Promise<PlatformActionResult & { attendedIds?: string[] }> {
+  const { actor, error } = await requireActor(eventRoles);
+  if (error) return error;
+  if (!isUuid(eventId)) return failure("El evento indicado no es válido.", "invalid");
+  const result = await actor!.supabase.from("event_attendance").select("user_id").eq("event_id", eventId).limit(2000);
+  if (result.error) return errorFor(result.error);
+  return { ...success("Asistencia cargada."), attendedIds: ((result.data ?? []) as Array<{ user_id: string }>).map(row => row.user_id) };
+}
+
+export async function saveEventAttendanceAction(eventId: string, attendedIds: string[]): Promise<PlatformActionResult> {
+  const { actor, error } = await requireActor(eventRoles);
+  if (error) return error;
+  if (!isUuid(eventId) || !Array.isArray(attendedIds) || attendedIds.length > 2000 || !attendedIds.every(isUuid)) {
+    return failure("Revisa la lista de asistentes.", "invalid");
   }
-  attendees.sort((a, b) => a.name.localeCompare(b.name, "es"));
-  return { ...success("Lista de asistencia cargada."), attendees };
+  const event = await actor!.supabase.from("events").select("id,status,starts_at").eq("id", eventId).maybeSingle();
+  if (event.error) return errorFor(event.error);
+  if (!event.data || event.data.status !== "published" || new Date(event.data.starts_at).getTime() > Date.now()) {
+    return failure("La asistencia se registra cuando el evento publicado ya ocurrió.", "invalid");
+  }
+  const current = await actor!.supabase.from("event_attendance").select("user_id").eq("event_id", eventId).limit(2000);
+  if (current.error) return errorFor(current.error);
+  const before = new Set(((current.data ?? []) as Array<{ user_id: string }>).map(row => row.user_id));
+  const after = new Set(attendedIds);
+  const removed = [...before].filter(id => !after.has(id));
+  const added = [...after].filter(id => !before.has(id));
+  if (removed.length) {
+    const { error: deleteError } = await actor!.supabase.from("event_attendance").delete().eq("event_id", eventId).in("user_id", removed);
+    if (deleteError) return errorFor(deleteError);
+  }
+  if (added.length) {
+    const { error: insertError } = await actor!.supabase.from("event_attendance").insert(added.map(userId => ({ event_id: eventId, user_id: userId })));
+    if (insertError) return errorFor(insertError);
+  }
+  revalidatePath("/plataforma");
+  return success(`Asistencia registrada: ${after.size} ${after.size === 1 ? "persona" : "personas"}.`);
 }
 
 const auditSummaryColumns = "id,occurred_at,actor_id,actor_name,actor_role,source,schema_name,table_name,operation,record_id,entity_label,changed_fields";

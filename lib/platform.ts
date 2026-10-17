@@ -51,6 +51,7 @@ export type PlatformSnapshot = {
   events: PlatformEvent[];
   eventRsvps: Record<string, string>;
   eventAttendance: Record<string, PlatformEventAttendee[]>;
+  eventCounts: Record<string, PlatformEventCounts>;
   proposals: PlatformProposal[];
   proposalVotingSchema: {
     state: PlatformSchemaState;
@@ -77,7 +78,17 @@ export type PlatformSnapshot = {
 export type PlatformEventAttendee = {
   userId: string;
   name: string;
-  status: "going" | "maybe";
+  status: "going" | "maybe" | "waitlisted";
+};
+
+export type PlatformEventCounts = {
+  going: number;
+  maybe: number;
+  waitlisted: number;
+  declined: number;
+  unanswered: number;
+  // Coordination only: members recorded as present after the event.
+  attended: number | null;
 };
 
 export type PlatformEvent = {
@@ -452,6 +463,7 @@ function emptySnapshot(
     events: [],
     eventRsvps: {},
     eventAttendance: {},
+    eventCounts: {},
     proposals: [],
     proposalVotingSchema: {
       state: "unavailable",
@@ -605,7 +617,8 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
     const query = supabase.from("events").select(
       "id,title,summary,description,kind,tone,starts_at,ends_at,venue_name,venue_address,location_url,capacity,status,is_public",
     );
-    return capabilities.canCoordinate || capabilities.canEdit ? query : query.eq("status", "published");
+    // Coordination prepares drafts; members also keep seeing cancelled events.
+    return capabilities.canCoordinate ? query : query.in("status", ["published", "cancelled"]);
   };
   const committeesQuery = () => {
     const query = supabase.from("committees").select("id,name,slug,description,is_active");
@@ -731,11 +744,21 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
     for (const rsvp of rsvpResult.data ?? []) eventRsvps[rsvp.event_id] = rsvp.rsvp_status;
   }
   const eventAttendance: Record<string, PlatformEventAttendee[]> = {};
-  const attendanceEventIds = events.filter((event) => event.status === "published").map((event) => event.id);
+  const eventCounts: Record<string, PlatformEventCounts> = {};
+  const attendanceEventIds = events.filter((event) => event.status === "published" || event.status === "cancelled").map((event) => event.id);
   if (attendanceEventIds.length > 0) {
-    const attendanceResult = await readQuery<Array<{ event_id: string; user_id: string; display_name: string; rsvp_status: "going" | "maybe" }>>(
-      supabase.rpc("get_event_attendance", { _event_ids: attendanceEventIds }),
-    );
+    const [attendanceResult, countsResult] = await Promise.all([
+      readQuery<Array<{ event_id: string; user_id: string; display_name: string; rsvp_status: PlatformEventAttendee["status"] }>>(
+        supabase.rpc("get_event_attendance", { _event_ids: attendanceEventIds }),
+      ),
+      readQuery<Array<PlatformEventCounts & { event_id: string }>>(
+        supabase.rpc("get_event_attendance_summary", { _event_ids: attendanceEventIds }),
+      ),
+    ]);
+    if (countsResult.error && !isMissingSchemaError(countsResult.error)) {
+      warnings.push(`ocupación de eventos: ${describeError(countsResult.error)}`);
+    }
+    for (const { event_id, ...counts } of countsResult.data ?? []) eventCounts[event_id] = counts;
     if (attendanceResult.error && !isMissingSchemaError(attendanceResult.error)) {
       warnings.push(`lista de asistencia: ${describeError(attendanceResult.error)}`);
     }
@@ -973,6 +996,7 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
     events,
     eventRsvps,
     eventAttendance,
+    eventCounts,
     proposals: ((proposalsResult.data ?? []) as ProposalRow[]).map((proposal) => ({
       id: proposal.id,
       title: proposal.title,
