@@ -4,9 +4,7 @@ import { isSupabaseConfigured } from "@/utils/supabase/config";
 import { createClient } from "@/utils/supabase/server";
 import { privilegedSecurityState, type PrivilegedSecurityState } from "@/lib/mfa-policy";
 import { sessionHasRecentSecondFactor } from "@/lib/mfa-session";
-
-// The workspace pages through these on the client; older ones stay in Auditoría.
-export const PROPOSAL_LIMIT = 100;
+import { PROPOSAL_LIMIT } from "@/lib/proposal-limits";
 
 export type PlatformRole =
   | "member"

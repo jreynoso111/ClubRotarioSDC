@@ -7,7 +7,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import type { FormEvent, ReactNode } from "react";
 
-import { PROPOSAL_LIMIT, type PlatformProposal, type PlatformSnapshot, type ProposalVoteChoice } from "@/lib/platform";
+import type { PlatformProposal, PlatformSnapshot, ProposalVoteChoice } from "@/lib/platform";
+import { PROPOSAL_LIMIT } from "@/lib/proposal-limits";
 import { defaultAuditFilters, type AuditPageResult } from "@/lib/audit";
 import { editorialLayouts, parseEditorialContent } from "@/lib/editorial-content";
 
