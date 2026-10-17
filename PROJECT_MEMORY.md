@@ -579,3 +579,11 @@ pm\codegraph.cmd`; no está en el PATH normal de Windows. Fuera de Codex, invoca
 - Los cuatro contadores pastel del resumen pasaron a una franja única blanca con divisiones finas, etiquetas en versalitas, cifras tabulares y acento azul solo al pasar el cursor; sin iconos ni flechas ↗. La tarjeta de bienvenida es azul marino con filete dorado y sin la estrella decorativa.
 - Verificado: lint, TypeScript, 119/119 pruebas. Publicado `.next-releases/20261017-115814` (34 comprobaciones; anterior `20261017-112711`). No se revisó visualmente con sesión iniciada: Turnstile no funciona en el navegador integrado.
 - `next build` añade las rutas `.next-releases/<release>/types` a `tsconfig.json` en cada despliegue; ese cambio no se confirma.
+
+## Agenda: estado de respuesta, rechazo y lista de asistentes · 2026-10-17
+
+- Las tarjetas de eventos abiertos cambian según la respuesta del miembro: amarillo = pendiente o «quizá», verde = asistirá, gris atenuado = no asistirá; con etiqueta de estado. Botones: pendiente → Confirmar / Quizá / No asistiré; quizá → Confirmar / No asistiré; confirmado → «Ya no podré ir»; rechazado → Confirmar.
+- Cada evento publicado muestra «N confirmados · M quizá · Ver lista». Los miembros ven nombres de confirmados y «quizá»; gestión sigue viendo además a quienes no asistirán (`getEventAttendeesAction`).
+- Nueva migración `20261017170000_member_event_attendance.sql`: RPC `public.get_event_attendance(uuid[])`, definer con `search_path` vacío, solo miembros activos, solo eventos publicados, solo going/maybe, máx. 100 ids. Prueba `member_event_attendance_test.sql`: 202/202 aserciones en postgres:16 temporal. **Pendiente de aprobación: NO aplicada al Supabase local de producción.** Hasta aplicarla, la app degrada a «Nadie ha confirmado todavía».
+- Publicado `.next-releases/20261017-120935` (34 comprobaciones).
+- **Incidente (~12:12–12:17 hora local):** el primer despliegue falló en la verificación pública y el sitio dio 502 unos minutos. Causa: un `git checkout -- tsconfig.json` previo recreó el archivo y perdió el ACE explícito de lectura de `ClubRotarioWebSvc`; `next start` como servicio salía con código 1. Se restauró `ReadAndExecute` en `tsconfig.json` y se reinició la tarea. **No usar `git checkout`/`restore` en archivos que lee el servicio; para revertir, sobrescribir el contenido en el mismo archivo.**
