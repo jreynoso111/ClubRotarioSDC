@@ -294,8 +294,8 @@
   background: rgba(247, 168, 27, 0.17);
   border-left: 4px solid var(--rotary-gold);
   margin-bottom: 28px;
-  max-width: 720px;
   padding: 22px 24px;
+  width: 100%;
 }
 
 .notice h2 {

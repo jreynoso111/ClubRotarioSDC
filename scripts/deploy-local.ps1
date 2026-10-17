@@ -46,7 +46,7 @@ try {
     $ready = $false
     for ($attempt=0; $attempt -lt 30; $attempt++) {
         try {
-            $response = Invoke-WebRequest 'http://127.0.0.1:3011/auth/sign-in' -TimeoutSec 5
+            $response = Invoke-WebRequest 'http://127.0.0.1:3011/auth/sign-in' -UseBasicParsing -TimeoutSec 5
             $ready = $response.StatusCode -eq 200 -and $response.Headers['X-Content-Type-Options'] -eq 'nosniff'
             if ($ready) { break }
         } catch { }
@@ -64,7 +64,7 @@ try {
     $healthy = $false
     for ($attempt=0; $attempt -lt 20; $attempt++) {
         try {
-            $response = Invoke-WebRequest 'https://www.clubrotariosdcolonial.org/auth/sign-in' -TimeoutSec 10
+            $response = Invoke-WebRequest 'https://www.clubrotariosdcolonial.org/auth/sign-in' -UseBasicParsing -TimeoutSec 10
             $healthy = $response.StatusCode -eq 200 -and $response.Headers['X-Content-Type-Options'] -eq 'nosniff'
             if ($healthy) { break }
         } catch { }

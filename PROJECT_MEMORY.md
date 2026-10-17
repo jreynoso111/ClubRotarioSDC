@@ -567,3 +567,9 @@ pm\codegraph.cmd`; no está en el PATH normal de Windows. Fuera de Codex, invoca
 - A petición del usuario, los cambios locales (Auth, MFA, Turnstile, CSP, diagnóstico, operación local, watchdog, verificación de reinicio y respaldo diario) se confirmaron en `claude/club-security-hardening` (commit `cbd7353`). Se fusionó `origin/codex/club-security-ci` (PR #1, `db09240`), con resultado `13049c0`: árbol idéntico al local (0 líneas de diferencia), 119/119 pruebas, lint y TypeScript. La rama está subida a origin.
 - **PR pendiente de crear por el usuario:** no hay `gh` y el navegador integrado no tiene sesión de GitHub (no se introducen contraseñas). Enlace: https://github.com/jreynoso111/ClubRotarioSDC/compare/main...claude/club-security-hardening?expand=1. El workflow solo se dispara con `pull_request` o con push a `main`, así que el CI correrá al abrir el PR. Al integrarlo en main, cerrar el PR #1 (su contenido ya va incluido).
 - La copia de trabajo quedó en la rama `claude/club-security-hardening`, no en `main`.
+
+## Aviso MFA a ancho completo · 2026-10-17
+
+- `.notice` en `app/plataforma/platform.module.css` perdió `max-width: 720px` (el aviso de activar MFA quedaba comprimido a la izquierda); ahora `width: 100%`.
+- `scripts/deploy-local.ps1`: `Invoke-WebRequest` usa `-UseBasicParsing` (sin él, el chequeo de preparación se quedaba esperando una confirmación en shells no interactivos).
+- Publicado en producción con `deploy-local.ps1 -ExistingBuildDir .next-releases/20261017-112711`: 34 comprobaciones pasaron (anterior: `20261017-024500`).
