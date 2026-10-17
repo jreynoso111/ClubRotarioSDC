@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import type { FormEvent, ReactNode } from "react";
 
-import type { PlatformSnapshot, ProposalVoteChoice } from "@/lib/platform";
+import { PROPOSAL_LIMIT, type PlatformProposal, type PlatformSnapshot, type ProposalVoteChoice } from "@/lib/platform";
 import { defaultAuditFilters, type AuditPageResult } from "@/lib/audit";
 import { editorialLayouts, parseEditorialContent } from "@/lib/editorial-content";
 
@@ -29,6 +29,7 @@ import {
 import { deleteProposalDraftAction, editProposalDraftAction, reviewProposalAction } from "./proposal-management-actions";
 import { OrganizationManager } from "./OrganizationManager";
 import { ActivityManager } from "./ActivityManager";
+import { createProposalTaskAction } from "./module-actions";
 import { FinanceModule } from "./FinanceModule";
 import { MembershipApplicationsModule } from "./MembershipApplicationsModule";
 import { ProposalCard } from "./ProposalCard";
@@ -41,6 +42,17 @@ import { MfaNotice } from "./MfaNotice";
 import { formatClubDate } from "@/lib/club-date";
 import styles from "./platform.module.css";
 const PlatformDiagnostics = dynamic(() => import("./PlatformDiagnostics").then(module => module.PlatformDiagnostics), { loading: () => <p role="status">Cargando diagnóstico…</p> });
+
+const proposalFilters: Array<{ id: string; label: string; match: (proposal: PlatformProposal, userId: string) => boolean }> = [
+  { id: "all", label: "Todas", match: () => true },
+  { id: "voting", label: "Votación abierta", match: proposal => proposal.voting.isOpen },
+  { id: "review", label: "Por revisar", match: proposal => proposal.status === "submitted" || proposal.status === "in_review" },
+  { id: "approved", label: "Aprobadas", match: proposal => proposal.status === "approved" },
+  { id: "rejected", label: "Devueltas", match: proposal => proposal.status === "rejected" },
+  { id: "mine", label: "Mías", match: (proposal, userId) => proposal.createdBy === userId },
+  { id: "archived", label: "Archivadas", match: proposal => proposal.status === "archived" },
+];
+const PROPOSAL_PAGE = 10;
 
 type Tab = "resumen" | "propuestas" | "agenda" | "actividades" | "finanzas" | "solicitudes" | "organizacion" | "revista" | "fotografias" | "mensajes" | "auditoria" | "diagnostico";
 
@@ -134,11 +146,18 @@ function EmptyState({ children }: { children: ReactNode }) {
   return <p className={styles.empty}>{children}</p>;
 }
 
-function NotificationBell({ notifications, disabled, onMarkRead, onViewAll, messagingSchema }: {
+// Notifications link to a platform tab as /plataforma?tab=<id>.
+function notificationTab(href: string | null) {
+  const match = href?.match(/^\/plataforma\?tab=([a-z]+)$/);
+  return match && tabs.some(item => item.id === match[1]) ? match[1] : null;
+}
+
+function NotificationBell({ notifications, disabled, onMarkRead, onViewAll, onOpen, messagingSchema }: {
   notifications: PlatformSnapshot["notifications"];
   disabled: boolean;
   onMarkRead: (id: string) => void;
   onViewAll: () => void;
+  onOpen: (tab: string) => void;
   messagingSchema: PlatformSnapshot["messagingSchema"];
 }) {
   const [open, setOpen] = useState(false);
@@ -194,6 +213,8 @@ function NotificationBell({ notifications, disabled, onMarkRead, onViewAll, mess
           <strong>{notification.title}</strong>
           <time dateTime={notification.createdAt}>{formatDate(notification.createdAt, true)}</time>
           <p>{notification.body}</p>
+          {notificationTab(notification.href) ? <button type="button" className={styles.notificationReadButton}
+            onClick={() => { setOpen(false); onOpen(notificationTab(notification.href)!); if (!notification.readAt) onMarkRead(notification.id); }}>Abrir</button> : null}
           {!notification.readAt ? <button type="button" className={styles.notificationReadButton}
             disabled={disabled} onClick={() => onMarkRead(notification.id)}>Marcar como leído</button> : null}
         </li>)}
@@ -214,6 +235,8 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
   const [administrationExpanded, setAdministrationExpanded] = useState(false);
   const [feedback, setFeedback] = useState("");
   const [savingProposal, setSavingProposal] = useState(false);
+  const [proposalFilter, setProposalFilter] = useState("all");
+  const [proposalPage, setProposalPage] = useState(1);
   const [feedbackError, setFeedbackError] = useState(false);
   const [pending, startTransition] = useTransition();
   const [auditResult, setAuditResult] = useState<AuditPageResult | null>(null);
@@ -297,6 +320,8 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
   }
 
   const unreadNotifications = snapshot.notifications.filter((item) => !item.readAt).length;
+  const visibleProposals = snapshot.proposals.filter(proposal =>
+    (proposalFilters.find(filter => filter.id === proposalFilter) ?? proposalFilters[0]).match(proposal, user?.id ?? ""));
   // Coordination follows every open task; everyone else sees the ones assigned to them.
   const overviewTasks = snapshot.tasks.filter(task => !["done", "cancelled"].includes(task.status)
     && (snapshot.capabilities.canCoordinate || task.assigneeId === user?.id));
@@ -345,7 +370,8 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
         <div className={styles.headerActions}>
           <NotificationBell notifications={snapshot.notifications} messagingSchema={snapshot.messagingSchema} disabled={pending}
             onMarkRead={id => run(markNotificationReadAction(id))}
-            onViewAll={() => selectTab("mensajes")} />
+            onViewAll={() => selectTab("mensajes")}
+            onOpen={next => selectTab(next as Tab)} />
           <SignOutButton />
         </div>
       </div>
@@ -382,7 +408,13 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
           {snapshot.proposalVotingSchema.state !== "ready" && snapshot.proposalVotingSchema.message
             ? <p className={styles.proposalModuleNotice} role="status">{snapshot.proposalVotingSchema.message}</p>
             : null}
-          {snapshot.proposals.map(proposal => <ProposalCard key={proposal.id} proposal={proposal}
+          <div className={styles.proposalFilters} role="group" aria-label="Filtrar propuestas">{proposalFilters.map(filter => {
+            const count = snapshot.proposals.filter(proposal => filter.match(proposal, user?.id ?? "")).length;
+            return filter.id === "all" || count > 0 ? <button type="button" key={filter.id} aria-pressed={proposalFilter === filter.id}
+              className={proposalFilter === filter.id ? styles.proposalFilterActive : styles.proposalFilter}
+              onClick={() => { setProposalFilter(filter.id); setProposalPage(1); }}>{filter.label} <span>{count}</span></button> : null;
+          })}</div>
+          {visibleProposals.slice(0, proposalPage * PROPOSAL_PAGE).map(proposal => <ProposalCard key={proposal.id} proposal={proposal}
             metadata={`${formatDate(proposal.createdAt)} · Autor: ${proposal.authorName}`}
             currentUserId={user?.id ?? ""}
             canManageVoting={snapshot.proposalVotingSchema.state === "ready" && (snapshot.capabilities.canCoordinate || snapshot.capabilities.canManageClub)}
@@ -392,8 +424,15 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
             onVote={(choice: ProposalVoteChoice) => run(castProposalVoteAction(proposal.id, choice))}
             onEdit={(input,onSuccess)=>run(editProposalDraftAction({proposalId:proposal.id,...input}),onSuccess)}
             onReview={input=>run(reviewProposalAction({proposalId:proposal.id,...input}))}
-            onDelete={() => run(deleteProposalDraftAction(proposal.id))} />)}
+            onDelete={() => run(deleteProposalDraftAction(proposal.id))}
+            tasks={snapshot.tasks.filter(task => task.proposalId === proposal.id)}
+            members={snapshot.memberDirectory}
+            onCreateTask={(input, onSuccess) => run(createProposalTaskAction({ proposalId: proposal.id, ...input }), onSuccess)} />)}
+          {visibleProposals.length > proposalPage * PROPOSAL_PAGE ? <button type="button" className={styles.buttonQuiet}
+            onClick={() => setProposalPage(page => page + 1)}>Ver más ({visibleProposals.length - proposalPage * PROPOSAL_PAGE} restantes)</button> : null}
+          {snapshot.proposals.length >= PROPOSAL_LIMIT ? <p className={styles.proposalVotingHelp}>Se muestran las {PROPOSAL_LIMIT} propuestas más recientes.</p> : null}
           {snapshot.proposals.length === 0 && <EmptyState>Todavía no hay propuestas visibles. Puedes abrir la primera conversación en el formulario.</EmptyState>}
+          {snapshot.proposals.length > 0 && visibleProposals.length === 0 && <EmptyState>No hay propuestas con este filtro.</EmptyState>}
         </article>
         <form className={styles.formCard} onSubmit={handleProposal}>
           <p className={styles.cardLabel}>Nueva propuesta</p><h2 className={styles.cardTitle}>Una idea concreta.</h2>

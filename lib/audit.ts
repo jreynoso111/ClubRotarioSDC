@@ -3,7 +3,7 @@ export const auditModules = {
   events: { label: "Eventos y asistencia", tables: ["events", "event_rsvps"] },
   stories: { label: "Revista", tables: ["stories"] },
   membership: { label: "Miembros y solicitudes", tables: ["profiles", "memberships", "access_requests", "membership_applications"] },
-  proposals: { label: "Propuestas", tables: ["proposals", "proposal_votes"] },
+  proposals: { label: "Propuestas", tables: ["proposals", "proposal_votes", "proposal_history"] },
   finance: { label: "Finanzas", tables: ["finance_monthly_dues", "finance_entries"] },
   organization: { label: "Organigrama y comités", tables: ["committees", "committee_members", "club_leadership_terms", "club_leadership_positions"] },
   activities: { label: "Actividades y tareas", tables: ["activities", "tasks"] },
@@ -68,7 +68,7 @@ export const auditTableLabels: Record<string, string> = {
   committees: "Comité", committee_members: "Integrante de comité", activities: "Actividad", tasks: "Tarea",
   internal_messages: "Mensaje", internal_message_recipients: "Entrega de mensaje", notifications: "Aviso",
   media_assets: "Archivo", objects: "Archivo almacenado", users: "Cuenta", sessions: "Sesión", audit_log: "Auditoría",
-  membership_applications: "Solicitud de ingreso", proposal_votes: "Participación en votación",
+  membership_applications: "Solicitud de ingreso", proposal_votes: "Participación en votación", proposal_history: "Historial de propuesta",
   finance_monthly_dues: "Cuota mensual", finance_entries: "Movimiento financiero", site_photo_slots: "Fotografía",
   club_leadership_terms: "Período de directiva", club_leadership_positions: "Cargo del club",
 };

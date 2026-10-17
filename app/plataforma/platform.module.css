@@ -452,6 +452,17 @@
 .proposalVoteTally > div { align-items: baseline; background: rgba(255, 253, 248, .76); border: 1px solid var(--line); display: flex; gap: 10px; justify-content: space-between; padding: 9px 11px; }
 .proposalVoteTally span { color: var(--ink-soft); font-size: 12px; }
 .proposalVoteTally strong { color: var(--rotary-blue); font-family: var(--font-geist-mono); font-size: 16px; }
+.proposalRoundNotice { background: rgba(247, 168, 27, .12); border-left: 3px solid var(--rotary-gold); color: var(--ink); font-size: 12px; line-height: 1.5; margin: 12px 0 0; padding: 8px 11px; }
+.proposalVoting .proposalRoundNotice { margin: 0; }
+.proposalTasks { border-top: 1px solid var(--line); display: grid; gap: 8px; margin-top: 15px; padding-top: 12px; }
+.proposalHistory { display: grid; gap: 8px; list-style: none; margin: 10px 0 0; padding: 0; }
+.proposalHistory li { border-left: 2px solid var(--line); color: var(--ink-soft); font-size: 12px; line-height: 1.5; padding-left: 10px; }
+.proposalHistory strong { color: var(--ink); }
+.proposalHistoryNotes { color: var(--ink); display: block; font-style: italic; }
+.proposalFilters { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 6px; }
+.proposalFilter, .proposalFilterActive { background: var(--paper); border: 1px solid var(--line); border-radius: 999px; color: var(--ink-soft); cursor: pointer; font-size: 12px; padding: 5px 11px; }
+.proposalFilter span, .proposalFilterActive span { font-family: var(--font-geist-mono); font-size: 11px; margin-left: 3px; opacity: .75; }
+.proposalFilterActive { background: var(--rotary-blue); border-color: var(--rotary-blue); color: var(--paper); }
 .proposalModuleNotice { background: rgba(247, 168, 27, .14); border-left: 3px solid var(--rotary-gold); color: var(--ink-soft); font-size: 10px; line-height: 1.5; margin: 12px 0 0; padding: 10px 12px; }
 .financeModule { display: grid; gap: 20px; min-width: 0; }
 .financeHeader, .financeSectionHeader { align-items: flex-end; display: flex; gap: 18px; justify-content: space-between; }

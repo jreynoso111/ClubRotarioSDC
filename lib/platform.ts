@@ -5,6 +5,9 @@ import { createClient } from "@/utils/supabase/server";
 import { privilegedSecurityState, type PrivilegedSecurityState } from "@/lib/mfa-policy";
 import { sessionHasRecentSecondFactor } from "@/lib/mfa-session";
 
+// The workspace pages through these on the client; older ones stay in Auditoría.
+export const PROPOSAL_LIMIT = 100;
+
 export type PlatformRole =
   | "member"
   | "coordinator"
@@ -117,7 +120,24 @@ export type PlatformProposal = {
     votesAgainst: number | null;
     votesAbstaining: number | null;
     myVote: ProposalVoteChoice | null;
+    round: number;
+    // Only after voting (or once closed): how many voted out of the active membership.
+    voters: number | null;
+    eligibleVoters: number | null;
   };
+  history: PlatformProposalHistoryEntry[];
+};
+
+export type ProposalVoteTally = { for: number; against: number; abstain: number };
+
+export type PlatformProposalHistoryEntry = {
+  id: string;
+  event: "submitted" | "in_review" | "approved" | "rejected" | "archived" | "corrected" | "voting_opened" | "voting_closed" | "tie_runoff";
+  round: number;
+  notes: string | null;
+  tally: ProposalVoteTally | null;
+  actorName: string;
+  createdAt: string;
 };
 
 export type PlatformActivity = {
@@ -262,6 +282,20 @@ type ProposalVotingSummaryRow = {
   votes_against: number | null;
   votes_abstaining: number | null;
   my_vote: ProposalVoteChoice | null;
+  ballot_round: number;
+  voters: number | null;
+  eligible_voters: number | null;
+};
+
+type ProposalHistoryRow = {
+  id: string;
+  proposal_id: string;
+  event: PlatformProposalHistoryEntry["event"];
+  ballot_round: number;
+  notes: string | null;
+  tally: ProposalVoteTally | null;
+  actor_name: string;
+  created_at: string;
 };
 
 type ActivityRow = {
@@ -566,7 +600,7 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
     .from("proposals")
     .select("id,title,summary,details,status,review_notes,created_by,created_at,submitted_at")
     .order("created_at", { ascending: false })
-    .limit(30);
+    .limit(PROPOSAL_LIMIT);
 
   const now = new Date().toISOString();
   const eventsQuery = () => {
@@ -741,12 +775,26 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
   let proposalVotingMessage: string | null = null;
   let proposalVotingRows: ProposalVotingSummaryRow[] = [];
   const proposalRows = (proposalsResult.data ?? []) as ProposalRow[];
+  let proposalHistoryRows: ProposalHistoryRow[] = [];
   if (proposalRows.length > 0) {
-    const votingResult = await readQuery<ProposalVotingSummaryRow[]>(
-      supabase.rpc("get_proposal_voting_summaries", {
-        _proposal_ids: proposalRows.map((proposal) => proposal.id),
-      }),
-    );
+    // The summaries RPC accepts at most 50 identifiers per call.
+    const ids = proposalRows.map((proposal) => proposal.id);
+    const chunks = Array.from({ length: Math.ceil(ids.length / 50) }, (_, index) => ids.slice(index * 50, index * 50 + 50));
+    const [historyResult, ...chunkResults] = await Promise.all([
+      readQuery<ProposalHistoryRow[]>(
+        supabase.from("proposal_history").select("id,proposal_id,event,ballot_round,notes,tally,actor_name,created_at")
+          .in("proposal_id", ids).order("created_at", { ascending: true }).limit(1000),
+      ),
+      ...chunks.map((chunk) => readQuery<ProposalVotingSummaryRow[]>(
+        supabase.rpc("get_proposal_voting_summaries", { _proposal_ids: chunk }),
+      )),
+    ]);
+    if (historyResult.error) warnings.push(`historial de propuestas: ${describeError(historyResult.error)}`);
+    proposalHistoryRows = (historyResult.data ?? []) as ProposalHistoryRow[];
+    const votingResult = {
+      error: chunkResults.find((result) => result.error)?.error ?? null,
+      data: chunkResults.flatMap((result) => (result.data ?? []) as ProposalVotingSummaryRow[]),
+    };
     if (votingResult.error) {
       if (isMissingSchemaError(votingResult.error)) {
         proposalVotingState = "migration_missing";
@@ -762,6 +810,13 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
     }
   }
   const votingByProposal = new Map(proposalVotingRows.map((row) => [row.proposal_id, row]));
+  const historyByProposal = new Map<string, PlatformProposalHistoryEntry[]>();
+  for (const row of proposalHistoryRows) {
+    historyByProposal.set(row.proposal_id, [...(historyByProposal.get(row.proposal_id) ?? []), {
+      id: row.id, event: row.event, round: row.ballot_round, notes: row.notes, tally: row.tally,
+      actorName: row.actor_name, createdAt: row.created_at,
+    }]);
+  }
 
   const messagingQueryResults: Array<{ error: PlatformError | null }> = [notificationsResult];
   let messagingState: PlatformSchemaState = "ready";
@@ -940,7 +995,11 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
         votesAgainst: votingByProposal.get(proposal.id)?.votes_against ?? null,
         votesAbstaining: votingByProposal.get(proposal.id)?.votes_abstaining ?? null,
         myVote: votingByProposal.get(proposal.id)?.my_vote ?? null,
+        round: votingByProposal.get(proposal.id)?.ballot_round ?? 1,
+        voters: votingByProposal.get(proposal.id)?.voters ?? null,
+        eligibleVoters: votingByProposal.get(proposal.id)?.eligible_voters ?? null,
       },
+      history: historyByProposal.get(proposal.id) ?? [],
     })),
     proposalVotingSchema: {
       state: proposalVotingState,

@@ -145,13 +145,15 @@ test("review permissions, closed-ballot requirements and rejection reasons are e
   assert.equal(context.attempts.length, 0);
 });
 
-function renderCard({ status = "rejected", ownerId = actorId, manager = false, startedAt = null, isOpen = false } = {}) {
+function renderCard({ status = "rejected", ownerId = actorId, manager = false, startedAt = null, isOpen = false, round = 1, voters = null, eligibleVoters = null, history = [] } = {}) {
   const exports = {};
-  new Function("require", "exports", compile("../app/plataforma/ProposalCard.tsx"))((name) => name.endsWith(".css") ? new Proxy({}, { get: (_, key) => key }) : require(name), exports);
+  const clubDate = {};
+  new Function("require", "exports", compile("../lib/club-date.ts"))(require, clubDate);
+  new Function("require", "exports", compile("../app/plataforma/ProposalCard.tsx"))((name) => name.endsWith(".css") ? new Proxy({}, { get: (_, key) => key }) : name === "@/lib/club-date" ? clubDate : require(name), exports);
   return renderToStaticMarkup(createElement(exports.ProposalCard, {
-    proposal: { id: proposalId, title: "Idea del club", summary: "Resumen de la propuesta.", details: "", status, createdBy: ownerId, reviewNotes: "Completa el presupuesto.", voting: { isOpen, startedAt, myVote: null, votesFor: 3, votesAgainst: 1, votesAbstaining: 0 } },
+    proposal: { id: proposalId, title: "Idea del club", summary: "Resumen de la propuesta.", details: "", status, createdBy: ownerId, reviewNotes: "Completa el presupuesto.", voting: { isOpen, startedAt, myVote: null, votesFor: 3, votesAgainst: 1, votesAbstaining: 0, round, voters, eligibleVoters }, history },
     metadata: "Una propuesta del club", currentUserId: actorId, canManageVoting: manager, pending: false,
-    onSubmit() {}, onToggleVoting() {}, onVote() {}, onEdit() {}, onReview() {},
+    onSubmit() {}, onToggleVoting() {}, onVote() {}, onEdit() {}, onReview() {}, onDelete() {}, tasks: [], members: [], onCreateTask() {},
   }));
 }
 
@@ -163,4 +165,18 @@ test("proposal controls offer corrections only to authors and explain that reope
   assert.match(closedBallot, /Reabrir votación · conservar votos/);
   assert.match(closedBallot, /se conservarán los votos registrados/);
   assert.match(renderCard({ status: "submitted", manager: true }), /Activar votación/);
+});
+
+test("runoff and corrected rounds explain what happened, and participation appears only when the summary provides it", () => {
+  const tally = { for: 2, against: 2, abstain: 1 };
+  const runoff = renderCard({ status: "in_review", isOpen: true, startedAt: "2026-10-17T12:00:00Z", round: 2, voters: 3, eligibleVoters: 9,
+    history: [{ id: "h1", event: "tie_runoff", round: 1, notes: null, tally, actorName: "Coordinación", createdAt: "2026-10-17T11:00:00Z" }] });
+  assert.match(runoff, /Ronda 2: votación de desempate/);
+  assert.match(runoff, /2 a favor, 2 en contra, 1 abstención/);
+  assert.match(runoff, /3 de 9 miembros activos han votado/);
+  assert.match(runoff, /Historial \(1\)/);
+  const corrected = renderCard({ status: "submitted", round: 2,
+    history: [{ id: "h2", event: "corrected", round: 1, notes: null, tally, actorName: "Autor", createdAt: "2026-10-17T11:00:00Z" }] });
+  assert.match(corrected, /fue corregida por su autor/);
+  assert.doesNotMatch(renderCard({ status: "in_review", isOpen: true, startedAt: "2026-10-17T12:00:00Z" }), /miembros activos han votado/);
 });

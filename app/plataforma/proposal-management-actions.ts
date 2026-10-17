@@ -90,6 +90,13 @@ export async function reviewProposalAction(input: {
     .eq("voting_open", false)
     .select("id")
     .maybeSingle();
+  // Club rule: approving a tied ballot opens a runoff round instead.
+  if (writeError?.message?.includes("proposal_vote_tied")) {
+    const { data: round, error: runoffError } = await actor.supabase.rpc("start_proposal_runoff", { _proposal_id: input.proposalId });
+    if (runoffError) return moduleFailure("La votación terminó en empate y no se pudo abrir el desempate. Inténtalo de nuevo.");
+    revalidatePath("/plataforma");
+    return { ok: true, message: `La votación terminó en empate: se abrió la ronda ${round} para desempatar. Podrás registrar la decisión cuando se cierre.` };
+  }
   if (writeError || !data) return moduleFailure("La propuesta cambió. Actualiza la página e inténtalo nuevamente.");
   revalidatePath("/plataforma");
   return { ok: true, message: {

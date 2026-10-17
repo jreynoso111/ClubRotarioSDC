@@ -124,6 +124,27 @@ export async function createTaskAction(input: TaskInput): Promise<PlatformAction
   return { ok: true, message: "La tarea quedó vinculada a la actividad.", id: data.id };
 }
 
+export async function createProposalTaskAction(input: Omit<TaskInput, "activityId"> & { proposalId: string }): Promise<PlatformActionResult> {
+  const { actor, error } = await requireModuleActor(["coordinator", "club_manager", "admin"]);
+  if (error || !actor) return error!;
+  const title = typeof input?.title === "string" ? input.title.trim() : "";
+  const description = typeof input?.description === "string" ? input.description.trim() || null : null;
+  const dueAt = dateValue(input?.dueAt);
+  if (!validUuid(input?.proposalId) || title.length < 2 || title.length > 180 || (description?.length ?? 0) > 4000
+    || !["low", "normal", "high", "urgent"].includes(input.priority) || (input.dueAt && !dueAt)) return moduleFailure("Revisa el nombre, la prioridad y la fecha de la tarea.", "invalid");
+  const { data: proposal, error: proposalError } = await actor.supabase.from("proposals").select("id,status").eq("id", input.proposalId).maybeSingle();
+  if (proposalError || !proposal) return moduleFailure("La propuesta ya no está disponible.", "invalid");
+  if (proposal.status !== "approved") return moduleFailure("Solo las propuestas aprobadas pueden convertirse en tareas.", "invalid");
+  if (input.assigneeId && !await isAssignableMember(actor, input.assigneeId)) return moduleFailure("La tarea debe asignarse a una membresía activa.", "invalid");
+  const { data, error: insertError } = await actor.supabase.from("tasks").insert({
+    proposal_id: input.proposalId, title, description, priority: input.priority,
+    due_at: dueAt, assignee_id: input.assigneeId || null, created_by: actor.userId,
+  }).select("id").maybeSingle();
+  if (insertError || !data) return moduleFailure("No se pudo crear la tarea. Revisa los datos e inténtalo de nuevo.");
+  revalidatePath("/plataforma");
+  return { ok: true, message: "La tarea quedó vinculada a la propuesta.", id: data.id };
+}
+
 export async function updateTaskAction(input: TaskInput & { taskId: string }): Promise<PlatformActionResult> {
   const { actor, error } = await requireModuleActor(["coordinator", "club_manager", "admin"]);
   if (error || !actor) return error!;

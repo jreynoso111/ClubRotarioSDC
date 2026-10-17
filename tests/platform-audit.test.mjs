@@ -103,7 +103,7 @@ test("new club modules query all of their audit tables without exposing other mo
   const cases = [
     ["finance", ["finance_monthly_dues", "finance_entries"]],
     ["membership", ["profiles", "memberships", "access_requests", "membership_applications"]],
-    ["proposals", ["proposals", "proposal_votes"]],
+    ["proposals", ["proposals", "proposal_votes", "proposal_history"]],
     ["media", ["media_assets", "objects", "site_photo_slots"]],
   ];
   for (const [module, tables] of cases) {
