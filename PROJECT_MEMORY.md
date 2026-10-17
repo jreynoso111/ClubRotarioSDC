@@ -573,3 +573,9 @@ pm\codegraph.cmd`; no está en el PATH normal de Windows. Fuera de Codex, invoca
 - `.notice` en `app/plataforma/platform.module.css` perdió `max-width: 720px` (el aviso de activar MFA quedaba comprimido a la izquierda); ahora `width: 100%`.
 - `scripts/deploy-local.ps1`: `Invoke-WebRequest` usa `-UseBasicParsing` (sin él, el chequeo de preparación se quedaba esperando una confirmación en shells no interactivos).
 - Publicado en producción con `deploy-local.ps1 -ExistingBuildDir .next-releases/20261017-112711`: 34 comprobaciones pasaron (anterior: `20261017-024500`).
+
+## Resumen de la plataforma más sobrio · 2026-10-17
+
+- Los cuatro contadores pastel del resumen pasaron a una franja única blanca con divisiones finas, etiquetas en versalitas, cifras tabulares y acento azul solo al pasar el cursor; sin iconos ni flechas ↗. La tarjeta de bienvenida es azul marino con filete dorado y sin la estrella decorativa.
+- Verificado: lint, TypeScript, 119/119 pruebas. Publicado `.next-releases/20261017-115814` (34 comprobaciones; anterior `20261017-112711`). No se revisó visualmente con sesión iniciada: Turnstile no funciona en el navegador integrado.
+- `next build` añade las rutas `.next-releases/<release>/types` a `tsconfig.json` en cada despliegue; ese cambio no se confirma.
