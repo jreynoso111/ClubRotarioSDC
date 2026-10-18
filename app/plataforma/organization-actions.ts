@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { avatarVersion } from "@/lib/account";
 import { currentRotaryYear, organizationAccessLevels, type OrganizationData, type OrganizationMember, type LeadershipPosition } from "@/lib/organization";
 import type { PlatformRole } from "@/lib/platform";
 import type { PlatformActionResult } from "./actions";
@@ -66,6 +67,12 @@ export async function getOrganizationAction(termId?: string): Promise<PlatformAc
       const activeRoles = new Map(membershipRows.filter(row => row.membership_status === "active" && row.membership_role !== "admin").map(row => [row.user_id, row.membership_role]));
       members = members.filter(member => activeRoles.has(member.userId)).map(member => ({ ...member, accessRole: activeRoles.get(member.userId) }));
     }
+
+    // Photos come from the same member-readable profiles; a failed read only leaves initials showing.
+    const avatarRows = await readAllRows<{ id: string; avatar_path: string | null; updated_at: string | null }>((from, to) =>
+      actor.supabase.from("profiles").select("id,avatar_path,updated_at").order("id").range(from, to));
+    const avatarVersions = new Map((avatarRows ?? []).map(row => [row.id, avatarVersion(row.avatar_path, row.updated_at)]));
+    members = members.map(member => ({ ...member, avatarVersion: avatarVersions.get(member.userId) ?? null }));
 
     let positions: LeadershipPosition[] = [];
     if (selected) {

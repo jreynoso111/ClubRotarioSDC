@@ -22,7 +22,7 @@ export type LeadershipPosition = {
   updatedAt: string;
 };
 
-export type OrganizationMember = { userId: string; name: string; bio: string | null; accessRole?: PlatformRole };
+export type OrganizationMember = { userId: string; name: string; bio: string | null; accessRole?: PlatformRole; avatarVersion?: string | null };
 export type LeadershipNode = LeadershipPosition & { children: LeadershipNode[] };
 export type OrganizationData = { terms: LeadershipTerm[]; positions: LeadershipPosition[]; members: OrganizationMember[]; termId: string | null };
 

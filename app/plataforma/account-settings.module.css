@@ -1,0 +1,267 @@
+.layout {
+  align-items: start;
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.wide {
+  grid-column: 1 / -1;
+}
+
+.card {
+  align-content: start;
+  background: rgba(255, 253, 248, 0.82);
+  border: 1px solid var(--line);
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  padding: 25px;
+}
+
+.cardLabel {
+  color: var(--teal);
+  font-family: var(--font-geist-mono);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.cardTitle {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 28px;
+  font-weight: 400;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.hint {
+  color: var(--ink-soft);
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.current {
+  color: var(--ink-soft);
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.current strong {
+  color: var(--ink);
+}
+
+.form {
+  display: grid;
+  gap: 14px;
+}
+
+.form label {
+  color: var(--ink);
+  display: grid;
+  font-size: 10px;
+  font-weight: 800;
+  gap: 6px;
+  letter-spacing: 0.08em;
+  min-width: 0;
+  text-transform: uppercase;
+}
+
+.form input,
+.form textarea {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 0;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0;
+  min-height: 44px;
+  padding: 11px 12px;
+  text-transform: none;
+  width: 100%;
+}
+
+.form textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.form input:focus,
+.form textarea:focus {
+  border-color: var(--rotary-blue);
+  outline: 2px solid rgba(23, 69, 143, 0.14);
+}
+
+.counter {
+  color: var(--ink-soft);
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-align: right;
+  text-transform: none;
+}
+
+.button,
+.buttonQuiet,
+.dangerButton {
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 800;
+  justify-self: start;
+  letter-spacing: 0.08em;
+  padding: 13px 16px;
+  text-transform: uppercase;
+}
+
+.button {
+  background: var(--rotary-blue);
+  border: 0;
+  color: var(--paper);
+}
+
+.buttonQuiet {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--ink);
+}
+
+.dangerButton {
+  background: #8e2424;
+  border: 0;
+  color: #fff;
+}
+
+.button:disabled,
+.buttonQuiet:disabled,
+.dangerButton:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.avatarRow {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.avatarPreview {
+  align-items: center;
+  background: #e0ecf8;
+  border-radius: 50%;
+  color: #1b578f;
+  display: grid;
+  flex-shrink: 0;
+  font-size: 22px;
+  font-weight: 750;
+  height: 104px;
+  overflow: hidden;
+  place-items: center;
+  width: 104px;
+}
+
+.avatarActions {
+  display: grid;
+  flex: 1 1 240px;
+  gap: 10px;
+  min-width: 0;
+}
+
+.actionRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.confirmBox {
+  border: 1px solid var(--line);
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.confirmBox p {
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.visuallyHidden {
+  clip: rect(0 0 0 0);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  width: 1px;
+}
+
+.section {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 10px;
+  padding-top: 16px;
+}
+
+.section h3 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 19px;
+  font-weight: 400;
+  margin: 0;
+}
+
+.enabled {
+  color: var(--rotary-blue);
+}
+
+.inlineLink {
+  color: var(--rotary-blue);
+  font-size: 11px;
+  font-weight: 800;
+  justify-self: start;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.successNotice,
+.errorNotice {
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 0;
+  overflow-wrap: anywhere;
+  padding: 10px 12px;
+}
+
+.successNotice {
+  background: rgba(0, 103, 200, 0.1);
+  color: var(--rotary-blue);
+}
+
+.errorNotice {
+  background: rgba(181, 46, 46, 0.1);
+  color: #8e2424;
+}
+
+@media (max-width: 760px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .card {
+    padding: 20px;
+  }
+
+  .avatarPreview {
+    height: 88px;
+    width: 88px;
+  }
+}

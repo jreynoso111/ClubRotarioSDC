@@ -16,6 +16,18 @@ export type NavigationItemId = typeof navigationItems[number]["id"];
 export type PlatformNavigation = { order: NavigationItemId[]; revision: number; available: boolean };
 export const defaultNavigationOrder: NavigationItemId[] = navigationItems.map(item => item.id);
 
+// Workspace pages reachable from the address bar. "mensajes" and "perfil" are opened from the
+// header, so they stay outside the shared sidebar order.
+export type WorkspaceTabId = NavigationItemId | "mensajes" | "perfil";
+export const workspaceTabIds: readonly WorkspaceTabId[] = [...defaultNavigationOrder, "mensajes", "perfil"];
+
+export function allowedWorkspaceTab(id: string | null | undefined, capabilities: { canAudit: boolean; canEdit: boolean }): WorkspaceTabId | null {
+  if (!id || !(workspaceTabIds as readonly string[]).includes(id)) return null;
+  if ((id === "diagnostico" || id === "auditoria") && !capabilities.canAudit) return null;
+  if (id === "fotografias" && !capabilities.canEdit) return null;
+  return id as WorkspaceTabId;
+}
+
 export function isNavigationOrder(value: unknown): value is NavigationItemId[] {
   return Array.isArray(value) && value.length === defaultNavigationOrder.length
     && new Set(value).size === value.length

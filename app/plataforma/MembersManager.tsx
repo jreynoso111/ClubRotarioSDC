@@ -17,6 +17,7 @@ import {
 } from "./members-actions";
 import styles from "./management.module.css";
 import { CreateMemberForm } from "./CreateMemberForm";
+import { MemberAvatar } from "./MemberAvatar";
 
 type AccessInput = Parameters<typeof updateMemberAccessAction>[0];
 type AccessState = { role: PlatformRole; status: MemberStatus };
@@ -167,7 +168,7 @@ export function MembersManager({ currentUserId, committees, tasks, initialMember
           <label>{showingAdministration ? "Buscar cuenta administrativa" : "Buscar miembro"}<input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Nombre, rol o estado" /></label>
           <label>Estado<select value={filter} onChange={event => setFilter(event.target.value as "all" | MemberStatus)}><option value="all">Todos</option>{memberStatuses.map(key => <option key={key} value={key}>{memberStatusLabels[key]}</option>)}</select></label>
         </div>
-        <div className={styles.memberList}>{visible.map(member => <button type="button" key={member.userId} className={`${styles.member} ${selectedId === member.userId ? styles.memberSelected : ""}`} onClick={() => setSelectedId(member.userId)} aria-pressed={selectedId === member.userId}><span className={styles.avatar}>{member.name.split(/\s+/).slice(0, 2).map(part => part[0]).join("").toUpperCase()}</span><span className={styles.memberText}><strong>{member.name}{member.userId === currentUserId ? " · Tú" : ""}</strong><small>{showingAdministration ? "Cuenta administrativa del sistema" : leadershipPositions.filter(position => position.memberId === member.userId && position.active).map(position => position.title).join(" · ") || "Miembro del club"}</small></span><span className={`${styles.badge} ${styles[member.status]}`}>{memberStatusLabels[member.status]}</span></button>)}</div>
+        <div className={styles.memberList}>{visible.map(member => <button type="button" key={member.userId} className={`${styles.member} ${selectedId === member.userId ? styles.memberSelected : ""}`} onClick={() => setSelectedId(member.userId)} aria-pressed={selectedId === member.userId}><MemberAvatar userId={member.userId} name={member.name} avatarVersion={member.avatarVersion} className={styles.avatar} /><span className={styles.memberText}><strong>{member.name}{member.userId === currentUserId ? " · Tú" : ""}</strong><small>{showingAdministration ? "Cuenta administrativa del sistema" : leadershipPositions.filter(position => position.memberId === member.userId && position.active).map(position => position.title).join(" · ") || "Miembro del club"}</small></span><span className={`${styles.badge} ${styles[member.status]}`}>{memberStatusLabels[member.status]}</span></button>)}</div>
         {visible.length === 0 && <p className={styles.empty}>{showingAdministration ? "No hay cuentas administrativas con estos filtros." : members.length === 0 ? "Todavía no hay miembros del club. Las cuentas administrativas se consultan por separado." : "No hay miembros con estos filtros."}</p>}
       </article>
       {selected ? <article className={styles.card} key={`${selected.userId}-${selected.updatedAt}-${selected.name}`}>

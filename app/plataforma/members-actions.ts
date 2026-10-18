@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { memberApprovedEmail, memberReactivatedEmail, memberRoleChangedEmail, memberSuspendedEmail, sendClubEmail, type ClubEmailContent } from "@/lib/email";
 import { memberNotesMaxLength, memberReasonRange, memberStatuses, partitionClubAccounts, platformRoleLabels, platformRoles, type MemberStatus } from "@/lib/member-access";
+import { avatarVersion } from "@/lib/account";
 import type { MembershipApplicationStatus } from "@/lib/membership-applications";
 import type { PlatformRole } from "@/lib/platform";
 import { readEveryPage } from "@/lib/read-every-page";
@@ -28,6 +29,8 @@ export type ManagedMember = {
   updatedAt: string;
   // Editors with this flag may publish in the magazine; management and admins always may.
   canPublishStories: boolean;
+  // Cache-busting version of the profile photo; null when the member has no photo.
+  avatarVersion: string | null;
 };
 
 export type PendingMember = {
@@ -61,7 +64,7 @@ type MembershipListRow = {
   updated_at: string;
   can_publish_stories: boolean;
 };
-type ProfileRow = { id: string; display_name: string | null; bio: string | null };
+type ProfileRow = { id: string; display_name: string | null; bio: string | null; avatar_path: string | null; updated_at: string | null };
 type NoteRow = { user_id: string; notes: string | null };
 type PendingRow = {
   user_id: string;
@@ -143,7 +146,7 @@ export async function listManagedMembersAction(): Promise<PlatformActionResult &
       readEveryPage<MembershipListRow, unknown>((first, last) => actor.supabase.from("memberships")
         .select("user_id,membership_role,membership_status,joined_at,approved_at,created_at,updated_at,can_publish_stories")
         .order("created_at", { ascending: false }).order("user_id").range(first, last)),
-      readEveryPage<ProfileRow, unknown>((first, last) => actor.supabase.from("profiles").select("id,display_name,bio")
+      readEveryPage<ProfileRow, unknown>((first, last) => actor.supabase.from("profiles").select("id,display_name,bio,avatar_path,updated_at")
         .order("id").range(first, last)),
     ]);
     if (memberships.error || profiles.error) return moduleFailure("No se pudo cargar el registro de miembros. Vuelve a intentar.");
@@ -155,6 +158,7 @@ export async function listManagedMembersAction(): Promise<PlatformActionResult &
       bio: profileById.get(row.user_id)?.bio ?? null, role: row.membership_role, status: row.membership_status,
       notes: notes.get(row.user_id) ?? null, joinedAt: row.joined_at, approvedAt: row.approved_at,
       createdAt: row.created_at, updatedAt: row.updated_at, canPublishStories: row.can_publish_stories === true,
+      avatarVersion: avatarVersion(profileById.get(row.user_id)?.avatar_path, profileById.get(row.user_id)?.updated_at),
     })));
     return {
       ok: true, message: "Miembros cargados.", actorRole: actor.role,

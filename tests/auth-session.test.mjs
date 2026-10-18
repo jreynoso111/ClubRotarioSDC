@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { createBrowserClient, createServerClient } from "@supabase/ssr";
 import { getAuthCookieName } from "../utils/supabase/session-options.ts";
 import { confirmEmail } from "../lib/auth-confirmation.ts";
-import { readEmailSession } from "../lib/email-session.ts";
+import { isPendingEmailChange, readEmailSession } from "../lib/email-session.ts";
 
 test("a browser session remains readable over the private server transport", async () => {
   const publicUrl = "https://api.clubrotariosdcolonial.org";
@@ -71,4 +71,11 @@ test("email fragments have fixed destinations and reject incomplete or failed ve
   for (const fragment of ["", "#error=access_denied", "#access_token=a&type=recovery", "#access_token=a&refresh_token=r&type=unexpected", "#access_token=a&refresh_token=r&type=recovery&error=expired"]) {
     assert.equal(readEmailSession(fragment), null);
   }
+});
+
+test("an email change returns to Mi cuenta, and the first of two links waits for the other", () => {
+  assert.equal(readEmailSession("#access_token=a&refresh_token=r&type=email_change").destination, "/plataforma?tab=perfil");
+  assert.equal(isPendingEmailChange("#message=Confirmation+link+accepted"), true);
+  assert.equal(isPendingEmailChange("#access_token=a&refresh_token=r&type=email_change"), false);
+  assert.equal(isPendingEmailChange("#error=access_denied&message=expired"), false);
 });

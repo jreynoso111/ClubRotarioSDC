@@ -2,6 +2,7 @@ import "server-only";
 
 import { isSupabaseConfigured } from "@/utils/supabase/config";
 import { createClient } from "@/utils/supabase/server";
+import { avatarVersion } from "@/lib/account";
 import { privilegedSecurityState, type PrivilegedSecurityState } from "@/lib/mfa-policy";
 import { sessionHasRecentSecondFactor } from "@/lib/mfa-session";
 import { PROPOSAL_LIMIT } from "@/lib/proposal-limits";
@@ -34,6 +35,9 @@ export type PlatformSnapshot = {
     id: string;
     email: string;
     displayName: string;
+    bio: string;
+    // Cache-busting version of the profile photo; null when the member has no photo.
+    avatarVersion: string | null;
   } | null;
   membership: {
     role: PlatformRole;
@@ -248,6 +252,12 @@ type MembershipRow = {
 type ProfileRow = {
   id: string;
   display_name: string | null;
+};
+
+type OwnProfileRow = ProfileRow & {
+  bio: string | null;
+  avatar_path: string | null;
+  updated_at: string | null;
 };
 
 type EventRow = {
@@ -504,8 +514,8 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
   }
 
   const [profileResult, membershipResult] = await Promise.all([
-    readQuery<ProfileRow>(
-      supabase.from("profiles").select("id,display_name").eq("id", user.id).maybeSingle(),
+    readQuery<OwnProfileRow>(
+      supabase.from("profiles").select("id,display_name,bio,avatar_path,updated_at").eq("id", user.id).maybeSingle(),
     ),
     readQuery<MembershipRow>(
       supabase
@@ -526,6 +536,8 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
         id: user.id,
         email: user.email ?? "",
         displayName: user.email ?? "Miembro del club",
+        bio: "",
+        avatarVersion: null,
       },
     );
   }
@@ -537,6 +549,8 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
     id: user.id,
     email: user.email ?? "",
     displayName,
+    bio: profile?.bio ?? "",
+    avatarVersion: avatarVersion(profile?.avatar_path, profile?.updated_at),
   };
 
   if (!membershipResult.data) {

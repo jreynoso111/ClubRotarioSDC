@@ -178,6 +178,7 @@ function setupMembers({ role = "club_manager", rpcError = null } = {}) {
   const members = loadModule("../app/plataforma/members-actions.ts", {
     "next/cache": { revalidatePath: path => invalidations.push(path) },
     "@/lib/email": {},
+    "@/lib/account": loadModule("../lib/account.ts"),
     "@/lib/member-access": loadModule("../lib/member-access.ts"),
     "@/lib/read-every-page": loadModule("../lib/read-every-page.ts"),
     "@/utils/site-url": {},

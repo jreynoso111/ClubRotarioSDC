@@ -1,4 +1,5 @@
 import { mfaDependencies } from "./helpers/mfa-deps.mjs";
+import { accountDependencies } from "./helpers/account-deps.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -67,7 +68,7 @@ function setup({ role = "admin", status = "active", signedIn = true, rpcError = 
     },
   };
   const dependencies = { "server-only": {}, "next/cache": { revalidatePath: path => invalidations.push(path) },
-    "@/utils/supabase/config": { isSupabaseConfigured: () => true }, "@/lib/email": {}, "@/lib/membership-applications": {}, "@/utils/site-url": {}, ...mfaDependencies, "@/utils/supabase/server": { createClient: async () => client },
+    "@/utils/supabase/config": { isSupabaseConfigured: () => true }, "@/lib/email": {}, "@/lib/membership-applications": {}, "@/utils/site-url": {}, ...mfaDependencies, ...accountDependencies, "@/utils/supabase/server": { createClient: async () => client },
     "@/lib/organization": organization };
   dependencies["./module-auth"] = compile("../app/plataforma/module-auth.ts", dependencies);
   return { actions: compile("../app/plataforma/organization-actions.ts", dependencies), calls, pages, invalidations };
@@ -169,7 +170,8 @@ test("administrator assignment lists page through every profile, membership, ter
   assert.equal(result.organization.members[404].accessRole, "member");
   assert.equal(result.organization.terms.length, 205);
   assert.equal(result.organization.positions.length, 230);
-  assert.deepEqual(pagesFor(fixture, "profiles"), [0, 200, 400]);
+  // The directory RPC pages the profiles, then the photo pass pages the same table once more.
+  assert.deepEqual(pagesFor(fixture, "profiles"), [0, 200, 400, 0, 200, 400]);
   assert.deepEqual(pagesFor(fixture, "memberships"), [0, 200, 400]);
   assert.deepEqual(pagesFor(fixture, "club_leadership_terms"), [0, 200]);
   assert.deepEqual(pagesFor(fixture, "club_leadership_positions"), [0, 200]);

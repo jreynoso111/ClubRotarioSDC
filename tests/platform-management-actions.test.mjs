@@ -1,4 +1,5 @@
 import { mfaDependencies } from "./helpers/mfa-deps.mjs";
+import { accountDependencies } from "./helpers/account-deps.mjs";
 import { toPublicSupabaseUrl } from "./helpers/supabase-public-url.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -165,6 +166,7 @@ function setup({
     "@/lib/editorial-content": {},
     "@/utils/site-url": { getPublicSiteOrigin: () => siteOrigin },
     ...mfaDependencies,
+    ...accountDependencies,
     "@/utils/supabase/server": { createClient: async () => client },
   };
   const auth = {};

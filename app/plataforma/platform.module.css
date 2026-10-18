@@ -80,6 +80,43 @@
   gap: 8px;
 }
 
+/* "Mi cuenta" stays visible at every width, unlike the name in the identity block. */
+.accountButton {
+  align-items: center;
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 10px;
+  font-weight: 800;
+  gap: 9px;
+  letter-spacing: 0.08em;
+  min-height: 40px;
+  padding: 4px 14px 4px 4px;
+  text-transform: uppercase;
+}
+
+.accountButton[aria-current="page"] {
+  border-color: var(--rotary-blue);
+  color: var(--rotary-blue);
+}
+
+.accountAvatar {
+  align-items: center;
+  background: #e0ecf8;
+  border-radius: 50%;
+  color: #1b578f;
+  display: grid;
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 750;
+  height: 32px;
+  overflow: hidden;
+  place-items: center;
+  width: 32px;
+}
+
 .notificationAnchor {
   position: relative;
 }

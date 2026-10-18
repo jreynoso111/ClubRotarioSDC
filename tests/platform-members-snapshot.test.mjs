@@ -1,4 +1,5 @@
 import { mfaDependencies } from "./helpers/mfa-deps.mjs";
+import { accountDependencies } from "./helpers/account-deps.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -85,6 +86,7 @@ test("the platform snapshot keeps notes out of the own membership, pages the dir
     "@/utils/supabase/server": { createClient: async () => client },
     "@/lib/mfa-policy": mfaDependencies["@/lib/mfa-policy"],
     "@/lib/mfa-session": mfaDependencies["@/lib/mfa-session"],
+    ...accountDependencies,
     "@/lib/proposal-limits": loadTypeScript("../lib/proposal-limits.ts"),
     "@/lib/read-every-page": loadTypeScript("../lib/read-every-page.ts"),
     "@/lib/platform-navigation": loadTypeScript("../lib/platform-navigation.ts"),

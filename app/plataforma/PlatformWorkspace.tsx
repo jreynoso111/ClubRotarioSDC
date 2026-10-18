@@ -9,7 +9,7 @@ import type { FormEvent, ReactNode } from "react";
 
 import type { PlatformProposal, PlatformSnapshot, ProposalVoteChoice } from "@/lib/platform";
 import { PROPOSAL_LIMIT } from "@/lib/proposal-limits";
-import { navigationItems, type NavigationItemId } from "@/lib/platform-navigation";
+import { allowedWorkspaceTab, navigationItems, type WorkspaceTabId } from "@/lib/platform-navigation";
 import { defaultAuditFilters, type AuditPageResult } from "@/lib/audit";
 
 import {
@@ -41,6 +41,8 @@ import { PlatformAudit } from "./PlatformAudit";
 import { MagazineManager } from "./MagazineManager";
 import { SitePhotoManager } from "./SitePhotoManager";
 import { MfaNotice } from "./MfaNotice";
+import { AccountSettings } from "./AccountSettings";
+import { MemberAvatar } from "./MemberAvatar";
 import { PlatformNavigation } from "./PlatformNavigation";
 import { formatClubDate } from "@/lib/club-date";
 import styles from "./platform.module.css";
@@ -58,11 +60,13 @@ const proposalFilters: Array<{ id: string; label: string; match: (proposal: Plat
 ];
 const PROPOSAL_PAGE = 10;
 
-type Tab = NavigationItemId | "mensajes";
+type Tab = WorkspaceTabId;
 
 const tabs: Array<{ id: Tab; label: string }> = [
   ...navigationItems,
   { id: "mensajes", label: "Mensajes" },
+  // Opened from the header ("Mi cuenta"); not part of the shared sidebar order.
+  { id: "perfil", label: "Mi cuenta" },
 ];
 
 const administrationTabs: Tab[] = ["fotografias", "auditoria", "diagnostico"];
@@ -79,6 +83,7 @@ function ModuleIcon({ module }: { module: Tab }) {
     revista: "M3 4h7l2 2 2-2h7v16h-7l-2 1-2-1H3z M12 6v15",
     fotografias: "M3 6h5l2-3h4l2 3h5v15H3z M15 13a3 3 0 1 1-6 0 3 3 0 0 1 6 0",
     mensajes: "M3 4h18v14H9l-6 3z M7 9h10 M7 13h6",
+    perfil: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z M4 21a8 8 0 0 1 16 0",
     auditoria: "M12 3l8 3v6c0 5-8 9-8 9s-8-4-8-9V6z M8 12l3 3 5-6",
     diagnostico: "M3 12h4l3-8 4 16 3-8h4",
   };
@@ -96,6 +101,7 @@ const descriptions: Record<Tab, string> = {
   revista: "Prepara, edita y publica artículos con sus fotografías y diseño.",
   fotografias: "Cambia las fotos de todas las páginas del sitio; las de la Revista se editan en cada publicación.",
   mensajes: "Consulta tus avisos y conversaciones con los miembros del club.",
+  perfil: "Actualiza tu nombre, tu foto, tu correo, tu contraseña y la seguridad de tu acceso.",
   auditoria: "Revisa quién cambió cada registro y compara sus valores anteriores y actuales.",
   diagnostico: "Analiza los errores de acceso y de la aplicación, y comprueba el estado del sistema.",
 };
@@ -142,10 +148,7 @@ function EmptyState({ children }: { children: ReactNode }) {
 
 // A tab the snapshot allows; used for the address bar and notification links.
 function allowedTab(id: string | null | undefined, snapshot: PlatformSnapshot): Tab | null {
-  if (!id || !tabs.some(item => item.id === id)) return null;
-  if ((id === "diagnostico" || id === "auditoria") && !snapshot.capabilities.canAudit) return null;
-  if (id === "fotografias" && !snapshot.capabilities.canEdit) return null;
-  return id as Tab;
+  return allowedWorkspaceTab(id, snapshot.capabilities);
 }
 
 // Notifications link to a platform tab as /plataforma?tab=<id>.
@@ -387,6 +390,11 @@ export function PlatformWorkspace({ snapshot, initialTab }: { snapshot: Platform
             onMarkRead={id => run(markNotificationReadAction(id))}
             onViewAll={() => selectTab("mensajes")}
             onOpen={next => selectTab(next as Tab)} />
+          <button type="button" className={styles.accountButton} aria-current={tab === "perfil" ? "page" : undefined}
+            onClick={() => selectTab("perfil")}>
+            <MemberAvatar userId={user?.id ?? ""} name={user?.displayName ?? "Miembro"} avatarVersion={user?.avatarVersion ?? null} className={styles.accountAvatar} />
+            <span>Mi cuenta</span>
+          </button>
           <button type="button" className={`${styles.notificationButton} ${styles.messagesButton}`} aria-current={tab === "mensajes" ? "page" : undefined}
             aria-label={unreadMessages > 0 ? `Mensajes, ${unreadMessages} sin leer` : "Mensajes"}
             onClick={() => selectTab("mensajes")}>
@@ -486,6 +494,8 @@ export function PlatformWorkspace({ snapshot, initialTab }: { snapshot: Platform
         canManageOrganization={isAdministrator} onOpenApplications={() => selectTab("solicitudes")} />}
 
       {tab === "revista" && <MagazineManager canWrite={snapshot.capabilities.canWriteStories} canPublish={snapshot.capabilities.canPublishStories} />}
+
+      {tab === "perfil" && user && <AccountSettings user={user} />}
 
       {tab === "mensajes" && <section className={styles.moduleGrid}>
         <article className={`${styles.card} ${styles.cardWide}`}><p className={styles.cardLabel}>Avisos y conversaciones</p><h2 className={styles.cardTitle}>Lo importante, cerca.</h2>{snapshot.notifications.slice(0, 8).map(notification => <div className={styles.row} key={notification.id}><div><strong>{notification.title}</strong><small>{formatDate(notification.createdAt, true)} · {notification.readAt ? "Leído" : "Sin leer"}</small><span>{notification.body}</span></div>{!notification.readAt ? <button type="button" className={styles.smallButtonQuiet} disabled={pending} onClick={() => run(markNotificationReadAction(notification.id))}>Marcar leído</button> : null}</div>)}{snapshot.notifications.length === 0 && <EmptyState>No hay avisos nuevos.</EmptyState>}{snapshot.messages.slice(0, 8).map(message => <div className={styles.message} key={`${message.direction}-${message.id}`}><div><span className={styles.messageTag}>{message.direction === "inbox" ? "Recibido" : "Enviado"}</span><strong>{message.subject}</strong><small>{message.direction === "sent" ? `Para ${message.recipientNames.join(", ") || "destinatario no disponible"}` : message.senderName} · {formatDate(message.createdAt, true)}</small></div><p>{message.body}</p>{message.direction === "inbox" && !message.readAt ? <button type="button" className={styles.smallButtonQuiet} disabled={pending} onClick={() => run(markMessageReadAction(message.id))}>Marcar leído</button> : null}</div>)}{snapshot.messages.length === 0 && snapshot.messagingSchema.state === "ready" && <EmptyState>Tu buzón todavía está vacío.</EmptyState>}{snapshot.messagingSchema.state !== "ready" && <p className={styles.noticeMessage}>{snapshot.messagingSchema.message}</p>}</article>

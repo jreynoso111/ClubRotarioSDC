@@ -10,6 +10,7 @@ import { createLeadershipTermAction, getOrganizationAction, saveLeadershipPositi
 import { MembersManager } from "./MembersManager";
 import { CommitteeManager } from "./CommitteeManager";
 import { MemberPicker } from "./MemberPicker";
+import { MemberAvatar } from "./MemberAvatar";
 import platformStyles from "./platform.module.css";
 import styles from "./organization.module.css";
 
@@ -17,21 +18,20 @@ type PositionDraft = { id: string | null; title: string; responsibilities: strin
 function draftFrom(position?: LeadershipPosition, memberId?: string): PositionDraft {
   return { id: position?.id ?? null, title: position?.title ?? "", responsibilities: position?.responsibilities ?? "", memberId: memberId ?? position?.memberId ?? "", parentId: position?.parentId ?? "", sortOrder: position?.sortOrder ?? 70, active: position?.active ?? true, accessRole: position?.accessRole ?? "member", applyAccess: false, updatedAt: position?.updatedAt };
 }
-function initials(name: string) { return name.split(/\s+/).slice(0, 2).map(part => part[0]).join("").toUpperCase(); }
-
-function LeadershipBranch({ node, canEdit, onEdit, onOpenMember, root = false }: {
-  node: LeadershipNode; canEdit: boolean; onEdit: (position: LeadershipPosition) => void; onOpenMember: (id: string) => void; root?: boolean;
+function LeadershipBranch({ node, canEdit, onEdit, onOpenMember, avatarVersions, root = false }: {
+  node: LeadershipNode; canEdit: boolean; onEdit: (position: LeadershipPosition) => void; onOpenMember: (id: string) => void;
+  avatarVersions: ReadonlyMap<string, string | null>; root?: boolean;
 }) {
   return <li className={styles.branch}>
     <article className={`${styles.positionCard} ${root ? styles.rootCard : ""}`}>
       <h3>{node.title}</h3>
       <span className={styles.accessBadge}>Acceso del cargo: {organizationAccessLevels.find(level => level.id === node.accessRole)?.label ?? "Miembro"}</span>
-      {node.memberId ? <button type="button" className={styles.person} onClick={() => onOpenMember(node.memberId!)}><span className={styles.avatar}>{initials(node.memberName ?? "Miembro")}</span><span><strong>{node.memberName ?? "Perfil del miembro"}</strong>{node.holderStatus === "suspended" && <em className={styles.suspendedBadge}>Suspendido</em>}<small>Ver perfil →</small></span></button>
+      {node.memberId ? <button type="button" className={styles.person} onClick={() => onOpenMember(node.memberId!)}><MemberAvatar userId={node.memberId} name={node.memberName ?? "Miembro"} avatarVersion={avatarVersions.get(node.memberId) ?? null} className={styles.avatar} /><span><strong>{node.memberName ?? "Perfil del miembro"}</strong>{node.holderStatus === "suspended" && <em className={styles.suspendedBadge}>Suspendido</em>}<small>Ver perfil →</small></span></button>
         : <p className={styles.vacancy}><span />Cargo por asignar</p>}
       {node.responsibilities && <p className={styles.responsibilities}>{node.responsibilities}</p>}
       {canEdit && <button type="button" className={styles.editPosition} onClick={() => onEdit(node)} aria-label={`Editar ${node.title}`}>{node.memberId ? "Editar cargo" : "Asignar miembro"} ↗</button>}
     </article>
-    {node.children.length > 0 && <ul className={styles.treeChildren}>{node.children.map(child => <LeadershipBranch key={child.id} node={child} canEdit={canEdit} onEdit={onEdit} onOpenMember={onOpenMember} />)}</ul>}
+    {node.children.length > 0 && <ul className={styles.treeChildren}>{node.children.map(child => <LeadershipBranch key={child.id} node={child} canEdit={canEdit} onEdit={onEdit} onOpenMember={onOpenMember} avatarVersions={avatarVersions} />)}</ul>}
   </li>;
 }
 
@@ -92,6 +92,7 @@ export function OrganizationManager({ currentUserId, committees, tasks, canManag
   const excludedParents = editor?.id ? leadershipDescendants(positions, editor.id) : new Set<string>();
   // A holder who is no longer an active member stays selectable only as a historical assignment.
   const knownMembers = organization?.members ?? [];
+  const avatarVersions = new Map(knownMembers.map(member => [member.userId, member.avatarVersion ?? null] as const));
   const holderOptions = editor?.memberId && !knownMembers.some(member => member.userId === editor.memberId)
     ? [{ userId: editor.memberId, name: `${positions.find(position => position.id === editor.id)?.memberName ?? "Miembro del período"} · Asignación histórica` }, ...knownMembers]
     : knownMembers;
@@ -149,7 +150,7 @@ export function OrganizationManager({ currentUserId, committees, tasks, canManag
       </div>
       <p className={styles.explanation}>Administración define cada cargo y su nivel de acceso. Asignar un cargo conserva los permisos del miembro hasta que administración elija aplicarlos a su perfil.</p>
       {term?.locked && <p className={styles.closedNotice}>Este período tiene la edición cerrada para conservar su directiva.</p>}
-      {term && activePositions.length > 0 ? <div className={styles.chart} aria-label={`Organigrama del club ${yearLabel}`}><div className={styles.chartLegend}><span>{activePositions.filter(isCountedAsAssigned).length} cargos asignados</span><span>{activePositions.filter(position => !isCountedAsAssigned(position)).length} por asignar</span></div><ul className={styles.treeRoots}>{tree.map(node => <LeadershipBranch key={node.id} node={node} root canEdit={canEdit && !pending} onEdit={edit} onOpenMember={openMember} />)}</ul></div>
+      {term && activePositions.length > 0 ? <div className={styles.chart} aria-label={`Organigrama del club ${yearLabel}`}><div className={styles.chartLegend}><span>{activePositions.filter(isCountedAsAssigned).length} cargos asignados</span><span>{activePositions.filter(position => !isCountedAsAssigned(position)).length} por asignar</span></div><ul className={styles.treeRoots}>{tree.map(node => <LeadershipBranch key={node.id} node={node} root canEdit={canEdit && !pending} onEdit={edit} onOpenMember={openMember} avatarVersions={avatarVersions} />)}</ul></div>
         : <div className={styles.emptyCard}><h3>{term ? "El organigrama está por definir." : "El club todavía no ha definido su directiva."}</h3><p>{canManageOrganization ? "Define el año rotario, asigna los miembros y adapta los cargos a la estructura del club." : "Cuando administración defina los cargos, podrás consultar aquí la directiva y los perfiles de sus integrantes."}</p></div>}
       {positions.some(position => !position.active) && <details className={styles.retired}><summary>Cargos retirados de este organigrama ({positions.filter(position => !position.active).length})</summary>{positions.filter(position => !position.active).map(position => <div key={position.id}><strong>{position.title}</strong><span>{position.memberName ?? "Sin asignación"}</span>{canEdit && <button type="button" className={styles.textButton} onClick={() => edit(position)}>Editar y recuperar</button>}</div>)}</details>}
       {term?.startYear === currentRotaryYear() && <div className={styles.committees}><div className={styles.heading}><div><h3>Comités del club</h3><p>Composición actual de los equipos de trabajo.</p></div><button type="button" className={styles.quietButton} onClick={() => setView("comites")}>Ver comités →</button></div><div className={styles.committeeGrid}>{committees.filter(committee => committee.isActive).map(committee => <article key={committee.id}><h4>{committee.name}</h4><p>{committee.members.filter(member => member.role === "chair").map(member => member.name).join(", ") || "Presidencia del comité por asignar"}</p><small>{committee.members.length} integrantes</small></article>)}</div>{committees.every(committee => !committee.isActive) && <p className={styles.empty}>Todavía no hay comités activos. Puedes definirlos en la vista Comités.</p>}</div>}
@@ -157,7 +158,7 @@ export function OrganizationManager({ currentUserId, committees, tasks, canManag
     {!loading && view === "miembros" && (canManageMembers ? <MembersManager key={selectedMemberId} currentUserId={currentUserId} committees={committees} tasks={tasks}
       initialMemberId={selectedMemberId} leadershipPositions={positions} leadershipYear={yearLabel} onOpenApplications={onOpenApplications} onMembersChanged={() => void load(term?.id, true)}
       onAssignPosition={canEdit ? id => edit(activePositions.find(position => !position.memberId), id) : undefined} />
-      : <div className={styles.directory}><label>Buscar miembro<input type="search" value={memberQuery} onChange={event => setMemberQuery(event.target.value)} placeholder="Nombre del miembro" /></label><div className={styles.directoryLayout}><div className={styles.directoryList}>{organization?.members.filter(member => member.name.toLocaleLowerCase("es").includes(memberQuery.toLocaleLowerCase("es"))).map(member => <button type="button" key={member.userId} aria-pressed={selectedMemberId === member.userId} onClick={() => setSelectedMemberId(member.userId)}><span className={styles.avatar}>{initials(member.name)}</span><span><strong>{member.name}</strong><small>{positions.filter(position => position.memberId === member.userId && position.active).map(position => position.title).join(" · ") || "Miembro del club"}</small></span></button>)}</div><article className={styles.profile}><h3>{selectedProfile?.name ?? positions.find(position => position.memberId === selectedMemberId)?.memberName ?? "Selecciona un miembro"}</h3>{selectedProfile?.bio && <p>{selectedProfile.bio}</p>}{memberPositions.length > 0 && <><h4>Cargos rotarios · {yearLabel}</h4><ul>{memberPositions.map(position => <li key={position.id}><strong>{position.title}</strong>{position.responsibilities && <p>{position.responsibilities}</p>}</li>)}</ul></>}{selectedProfile && memberPositions.length === 0 && <p>Este miembro no tiene cargos asignados en el período seleccionado.</p>}</article></div></div>)}
+      : <div className={styles.directory}><label>Buscar miembro<input type="search" value={memberQuery} onChange={event => setMemberQuery(event.target.value)} placeholder="Nombre del miembro" /></label><div className={styles.directoryLayout}><div className={styles.directoryList}>{organization?.members.filter(member => member.name.toLocaleLowerCase("es").includes(memberQuery.toLocaleLowerCase("es"))).map(member => <button type="button" key={member.userId} aria-pressed={selectedMemberId === member.userId} onClick={() => setSelectedMemberId(member.userId)}><MemberAvatar userId={member.userId} name={member.name} avatarVersion={member.avatarVersion} className={styles.avatar} /><span><strong>{member.name}</strong><small>{positions.filter(position => position.memberId === member.userId && position.active).map(position => position.title).join(" · ") || "Miembro del club"}</small></span></button>)}</div><article className={styles.profile}><h3>{selectedProfile?.name ?? positions.find(position => position.memberId === selectedMemberId)?.memberName ?? "Selecciona un miembro"}</h3>{selectedProfile?.bio && <p>{selectedProfile.bio}</p>}{memberPositions.length > 0 && <><h4>Cargos rotarios · {yearLabel}</h4><ul>{memberPositions.map(position => <li key={position.id}><strong>{position.title}</strong>{position.responsibilities && <p>{position.responsibilities}</p>}</li>)}</ul></>}{selectedProfile && memberPositions.length === 0 && <p>Este miembro no tiene cargos asignados en el período seleccionado.</p>}</article></div></div>)}
     {view === "comites" && <section className={platformStyles.moduleGrid}><CommitteeManager committees={committees} candidates={organization?.members ?? []} canManage={canManageCommittees} /></section>}
     <dialog ref={dialog} className={styles.dialog} aria-labelledby="organization-editor-title" onCancel={event => { event.preventDefault(); closeEditor(); }}>
       <div className={styles.dialogHeading}><h2 id="organization-editor-title">{newTerm ? "Definir año rotario" : assignmentMember ? "Asignar cargo al miembro" : editor?.id ? "Editar cargo" : "Agregar cargo"}</h2><button type="button" className={styles.close} disabled={pending} onClick={closeEditor} aria-label="Cerrar formulario de organigrama">×</button></div>
