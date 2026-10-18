@@ -22,6 +22,13 @@ export const memberStatusLabels: Record<MemberStatus, string> = { active: "Activ
 export const memberReasonRange = { min: 5, max: 500 } as const;
 export const memberNotesMaxLength = 4000;
 
+export function partitionClubAccounts<T extends { role: PlatformRole }>(accounts: T[]) {
+  return {
+    members: accounts.filter(account => account.role !== "admin"),
+    administrativeAccounts: accounts.filter(account => account.role === "admin"),
+  };
+}
+
 const roleRank: Record<PlatformRole, number> = { member: 0, coordinator: 1, editor: 1, club_manager: 2, admin: 3 };
 
 // Club managers cannot change administrator or club manager accounts; administrators can change any account.

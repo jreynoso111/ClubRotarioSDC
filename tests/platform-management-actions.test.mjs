@@ -31,6 +31,16 @@ const updatedAt = "2026-09-30T15:00:00Z";
 const siteOrigin = "https://www.clubrotariosdcolonial.org";
 const platformUrl = `${siteOrigin}/plataforma`;
 
+test("administrators are system accounts and never members in the managed roster", async () => {
+  for (const role of ["admin", "club_manager"]) {
+    const { members } = setup({ role, targetRole: "admin" });
+    const result = await members.listManagedMembersAction();
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.members, []);
+    assert.equal(result.administrativeAccounts.length, role === "admin" ? 1 : 0);
+  }
+});
+
 const emailModule = loadTypeScript("../lib/email.ts", { "server-only": {} });
 const memberAccess = loadTypeScript("../lib/member-access.ts");
 const readEveryPageModule = loadTypeScript("../lib/read-every-page.ts");

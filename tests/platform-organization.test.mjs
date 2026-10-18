@@ -31,7 +31,7 @@ function rowsBetween(total, first, last, make) {
 }
 
 function setup({ role = "admin", status = "active", signedIn = true, rpcError = null, size = 3, suspended = [],
-  holders = ["member-0"], positionCount = 1, termCount = 1, failOn = null } = {}) {
+  holders = ["member-0"], positionCount = 1, termCount = 1, failOn = null, administratorIds = [] } = {}) {
   const calls = [];
   const pages = [];
   const invalidations = [];
@@ -41,8 +41,9 @@ function setup({ role = "admin", status = "active", signedIn = true, rpcError = 
     if (table === "club_leadership_positions") return rowsBetween(positionCount, first, last, index => ({
       id: index === 0 ? positionId : `position-${index}`, term_id: termId, title: index === 0 ? "Presidencia" : `Cargo ${index}`, responsibilities: "",
       parent_id: null, member_id: holders[index] ?? null, member_name_snapshot: "Nombre histórico", sort_order: index, is_active: true, access_role: "member", updated_at: updatedAt }));
-    if (table === "profiles") return rowsBetween(size, first, last, index => ({ id: `member-${index}`, display_name: `Miembro ${index}`, bio: null }));
-    return rowsBetween(size, first, last, index => ({ user_id: `member-${index}`, membership_role: "member",
+    if (table === "profiles") return rowsBetween(size, first, last, index => ({ id: `member-${index}`, display_name: `Miembro ${index}`, bio: null }))
+      .filter(row => !administratorIds.includes(row.id));
+    return rowsBetween(size, first, last, index => ({ user_id: `member-${index}`, membership_role: administratorIds.includes(`member-${index}`) ? "admin" : "member",
       membership_status: suspended.includes(`member-${index}`) ? "suspended" : "active" }));
   };
   const client = {
@@ -59,7 +60,11 @@ function setup({ role = "admin", status = "active", signedIn = true, rpcError = 
       };
       return query;
     },
-    async rpc(name, args) { if (name === "has_privileged_session") return { data: true, error: null }; calls.push({ name, args }); return { data: name === "create_club_leadership_term" ? termId : positionId, error: rpcError }; },
+    rpc(name, args) {
+      if (name === "list_club_member_profiles") return this.from("profiles");
+      if (name === "has_privileged_session") return Promise.resolve({ data: true, error: null });
+      calls.push({ name, args }); return Promise.resolve({ data: name === "create_club_leadership_term" ? termId : positionId, error: rpcError });
+    },
   };
   const dependencies = { "server-only": {}, "next/cache": { revalidatePath: path => invalidations.push(path) },
     "@/utils/supabase/config": { isSupabaseConfigured: () => true }, "@/lib/email": {}, "@/lib/membership-applications": {}, "@/utils/site-url": {}, ...mfaDependencies, "@/utils/supabase/server": { createClient: async () => client },
@@ -69,6 +74,15 @@ function setup({ role = "admin", status = "active", signedIn = true, rpcError = 
 }
 
 const pagesFor = (fixture, table) => fixture.pages.filter(page => page.table === table).map(page => page.first);
+
+test("system administrators are absent from the club directory for every role", async () => {
+  for (const role of ["member", "club_manager", "admin"]) {
+    const fixture = setup({ role, administratorIds: ["member-0"] });
+    const result = await fixture.actions.getOrganizationAction();
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.organization.members.map(member => member.userId), ["member-1", "member-2"]);
+  }
+});
 
 test("Rotary year changes at midnight in Santo Domingo on July 1", () => {
   assert.equal(organization.currentRotaryYear(new Date("2026-07-01T03:59:59Z")), 2025);

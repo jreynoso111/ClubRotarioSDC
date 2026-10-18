@@ -50,10 +50,10 @@ export async function getOrganizationAction(termId?: string): Promise<PlatformAc
     const selected = termId ? terms.find(term => term.id === termId) : terms.find(term => term.startYear === currentRotaryYear()) ?? terms[0];
     if (termId && !selected) return moduleFailure("Ese período ya no está disponible.", "invalid");
 
-    // Management may read every membership; other members see only active profiles (RLS).
+    // The shared directory excludes system administrators for every caller.
     const management = actor.role === "admin" || actor.role === "club_manager";
     const profileRows = await readAllRows<{ id: string; display_name: string | null; bio: string | null }>((from, to) =>
-      actor.supabase.from("profiles").select("id,display_name,bio").order("id").range(from, to));
+      actor.supabase.rpc("list_club_member_profiles").order("id").range(from, to));
     if (!profileRows) return moduleFailure("No se pudieron cargar los perfiles del club.");
     let members: OrganizationMember[] = profileRows.map(row => ({ userId: row.id, name: row.display_name || "Miembro sin nombre", bio: row.bio ?? null }));
     const statusById = new Map<string, MembershipStatus>();
@@ -63,7 +63,7 @@ export async function getOrganizationAction(termId?: string): Promise<PlatformAc
       if (!membershipRows) return moduleFailure("No se pudo comprobar la lista de miembros activos.");
       membershipRows.forEach(row => statusById.set(row.user_id, row.membership_status));
       // Only active members can hold a position, so inactive profiles are not returned to management.
-      const activeRoles = new Map(membershipRows.filter(row => row.membership_status === "active").map(row => [row.user_id, row.membership_role]));
+      const activeRoles = new Map(membershipRows.filter(row => row.membership_status === "active" && row.membership_role !== "admin").map(row => [row.user_id, row.membership_role]));
       members = members.filter(member => activeRoles.has(member.userId)).map(member => ({ ...member, accessRole: activeRoles.get(member.userId) }));
     }
 

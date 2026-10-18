@@ -50,6 +50,8 @@ export function MembersManager({ currentUserId, committees, tasks, initialMember
 }) {
   const router = useRouter();
   const [members, setMembers] = useState<ManagedMember[]>([]);
+  const [administrativeAccounts, setAdministrativeAccounts] = useState<ManagedMember[]>([]);
+  const [accountView, setAccountView] = useState<"members" | "administration">("members");
   const [pendingMembers, setPendingMembers] = useState<PendingMember[]>([]);
   const [pendingError, setPendingError] = useState("");
   const [actorRole, setActorRole] = useState<PlatformRole>("member");
@@ -64,9 +66,11 @@ export function MembersManager({ currentUserId, committees, tasks, initialMember
   const applyDirectory = useCallback(({ result, pendingResult }: Directory) => {
     if (!result.ok) { setFeedback(result); return; }
     setMembers(result.members ?? []);
+    setAdministrativeAccounts(result.administrativeAccounts ?? []);
     setActorRole(result.actorRole ?? "member");
     setSelectedId(current => current || initialMemberId || result.members?.[0]?.userId || "");
-    setPendingMembers(pendingResult.ok ? pendingResult.members ?? [] : []);
+    const clubMemberIds = new Set((result.members ?? []).map(member => member.userId));
+    setPendingMembers(pendingResult.ok ? (pendingResult.members ?? []).filter(member => clubMemberIds.has(member.userId)) : []);
     setPendingError(pendingResult.ok ? "" : pendingResult.message);
   }, [initialMemberId]);
 
@@ -84,10 +88,12 @@ export function MembersManager({ currentUserId, committees, tasks, initialMember
     return () => { active = false; };
   }, [applyDirectory]);
 
-  const selected = members.find(member => member.userId === selectedId);
+  const showingAdministration = accountView === "administration" && actorRole === "admin";
+  const displayedAccounts = showingAdministration ? administrativeAccounts : members;
+  const selected = displayedAccounts.find(member => member.userId === selectedId);
   const isManagement = actorRole === "club_manager" || actorRole === "admin";
   const search = normalizeSearchText(query.trim());
-  const visible = members.filter(member => (filter === "all" || member.status === filter)
+  const visible = displayedAccounts.filter(member => (filter === "all" || member.status === filter)
     && (!search || [member.name, platformRoleLabels[member.role], memberStatusLabels[member.status]].some(text => normalizeSearchText(text).includes(search))));
   const selectedCommittees = committees.filter(committee => committee.members.some(member => member.userId === selectedId));
   const selectedTasks = tasks.filter(task => task.assigneeId === selectedId);
@@ -137,11 +143,15 @@ export function MembersManager({ currentUserId, committees, tasks, initialMember
   }
 
   return <section className={styles.workspace}>
-    <div className={styles.heading}><div><h2>Miembros del club</h2><p>Consulta cada ficha, sus responsabilidades y su acceso a la plataforma. Las personas que crean una cuenta aparecen arriba para aprobarlas o rechazarlas.</p></div><button type="button" className={styles.quietButton} disabled={pending || loading} onClick={() => { setLoading(true); void loadDirectory(); }}>Actualizar lista</button></div>
-    <div className={styles.summary}>{memberStatuses.map(status => <span key={status}><strong>{members.filter(member => member.status === status).length}</strong>{memberStatusLabels[status]}s</span>)}</div>
+    {actorRole === "admin" ? <nav className={styles.accountViews} aria-label="Tipo de cuenta">
+      <button type="button" className={styles.quietButton} aria-pressed={!showingAdministration} onClick={() => { setAccountView("members"); setSelectedId(members[0]?.userId ?? ""); setQuery(""); }}>Miembros del club</button>
+      <button type="button" className={styles.quietButton} aria-pressed={showingAdministration} onClick={() => { setAccountView("administration"); setSelectedId(administrativeAccounts[0]?.userId ?? ""); setQuery(""); }}>Administración del sistema</button>
+    </nav> : null}
+    <div className={styles.heading}><div><h2>{showingAdministration ? "Cuentas de administración" : "Miembros del club"}</h2><p>{showingAdministration ? "Estas cuentas administran el sistema y no forman parte del listado ni del conteo de miembros del club." : "Consulta cada ficha, sus responsabilidades y su acceso a la plataforma. Las personas que crean una cuenta aparecen arriba para aprobarlas o rechazarlas."}</p></div><button type="button" className={styles.quietButton} disabled={pending || loading} onClick={() => { setLoading(true); void loadDirectory(); }}>Actualizar lista</button></div>
+    {!showingAdministration ? <div className={styles.summary}>{memberStatuses.map(status => <span key={status}><strong>{members.filter(member => member.status === status).length}</strong>{memberStatusLabels[status]}s</span>)}</div> : null}
     {feedback ? <p className={`${styles.feedback} ${feedback.ok ? "" : styles.error}`} role={feedback.ok ? "status" : "alert"}>{feedback.message}</p> : null}
 
-    {isManagement ? <article className={styles.card}>
+    {isManagement && !showingAdministration ? <article className={styles.card}>
       <div className={styles.heading}><div><h3>Pendientes de aprobar</h3><p>Cuentas creadas que todavía no son miembros activos. Aprobar les da acceso como miembro; rechazar elimina la cuenta y conserva un registro del rechazo.</p></div></div>
       {pendingError ? <p className={`${styles.feedback} ${styles.error}`} role="alert">{pendingError}</p> : null}
       {!pendingError && pendingMembers.length === 0 ? <p className={styles.empty}>No hay cuentas pendientes de aprobación.</p> : null}
@@ -149,28 +159,32 @@ export function MembersManager({ currentUserId, committees, tasks, initialMember
         onApprove={() => approve(member)} onReject={reason => run(() => rejectPendingMemberAction(member.userId, reason))} onOpenApplications={onOpenApplications} />)}</div>
     </article> : null}
 
-    {loading && members.length === 0 ? <p className={styles.empty}>Cargando miembros…</p> : <div className={styles.split}>
+    {loading && displayedAccounts.length === 0 ? <p className={styles.empty}>{showingAdministration ? "Cargando cuentas administrativas…" : "Cargando miembros…"}</p> : <div className={styles.split}>
       <article className={styles.card}>
         <div className={styles.filters}>
-          <label>Buscar miembro<input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Nombre, rol o estado" /></label>
+          <label>{showingAdministration ? "Buscar cuenta administrativa" : "Buscar miembro"}<input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Nombre, rol o estado" /></label>
           <label>Estado<select value={filter} onChange={event => setFilter(event.target.value as "all" | MemberStatus)}><option value="all">Todos</option>{memberStatuses.map(key => <option key={key} value={key}>{memberStatusLabels[key]}</option>)}</select></label>
         </div>
-        <div className={styles.memberList}>{visible.map(member => <button type="button" key={member.userId} className={`${styles.member} ${selectedId === member.userId ? styles.memberSelected : ""}`} onClick={() => setSelectedId(member.userId)} aria-pressed={selectedId === member.userId}><span className={styles.avatar}>{member.name.split(/\s+/).slice(0, 2).map(part => part[0]).join("").toUpperCase()}</span><span className={styles.memberText}><strong>{member.name}{member.userId === currentUserId ? " · Tú" : ""}</strong><small>{leadershipPositions.filter(position => position.memberId === member.userId && position.active).map(position => position.title).join(" · ") || "Miembro del club"}</small></span><span className={`${styles.badge} ${styles[member.status]}`}>{memberStatusLabels[member.status]}</span></button>)}</div>
-        {visible.length === 0 && <p className={styles.empty}>{members.length === 0 ? "Cuando una persona cree su cuenta, aparecerá en Pendientes de aprobar." : "No hay miembros con estos filtros."}</p>}
+        <div className={styles.memberList}>{visible.map(member => <button type="button" key={member.userId} className={`${styles.member} ${selectedId === member.userId ? styles.memberSelected : ""}`} onClick={() => setSelectedId(member.userId)} aria-pressed={selectedId === member.userId}><span className={styles.avatar}>{member.name.split(/\s+/).slice(0, 2).map(part => part[0]).join("").toUpperCase()}</span><span className={styles.memberText}><strong>{member.name}{member.userId === currentUserId ? " · Tú" : ""}</strong><small>{showingAdministration ? "Cuenta administrativa del sistema" : leadershipPositions.filter(position => position.memberId === member.userId && position.active).map(position => position.title).join(" · ") || "Miembro del club"}</small></span><span className={`${styles.badge} ${styles[member.status]}`}>{memberStatusLabels[member.status]}</span></button>)}</div>
+        {visible.length === 0 && <p className={styles.empty}>{showingAdministration ? "No hay cuentas administrativas con estos filtros." : members.length === 0 ? "Todavía no hay miembros del club. Las cuentas administrativas se consultan por separado." : "No hay miembros con estos filtros."}</p>}
       </article>
       {selected ? <article className={styles.card} key={`${selected.userId}-${selected.updatedAt}-${selected.name}`}>
         <div className={styles.heading}><div><h3>{selected.name}</h3><p>{platformRoleLabels[selected.role]} · {memberStatusLabels[selected.status]}</p></div></div>
-        <dl className={styles.facts}><div><dt>Cuenta registrada</dt><dd>{formatDate(selected.createdAt)}</dd></div><div><dt>Ingreso al club</dt><dd>{formatDate(selected.joinedAt)}</dd></div><div><dt>Aprobación de membresía</dt><dd>{formatDate(selected.approvedAt)}</dd></div><div><dt>Último cambio de acceso</dt><dd>{formatDate(selected.updatedAt)}</dd></div></dl>
+        <dl className={styles.facts}><div><dt>Cuenta registrada</dt><dd>{formatDate(selected.createdAt)}</dd></div>{!showingAdministration ? <><div><dt>Ingreso al club</dt><dd>{formatDate(selected.joinedAt)}</dd></div><div><dt>Aprobación de membresía</dt><dd>{formatDate(selected.approvedAt)}</dd></div></> : null}<div><dt>Último cambio de acceso</dt><dd>{formatDate(selected.updatedAt)}</dd></div></dl>
+        {!showingAdministration && <>
         <h4 className={styles.sectionTitle}>Cargos rotarios{leadershipYear ? ` · ${leadershipYear}` : ""}</h4>{selectedPositions.length ? <ul className={styles.list}>{selectedPositions.map(position => <li key={position.id}><strong>{position.title}</strong>{position.responsibilities ? <p className={styles.muted}>{position.responsibilities}</p> : null}</li>)}</ul> : <p className={styles.muted}>Sin cargos asignados en este período.</p>}{onAssignPosition && selected.status === "active" && <button type="button" className={styles.quietButton} onClick={() => onAssignPosition(selected.userId)}>Asignar cargo en el organigrama →</button>}
-        <details className={styles.detail}><summary>Editar nombre y perfil</summary>{canEditProfile ? <form className={styles.form} onSubmit={saveProfile}><label>Nombre completo<input name="name" defaultValue={selected.name} required minLength={2} maxLength={120} /></label><label>Perfil y ocupación<textarea name="bio" defaultValue={selected.bio ?? ""} maxLength={4000} placeholder="Ocupación, intereses y experiencia del miembro" /></label><button className={styles.button} disabled={pending}>Guardar ficha</button></form> : <p className={styles.empty}>Solo un administrador puede modificar esta cuenta.</p>}</details>
-        <details className={styles.detail}><summary>Acceso y notas de la membresía</summary>{canEditAccess ? <AccessForm member={selected} actorRole={actorRole} busy={pending} onSave={saveAccess} /> : <p className={styles.empty}>{isSelf ? "Otro administrador debe modificar el acceso de tu propia cuenta." : "Solo un administrador puede modificar esta cuenta."}</p>}</details>
+        </>}
+        <details className={styles.detail}><summary>Editar nombre y perfil</summary>{canEditProfile ? <form className={styles.form} onSubmit={saveProfile}><label>Nombre completo<input name="name" defaultValue={selected.name} required minLength={2} maxLength={120} /></label><label>{showingAdministration ? "Descripción de la cuenta" : "Perfil y ocupación"}<textarea name="bio" defaultValue={selected.bio ?? ""} maxLength={4000} placeholder={showingAdministration ? "Descripción de la cuenta administrativa" : "Ocupación, intereses y experiencia del miembro"} /></label><button className={styles.button} disabled={pending}>Guardar ficha</button></form> : <p className={styles.empty}>Solo un administrador puede modificar esta cuenta.</p>}</details>
+        <details className={styles.detail}><summary>{showingAdministration ? "Acceso y notas de la cuenta" : "Acceso y notas de la membresía"}</summary>{canEditAccess ? <AccessForm member={selected} actorRole={actorRole} busy={pending} onSave={saveAccess} /> : <p className={styles.empty}>{isSelf ? "Otro administrador debe modificar el acceso de tu propia cuenta." : "Solo un administrador puede modificar esta cuenta."}</p>}</details>
         <AccessHistoryDetails userId={selected.userId} />
         {isManagement && selected.role === "editor" && selected.status === "active"
           ? <StoryPublisherToggle member={selected} busy={pending} onChange={enabled => run(() => setStoryPublisherAction(selected.userId, enabled))} />
           : null}
+        {!showingAdministration && <>
         <h4 className={styles.sectionTitle}>Comités y responsabilidades</h4>{selectedCommittees.length ? <ul className={styles.list}>{selectedCommittees.map(committee => <li key={committee.id}>{committee.name}{committee.isActive ? "" : " · Terminado"}</li>)}</ul> : <p className={styles.muted}>Aún sin comités asignados. Puedes añadirlo desde Comités.</p>}
         <h4 className={styles.sectionTitle}>Tareas asignadas</h4>{selectedTasks.length ? <ul className={styles.list}>{selectedTasks.map(task => <li key={task.id}>{task.title} · {["done", "cancelled"].includes(task.status) ? "Cerrada" : "En seguimiento"}</li>)}</ul> : <p className={styles.muted}>Aún no tiene tareas asignadas. Puedes crear una en Actividades.</p>}
-      </article> : <article className={styles.card}><p className={styles.empty}>Selecciona un miembro para consultar su ficha.</p></article>}
+        </>}
+      </article> : <article className={styles.card}><p className={styles.empty}>{showingAdministration ? "Selecciona una cuenta administrativa." : "Selecciona un miembro para consultar su ficha."}</p></article>}
     </div>}
   </section>;
 }

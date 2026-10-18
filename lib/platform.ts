@@ -341,10 +341,6 @@ type CommitteeMemberRow = {
   committee_role: string;
 };
 
-type ActiveMembershipRow = {
-  user_id: string;
-};
-
 
 type NotificationRow = {
   id: string;
@@ -621,7 +617,7 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
     committeeMembersResult,
     notificationsResult,
     directoryResult,
-    committeeCandidatesResult,
+    clubDirectoryResult,
     navigationResult,
   ] = await Promise.all([
     readQuery<EventRow[]>(
@@ -667,11 +663,9 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
       readEveryPage((first, last) => supabase.from("profiles").select("id,display_name")
         .order("display_name", { ascending: true }).order("id").range(first, last)),
     ),
-    readQuery<ActiveMembershipRow[]>(
-      capabilities.canManageMembership
-        ? readEveryPage((first, last) => supabase.from("memberships").select("user_id").eq("membership_status", "active")
-          .order("user_id").range(first, last))
-        : Promise.resolve({ data: [], error: null }),
+    readQuery<ProfileRow[]>(
+      readEveryPage((first, last) => supabase.rpc("list_club_member_profiles")
+        .order("display_name", { ascending: true }).order("id").range(first, last)),
     ),
     readQuery<{ item_order: unknown; revision: number }>(
       supabase.from("platform_navigation").select("item_order,revision").eq("id", true).maybeSingle(),
@@ -693,7 +687,7 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
     [committeesResult, "comités"],
     [committeeMembersResult, "integrantes de comités"],
     [directoryResult, "directorio"],
-    ...(capabilities.canManageMembership ? [[committeeCandidatesResult, "integrantes activos"] as const] : []),
+    [clubDirectoryResult, "miembros del club"],
   ] as const;
   for (const [result, label] of existingResults) {
     if (result.error && !isMissingSchemaError(result.error)) {
@@ -756,15 +750,13 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
     }
   }
 
-  const directory = ((directoryResult.data ?? []) as ProfileRow[]).map((row) => ({
+  const profileDirectory = ((directoryResult.data ?? []) as ProfileRow[]).map((row) => ({
     userId: row.id,
     name: row.display_name?.trim() || "Miembro del club",
   }));
-  const activeCommitteeCandidateIds = new Set(
-    (committeeCandidatesResult.data ?? []).map((row) => row.user_id),
-  );
-  const committeeCandidates = directory.filter((member) => activeCommitteeCandidateIds.has(member.userId));
-  const names = new Map(directory.map((member) => [member.userId, member.name]));
+  const directory = (clubDirectoryResult.data ?? []).map(row => ({ userId: row.id, name: row.display_name?.trim() || "Miembro del club" }));
+  const committeeCandidates = capabilities.canManageMembership ? directory : [];
+  const names = new Map(profileDirectory.map((member) => [member.userId, member.name]));
   const committeeMembers = (committeeMembersResult.data ?? []) as CommitteeMemberRow[];
   const committees = ((committeesResult.data ?? []) as CommitteeRow[]).map((committee) => ({
     id: committee.id,

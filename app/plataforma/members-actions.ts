@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { memberApprovedEmail, memberReactivatedEmail, memberRoleChangedEmail, memberSuspendedEmail, sendClubEmail, type ClubEmailContent } from "@/lib/email";
-import { memberNotesMaxLength, memberReasonRange, memberStatuses, platformRoleLabels, platformRoles, type MemberStatus } from "@/lib/member-access";
+import { memberNotesMaxLength, memberReasonRange, memberStatuses, partitionClubAccounts, platformRoleLabels, platformRoles, type MemberStatus } from "@/lib/member-access";
 import type { MembershipApplicationStatus } from "@/lib/membership-applications";
 import type { PlatformRole } from "@/lib/platform";
 import { readEveryPage } from "@/lib/read-every-page";
@@ -135,7 +135,7 @@ function accessMessages(row: AccessRow, status: MemberStatus, role: PlatformRole
   return messages;
 }
 
-export async function listManagedMembersAction(): Promise<PlatformActionResult & { members?: ManagedMember[]; actorRole?: PlatformRole }> {
+export async function listManagedMembersAction(): Promise<PlatformActionResult & { members?: ManagedMember[]; administrativeAccounts?: ManagedMember[]; actorRole?: PlatformRole }> {
   const { actor, error } = await requireModuleActor(managementRoles);
   if (error || !actor) return error!;
   try {
@@ -150,14 +150,16 @@ export async function listManagedMembersAction(): Promise<PlatformActionResult &
     const notes = await readMembershipNotes(actor.supabase, memberships.data.map(row => row.user_id));
     if (!notes) return moduleFailure("No se pudo cargar las notas internas. Vuelve a intentar.");
     const profileById = new Map(profiles.data.map(profile => [profile.id, profile]));
+    const accounts = partitionClubAccounts(memberships.data.map(row => ({
+      userId: row.user_id, name: fallbackName(profileById.get(row.user_id)?.display_name),
+      bio: profileById.get(row.user_id)?.bio ?? null, role: row.membership_role, status: row.membership_status,
+      notes: notes.get(row.user_id) ?? null, joinedAt: row.joined_at, approvedAt: row.approved_at,
+      createdAt: row.created_at, updatedAt: row.updated_at, canPublishStories: row.can_publish_stories === true,
+    })));
     return {
       ok: true, message: "Miembros cargados.", actorRole: actor.role,
-      members: memberships.data.map(row => ({
-        userId: row.user_id, name: fallbackName(profileById.get(row.user_id)?.display_name),
-        bio: profileById.get(row.user_id)?.bio ?? null, role: row.membership_role, status: row.membership_status,
-        notes: notes.get(row.user_id) ?? null, joinedAt: row.joined_at, approvedAt: row.approved_at,
-        createdAt: row.created_at, updatedAt: row.updated_at, canPublishStories: row.can_publish_stories === true,
-      })),
+      members: accounts.members,
+      administrativeAccounts: actor.role === "admin" ? accounts.administrativeAccounts : [],
     };
   } catch {
     return moduleFailure("No se pudo cargar el registro de miembros. Vuelve a intentar.");

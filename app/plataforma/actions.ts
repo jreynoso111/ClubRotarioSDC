@@ -399,7 +399,7 @@ export async function getFinanceDashboardAction(
     canManage
       ? supabase
           .from("memberships")
-          .select("user_id,membership_status,profile:profiles!memberships_user_id_fkey(display_name)")
+          .select("user_id,membership_role,membership_status,profile:profiles!memberships_user_id_fkey(display_name)")
           .order("user_id", { ascending: true })
           .limit(1000)
       : Promise.resolve({ data: [], error: null }),
@@ -470,6 +470,7 @@ export async function getFinanceDashboardAction(
   };
   type MemberRow = {
     user_id: string;
+    membership_role: string;
     membership_status: string;
     profile: { display_name: string | null } | null;
   };
@@ -514,7 +515,7 @@ export async function getFinanceDashboardAction(
     receiptNumber: entry.receipt_number,
     attachmentPath: entry.attachment_path,
   }));
-  const members = ((membersResult.data ?? []) as unknown as MemberRow[]).map((member) => ({
+  const members = ((membersResult.data ?? []) as unknown as MemberRow[]).filter(member => member.membership_role !== "admin").map((member) => ({
     id: member.user_id,
     name: member.profile?.display_name?.trim() || "Miembro del club",
     active: member.membership_status === "active",

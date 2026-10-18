@@ -235,6 +235,7 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
   const [auditResult, setAuditResult] = useState<AuditPageResult | null>(null);
   const auditRequest = useRef(0);
   const user = snapshot.user;
+  const isSystemAccount = snapshot.membership?.role === "admin";
 
   function selectTab(next: Tab) {
     if (next === tab) return;
@@ -335,7 +336,7 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
       <div className={styles.sideSection}>ESPACIO DE TRABAJO</div>
       <PlatformNavigation initial={snapshot.navigation} selected={tab} canReorder={isAdministrator}
         items={mainTabs.map(item => ({ ...item, icon: <ModuleIcon module={item.id} /> }))} onSelect={selectTab} />
-      <div className={styles.sidebarFooter}><span className={styles.memberDot} /> Membresía activa<p>Personas de acción.<br />Un club, muchas formas de servir.</p><Link href="/">Visitar sitio público ↗</Link></div>
+      <div className={styles.sidebarFooter}><span className={styles.memberDot} /> {isSystemAccount ? "Acceso administrativo" : "Membresía activa"}<p>Personas de acción.<br />Un club, muchas formas de servir.</p><Link href="/">Visitar sitio público ↗</Link></div>
     </aside>
     {isAdministrator && <aside className={`${styles.adminRail} ${administrationExpanded ? styles.adminRailExpanded : ""}`} aria-label="Herramientas de administración">
       <button type="button" className={styles.adminToggle} aria-expanded={administrationExpanded} aria-controls="administration-navigation"
@@ -358,7 +359,7 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
     <header className={styles.header}>
       <div><p className={styles.eyebrow}>Tu espacio de trabajo</p><h1 className={styles.title}>Hola, <em>{user?.displayName.split(" ")[0] ?? "miembro"}.</em></h1></div>
       <div className={styles.accountHeader}>
-        <p className={styles.identity}><strong>{user?.displayName}</strong><span className={styles.role}>{roleLabels[snapshot.membership?.role ?? "member"]}</span><span>Membresía activa</span></p>
+        <p className={styles.identity}><strong>{user?.displayName}</strong><span className={styles.role}>{roleLabels[snapshot.membership?.role ?? "member"]}</span><span>{isSystemAccount ? "Cuenta del sistema" : "Membresía activa"}</span></p>
         <div className={styles.headerActions}>
           <NotificationBell notifications={snapshot.notifications} messagingSchema={snapshot.messagingSchema} disabled={pending}
             onMarkRead={id => run(markNotificationReadAction(id))}

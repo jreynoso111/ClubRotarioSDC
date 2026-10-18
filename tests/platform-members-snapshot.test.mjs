@@ -35,7 +35,9 @@ function fakeClient(recorded) {
       { user_id: actorId, membership_role: "club_manager", membership_status: "active", joined_at: "2025-02-01T14:00:00Z", notes: "Nota privada de la gestión" },
       ...memberIds.map(user_id => ({ user_id, membership_role: "member", membership_status: "active", joined_at: "2025-03-01T14:00:00Z", notes: "Nota privada" })),
     ],
-    profiles: allIds.map((id, index) => ({ id, display_name: index === 0 ? "Gestión" : `Miembro ${index}`, bio: null })),
+    profiles: [...allIds.map((id, index) => ({ id, display_name: index === 0 ? "Gestión" : `Miembro ${index}`, bio: null })),
+      { id: "system-admin", display_name: "Administración del sistema", bio: null }],
+    club_member_profiles: allIds.map((id, index) => ({ id, display_name: index === 0 ? "Gestión" : `Miembro ${index}`, bio: null })),
     committees: [{ id: "committee-1", name: "Comité de prueba", slug: "comite-de-prueba", description: null, is_active: true }],
     committee_members: allIds.map(user_id => ({ committee_id: "committee-1", user_id, committee_role: "member" })),
   };
@@ -46,7 +48,10 @@ function fakeClient(recorded) {
       getClaims: async () => ({ data: { claims }, error: null }),
       mfa: { listFactors: async () => ({ data: { all: [], totp: [{ id: "factor" }] }, error: null }) },
     },
-    rpc: async name => (name === "has_privileged_session" ? { data: true, error: null } : { data: [], error: null }),
+    rpc(name) {
+      return name === "list_club_member_profiles" ? this.from("club_member_profiles")
+        : Promise.resolve(name === "has_privileged_session" ? { data: true, error: null } : { data: [], error: null });
+    },
     from(table) {
       const filters = [];
       const state = { columns: "", single: false };
@@ -94,7 +99,10 @@ test("the platform snapshot keeps notes out of the own membership, pages the dir
 
   assert.equal(snapshot.memberDirectory.length, allIds.length);
   assert.equal(snapshot.committeeCandidates.length, allIds.length);
+  assert.equal(snapshot.memberDirectory.some(member => member.userId === "system-admin"), false);
+  assert.equal(snapshot.committeeCandidates.some(member => member.userId === "system-admin"), false);
   assert.equal(snapshot.committees[0].members.length, allIds.length);
   assert.deepEqual(recorded.ranges.filter(range => range.table === "committee_members").map(range => range.first), [0, 200]);
   assert.deepEqual(recorded.ranges.filter(range => range.table === "profiles").map(range => range.first), [0, 200]);
+  assert.deepEqual(recorded.ranges.filter(range => range.table === "club_member_profiles").map(range => range.first), [0, 200]);
 });
