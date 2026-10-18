@@ -267,7 +267,7 @@ export function PlatformWorkspace({ snapshot, initialTab }: { snapshot: Platform
     if (next === tab) return;
     setTab(next);
     setFeedback("");
-    window.history.replaceState(window.history.state, "", next === "resumen" ? "/plataforma" : `/plataforma?tab=${next}`);
+    window.history.replaceState(null, "", next === "resumen" ? "/plataforma" : `/plataforma?tab=${next}`);
     if (next === "auditoria" && snapshot.capabilities.canAudit) loadAudit();
   }
 
