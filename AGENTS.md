@@ -1,3 +1,9 @@
+## Arquitectura obligatoria — decisión del usuario del 17/10/2026
+
+Leer `C:\Users\OPRET\Desktop\ARQUITECTURA-DE-PROYECTOS.md` antes de operar este proyecto. **Club Rotario, como todos los proyectos de esta PC, debe ejecutarse en la VM con Ubuntu Server. Windows aloja los agentes y la VM.** Next, Supabase, sus contenedores, Studio, túnel y tareas del Club pertenecen a Ubuntu.
+
+Las descripciones posteriores de producción local en Windows, Docker Desktop, `127.0.0.1:3010` y tareas programadas documentan el estado existente o histórico; no autorizan mantener esa arquitectura como destino definitivo. Migrar con respaldo, reversión y pruebas de datos, autenticación y dominio público antes de retirar el servicio de Windows. No confundir esta instrucción con una migración ya completada. Esta decisión sustituye únicamente las instrucciones incompatibles de alojamiento; conservar el resto de las reglas del proyecto.
+
 ## Memoria permanente del proyecto
 
 - Al iniciar trabajo en este repositorio, lee `PROJECT_MEMORY.md` para recuperar las decisiones vigentes, el mapa del código y el estado local/remoto.
