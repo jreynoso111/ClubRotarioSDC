@@ -9,11 +9,14 @@ import {
   SectionLabel,
   formatLongDate,
 } from "@/components/public/PublicChrome";
-import { getEditorialGuides, getPublicStoriesPage, type PublicStory } from "@/lib/editorial";
+import { getPublicStoriesPage, type PublicStory } from "@/lib/editorial";
+import { getPublicSiteOrigin } from "@/utils/site-url";
 
 import styles from "./magazine.module.css";
 
 const PUBLICATION_PAGE_SIZE = 9;
+const REVISTA_DESCRIPTION =
+  "Historias, ideas y referencias para seguir el servicio del Club Rotario Santo Domingo Colonial.";
 
 type RevistaPageProps = {
   searchParams: Promise<{ pagina?: string }>;
@@ -43,8 +46,15 @@ function getPaginationItems(totalPages: number, currentPage: number): Array<numb
 
 export const metadata: Metadata = {
   title: "Revista",
-  description:
-    "Historias, ideas y referencias para seguir el servicio del Club Rotario Santo Domingo Colonial.",
+  description: REVISTA_DESCRIPTION,
+  openGraph: {
+    title: "Revista · Club Rotario Santo Domingo Colonial",
+    description: REVISTA_DESCRIPTION,
+    url: `${getPublicSiteOrigin()}/revista`,
+    siteName: "Club Rotario Santo Domingo Colonial",
+    locale: "es_DO",
+    type: "website",
+  },
 };
 
 function StoryCard({
@@ -70,19 +80,19 @@ function StoryCard({
       href={`/revista/${story.slug}`}
     >
       <CoverArt
-        src={story.coverImageUrl ?? story.coverImagePath}
+        src={story.coverImageUrl}
         alt={story.title}
         className={styles.storyCover}
         priority={featured}
       />
       <div className={styles.storyCardBody}>
         <div className={styles.storyMeta}>
-          <span>{story.isExample ? "Ejemplo editorial" : story.storyTypeLabel}</span>
-          {story.publishedAt ? <time dateTime={story.publishedAt}>{formatLongDate(story.publishedAt)}</time> : <span>{story.isExample ? "Texto de muestra" : "Lectura de referencia"}</span>}
+          <span>{story.storyTypeLabel}</span>
+          {story.publishedAt ? <time dateTime={story.publishedAt}>{formatLongDate(story.publishedAt)}</time> : null}
         </div>
         <h2>{story.title}</h2>
         <p>{story.excerpt}</p>
-        <span className={styles.readMore}>{story.isExample ? "Ver ejemplo editorial" : story.isReference ? "Abrir referencia" : "Leer publicación"} <ArrowUpRight /></span>
+        <span className={styles.readMore}>Leer publicación <ArrowUpRight /></span>
       </div>
     </Link>
   );
@@ -92,14 +102,9 @@ export default async function RevistaPage({ searchParams }: RevistaPageProps) {
   const params = await searchParams;
   const requestedPage = parsePage(params.pagina);
   const publicationPage = await getPublicStoriesPage(requestedPage, PUBLICATION_PAGE_SIZE);
-  const guides = getEditorialGuides();
-  const publications = publicationPage.hasClubStories ? publicationPage.stories : [];
-  const hasClubStories = publicationPage.hasClubStories;
-  const totalPages = hasClubStories ? Math.max(1, Math.ceil(publicationPage.total / publicationPage.pageSize)) : 1;
+  const publications = publicationPage.stories;
+  const totalPages = Math.max(1, Math.ceil(publicationPage.total / publicationPage.pageSize));
   const paginationItems = getPaginationItems(totalPages, publicationPage.page);
-  const guidesClassName = publications.length > 0
-    ? styles.guides
-    : `${styles.guides} ${styles.guidesCompact}`;
   const currentYear = new Date().getFullYear();
 
   return (
@@ -191,24 +196,11 @@ export default async function RevistaPage({ searchParams }: RevistaPageProps) {
               </nav>
             ) : null}
           </section>
-        ) : null}
-
-        {guides.length > 0 ? (
-          <section className={guidesClassName}>
-            <div className={styles.sectionHeading}>
-              <div>
-                <SectionLabel>Lecturas y maquetas editoriales</SectionLabel>
-                <h2>Referencias para <span>empezar.</span></h2>
-              </div>
-              <p>Las tarjetas indican si son ejemplos de diseño o información de Rotary International. No son historias publicadas por el club.</p>
-            </div>
-            <div className={styles.guideGrid}>
-              {guides.map((guide, index) => (
-                <StoryCard key={guide.id} story={guide} featured={index === 0} />
-              ))}
-            </div>
+        ) : (
+          <section className={styles.issueEmpty}>
+            <p className={styles.issueEmptyText}>Pronto publicaremos las primeras historias del club.</p>
           </section>
-        ) : null}
+        )}
 
         <section className={styles.joinBand}>
           <div>

@@ -87,3 +87,6 @@
 .historyList strong { color: #2c496b; font-size: 13px; }
 .historyList span { color: #718197; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
 .historyList .historyReason { color: #425873; font-style: italic; }
+.publisherToggle { border-top: 1px solid #e8eef6; display: grid; gap: 8px; margin-top: 18px; padding-top: 18px; }
+.publisherToggle label { align-items: center; color: #425873; display: flex; font-size: 13px; font-weight: 600; gap: 10px; }
+.publisherToggle input { height: 16px; width: 16px; }

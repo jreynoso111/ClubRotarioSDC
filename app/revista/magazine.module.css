@@ -502,7 +502,7 @@
   .heroActions .buttonPrimary { font-size: 7px; gap: 5px; padding: 8px 6px; }
 }
 
-.guidesCompact {
-  border-top: 0;
-  padding-top: clamp(42px, 5vw, 68px);
-}
+.issueEmpty { animation: reveal .8s .25s ease-out both; padding: 96px 0 104px; }
+.issueEmptyText { color: var(--ink-soft); font-family: Georgia, "Times New Roman", serif; font-size: clamp(26px, 3.2vw, 40px); letter-spacing: -.03em; line-height: 1.15; margin: 0; max-width: 640px; }
+.issueEmptyActions { align-items: center; display: flex; flex-wrap: wrap; gap: 28px; margin-top: 30px; }
+.issueEmptyActions button, .issueEmptyActions a { background: none; border: 0; border-bottom: 1px solid var(--ink); color: var(--ink); cursor: pointer; font: inherit; font-size: 11px; font-weight: 800; letter-spacing: .07em; padding: 0 0 7px; text-transform: uppercase; }

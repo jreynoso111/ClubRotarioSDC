@@ -41,6 +41,10 @@ export type PlatformSnapshot = {
   capabilities: {
     canCoordinate: boolean;
     canEdit: boolean;
+    // Editors, club managers and admins (with a recent second factor) can prepare magazine stories.
+    canWriteStories: boolean;
+    // Only the database decides who may publish; a failed check leaves publishing hidden.
+    canPublishStories: boolean;
     canManageClub: boolean;
     canManageFinances: boolean;
     canManageCommittees: boolean;
@@ -60,7 +64,6 @@ export type PlatformSnapshot = {
   activities: PlatformActivity[];
   tasks: PlatformTask[];
   committees: PlatformCommittee[];
-  stories: PlatformStory[];
   notifications: PlatformNotification[];
   messages: PlatformMessage[];
   memberDirectory: PlatformDirectoryMember[];
@@ -196,6 +199,8 @@ export type PlatformStory = {
   publishedAt: string | null;
   coverImagePath: string | null;
   authorId: string | null;
+  // Sent back unchanged with every save so a stale editor cannot overwrite newer text.
+  updatedAt: string;
 };
 
 export type PlatformNotification = {
@@ -338,19 +343,6 @@ type ActiveMembershipRow = {
   user_id: string;
 };
 
-type StoryRow = {
-  id: string;
-  title: string;
-  slug: string;
-  excerpt: string | null;
-  content: string;
-  story_type: string;
-  status: string;
-  is_public: boolean;
-  published_at: string | null;
-  cover_image_path: string | null;
-  author_id: string | null;
-};
 
 type NotificationRow = {
   id: string;
@@ -436,6 +428,8 @@ function emptySnapshot(
     capabilities: {
       canCoordinate: false,
       canEdit: false,
+      canWriteStories: false,
+      canPublishStories: false,
       canManageClub: false,
       canManageFinances: false,
       canManageCommittees: false,
@@ -455,7 +449,6 @@ function emptySnapshot(
     activities: [],
     tasks: [],
     committees: [],
-    stories: [],
     notifications: [],
     messages: [],
     memberDirectory: [],
@@ -479,6 +472,12 @@ async function readPrivilegedSecurityState(supabase: Awaited<ReturnType<typeof c
   } catch {
     return "verify";
   }
+}
+
+// The database answers for the signed-in caller (role, active membership and the publisher flag).
+async function readCanPublishStories(supabase: Awaited<ReturnType<typeof createClient>>) {
+  const { data, error } = await readQuery<boolean>(supabase.rpc("can_publish_stories"));
+  return !error && data === true;
 }
 
 export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
@@ -555,9 +554,12 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
   const securityState = isActive ? await readPrivilegedSecurityState(supabase, role) : "not_required";
   // Mirror the database: without a recent second factor, privileged roles act as members.
   const effectiveRole: PlatformRole = securityState === "enroll" || securityState === "verify" ? "member" : role;
+  const canWriteStories = isActive && ["editor", "club_manager", "admin"].includes(effectiveRole);
   const capabilities = {
     canCoordinate: isActive && ["coordinator", "club_manager", "admin"].includes(effectiveRole),
     canEdit: isActive && ["editor", "club_manager", "admin"].includes(effectiveRole),
+    canWriteStories,
+    canPublishStories: canWriteStories && await readCanPublishStories(supabase),
     canManageClub: isActive && ["club_manager", "admin"].includes(effectiveRole),
     canManageFinances: isActive && ["club_manager", "admin"].includes(effectiveRole),
     canManageCommittees: isActive && (effectiveRole === "admin" || effectiveRole === "club_manager"),
@@ -614,7 +616,6 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
     tasksResult,
     committeesResult,
     committeeMembersResult,
-    storiesResult,
     notificationsResult,
     directoryResult,
     committeeCandidatesResult,
@@ -651,13 +652,6 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
       readEveryPage((first, last) => supabase.from("committee_members").select("committee_id,user_id,committee_role")
         .order("committee_id").order("user_id").range(first, last)),
     ),
-    readQuery<StoryRow[]>(
-      supabase
-        .from("stories")
-        .select("id,title,slug,excerpt,content,story_type,status,is_public,published_at,cover_image_path,author_id")
-        .order("updated_at", { ascending: false })
-        .limit(30),
-    ),
     readQuery<NotificationRow[]>(
       supabase
         .from("notifications")
@@ -686,7 +680,6 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
     [tasksResult, "tareas"],
     [committeesResult, "comités"],
     [committeeMembersResult, "integrantes de comités"],
-    [storiesResult, "publicaciones"],
     [directoryResult, "directorio"],
     ...(capabilities.canManageMembership ? [[committeeCandidatesResult, "integrantes activos"] as const] : []),
   ] as const;
@@ -996,19 +989,6 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
       assigneeId: task.assignee_id,
     })),
     committees,
-    stories: ((storiesResult.data ?? []) as StoryRow[]).map((story) => ({
-      id: story.id,
-      title: story.title,
-      slug: story.slug,
-      excerpt: story.excerpt,
-      content: story.content,
-      storyType: story.story_type,
-      status: story.status,
-      isPublic: story.is_public,
-      publishedAt: story.published_at,
-      coverImagePath: story.cover_image_path,
-      authorId: story.author_id,
-    })),
     notifications: ((notificationsResult.data ?? []) as NotificationRow[]).map((notification) => ({
       id: notification.id,
       kind: notification.kind,

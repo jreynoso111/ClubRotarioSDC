@@ -13,7 +13,7 @@ import { membershipApplicationStatusLabels } from "@/lib/membership-applications
 import type { PlatformActionResult } from "./actions";
 import {
   getMemberAccessHistoryAction, listManagedMembersAction, listPendingMembersAction, rejectPendingMemberAction,
-  updateMemberAccessAction, updateMemberProfileAction, type ManagedMember, type MemberAccessHistoryEntry, type PendingMember,
+  setStoryPublisherAction, updateMemberAccessAction, updateMemberProfileAction, type ManagedMember, type MemberAccessHistoryEntry, type PendingMember,
 } from "./members-actions";
 import styles from "./management.module.css";
 
@@ -165,6 +165,9 @@ export function MembersManager({ currentUserId, committees, tasks, initialMember
         <details className={styles.detail}><summary>Editar nombre y perfil</summary>{canEditProfile ? <form className={styles.form} onSubmit={saveProfile}><label>Nombre completo<input name="name" defaultValue={selected.name} required minLength={2} maxLength={120} /></label><label>Perfil y ocupación<textarea name="bio" defaultValue={selected.bio ?? ""} maxLength={4000} placeholder="Ocupación, intereses y experiencia del miembro" /></label><button className={styles.button} disabled={pending}>Guardar ficha</button></form> : <p className={styles.empty}>Solo un administrador puede modificar esta cuenta.</p>}</details>
         <details className={styles.detail}><summary>Acceso y notas de la membresía</summary>{canEditAccess ? <AccessForm member={selected} actorRole={actorRole} busy={pending} onSave={saveAccess} /> : <p className={styles.empty}>{isSelf ? "Otro administrador debe modificar el acceso de tu propia cuenta." : "Solo un administrador puede modificar esta cuenta."}</p>}</details>
         <AccessHistoryDetails userId={selected.userId} />
+        {isManagement && selected.role === "editor" && selected.status === "active"
+          ? <StoryPublisherToggle member={selected} busy={pending} onChange={enabled => run(() => setStoryPublisherAction(selected.userId, enabled))} />
+          : null}
         <h4 className={styles.sectionTitle}>Comités y responsabilidades</h4>{selectedCommittees.length ? <ul className={styles.list}>{selectedCommittees.map(committee => <li key={committee.id}>{committee.name}{committee.isActive ? "" : " · Terminado"}</li>)}</ul> : <p className={styles.muted}>Aún sin comités asignados. Puedes añadirlo desde Comités.</p>}
         <h4 className={styles.sectionTitle}>Tareas asignadas</h4>{selectedTasks.length ? <ul className={styles.list}>{selectedTasks.map(task => <li key={task.id}>{task.title} · {["done", "cancelled"].includes(task.status) ? "Cerrada" : "En seguimiento"}</li>)}</ul> : <p className={styles.muted}>Aún no tiene tareas asignadas. Puedes crear una en Actividades.</p>}
       </article> : <article className={styles.card}><p className={styles.empty}>Selecciona un miembro para consultar su ficha.</p></article>}
@@ -254,6 +257,15 @@ function PendingMemberRow({ member, busy, onApprove, onReject, onOpenApplication
       <button type="button" className={styles.dangerButton} disabled={busy} onClick={() => setRejecting(true)}>Rechazar</button>
     </div>}
   </article>;
+}
+
+// Publishing in the magazine is a separate grant for active editors. Management changes it; the database checks the change.
+function StoryPublisherToggle({ member, busy, onChange }: { member: ManagedMember; busy: boolean; onChange: (enabled: boolean) => void }) {
+  return <div className={styles.publisherToggle}>
+    <h4 className={styles.sectionTitle}>Revista</h4>
+    <label><input type="checkbox" checked={member.canPublishStories} disabled={busy} onChange={event => onChange(event.currentTarget.checked)} /> Puede publicar en la Revista</label>
+    <p className={styles.muted}>Permite publicar, pasar a borrador, archivar y eliminar textos. Sin este permiso, la persona escribe borradores y los envía a revisión.</p>
+  </div>;
 }
 
 // The history is requested the first time the panel opens, so the list does not load for every card.

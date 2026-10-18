@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState, useTransition } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 
@@ -17,20 +16,34 @@ const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const storyTypeLabels: Record<string, string> = { cronica: "Crónica", voces: "Voces del club", archivo: "Archivo", noticia: "Noticia", otro: "Historia" };
 
+type StoryStatus = "draft" | "review" | "published" | "archived";
 type Draft = {
   title: string; excerpt: string; body: string; pullQuote: string; storyType: string;
-  status: "draft" | "published"; coverImageAlt: string; inlineImageAlt: string; inlineImageCaption: string;
+  status: StoryStatus; coverImageAlt: string; inlineImageAlt: string; inlineImageCaption: string;
   inlineImageAfterParagraph: string; inlineImageAlignment: EditorialImageAlignment;
 };
 type SelectedImage = { file: File; url: string };
 type GalleryDraftImage = { id: string; path: string | null; url: string; alt: string; caption: string; file?: File };
+
+const storyStatuses: StoryStatus[] = ["draft", "review", "published", "archived"];
+const statusHelp: Record<StoryStatus, string> = {
+  draft: "El borrador solo se ve en esta plataforma. Puedes seguir editándolo.",
+  review: "Quedará en revisión. La gestión o una persona editora autorizada la revisará antes de publicarla.",
+  published: "Al guardar, la publicación y sus fotografías quedarán visibles en la revista de la web.",
+  archived: "Archivada, deja de verse en la revista pública.",
+};
+const publisherMessage = "Solo la gestión o una persona autorizada puede publicar o modificar textos publicados.";
+
+function storyStatusOf(story?: PlatformStory): StoryStatus {
+  return storyStatuses.find(status => status === story?.status) ?? "draft";
+}
 
 function draftFromStory(story?: PlatformStory): Draft {
   const content = story ? parseEditorialContent(story.content) : null;
   return {
     title: story?.title ?? "", excerpt: story?.excerpt ?? "", body: content?.body ?? story?.content ?? "",
     pullQuote: content?.pullQuote ?? "", storyType: story?.storyType ?? "cronica",
-    status: story?.status === "published" ? "published" : "draft", coverImageAlt: content?.coverImageAlt ?? "",
+    status: storyStatusOf(story), coverImageAlt: content?.coverImageAlt ?? "",
     inlineImageAlt: content?.inlineImageAlt ?? "", inlineImageCaption: content?.inlineImageCaption ?? "",
     inlineImageAfterParagraph: String(content?.inlineImageAfterParagraph ?? 0), inlineImageAlignment: content?.inlineImageAlignment ?? "right",
   };
@@ -74,12 +87,13 @@ function PublicationPreview({ draft, layoutId, coverUrl, inlineUrl, gallery }: {
   );
 }
 
-export function StoryComposerDialog({ canPublish, story }: { canPublish: boolean; story?: PlatformStory }) {
-  const router = useRouter();
+// The parent mounts this dialog only while it is open, so each opening starts from the latest stored story.
+export function StoryComposerDialog({ canPublish, story, onClose, onSaved }: {
+  canPublish: boolean; story?: PlatformStory; onClose: () => void; onSaved: (message: string) => void;
+}) {
   const titleId = useId();
   const layoutsId = useId();
   const originalContent = story ? parseEditorialContent(story.content) : null;
-  const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(() => draftFromStory(story));
   const [layoutId, setLayoutId] = useState<EditorialLayoutId>(() => originalContent?.layoutId ?? "portada");
   const [layoutsExpanded, setLayoutsExpanded] = useState(false);
@@ -89,7 +103,6 @@ export function StoryComposerDialog({ canPublish, story }: { canPublish: boolean
   const [gallery, setGallery] = useState<GalleryDraftImage[]>(() => (originalContent?.gallery ?? []).map((image) => ({ ...image, id: image.path, url: publicImageUrl(image.path) ?? "" })));
   const [pending, startTransition] = useTransition();
   const [feedback, setFeedback] = useState("");
-  const [feedbackError, setFeedbackError] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
   const inlineInputRef = useRef<HTMLInputElement>(null);
@@ -105,10 +118,8 @@ export function StoryComposerDialog({ canPublish, story }: { canPublish: boolean
 
   useEffect(() => {
     const dialog = dialogRef.current;
-    if (!dialog) return;
-    if (open && !dialog.open) dialog.showModal();
-    if (!open && dialog.open) dialog.close();
-  }, [open]);
+    if (dialog && !dialog.open) dialog.showModal();
+  }, []);
 
   useEffect(() => {
     const urls = objectUrls.current;
@@ -117,9 +128,7 @@ export function StoryComposerDialog({ canPublish, story }: { canPublish: boolean
 
   function closeDialog() {
     if (pending) return;
-    setOpen(false);
-    setFeedback("");
-    setFeedbackError(false);
+    onClose();
   }
 
   function changeField(field: keyof Draft, value: string) {
@@ -131,7 +140,6 @@ export function StoryComposerDialog({ canPublish, story }: { canPublish: boolean
     if (!file) return;
     if (!ALLOWED_IMAGE_TYPES.has(file.type) || file.size > MAX_IMAGE_BYTES) {
       setFeedback("Cada fotografía debe ser JPG, PNG o WebP y pesar 10 MB o menos.");
-      setFeedbackError(true);
       event.currentTarget.value = "";
       return;
     }
@@ -158,12 +166,10 @@ export function StoryComposerDialog({ canPublish, story }: { canPublish: boolean
     event.currentTarget.value = "";
     if (gallery.length + files.length > MAX_EDITORIAL_GALLERY_IMAGES) {
       setFeedback(`Puedes añadir hasta ${MAX_EDITORIAL_GALLERY_IMAGES} fotos al carrusel.`);
-      setFeedbackError(true);
       return;
     }
     if (files.some((file) => !ALLOWED_IMAGE_TYPES.has(file.type) || file.size > MAX_IMAGE_BYTES)) {
       setFeedback("Cada fotografía debe ser JPG, PNG o WebP y pesar 10 MB o menos.");
-      setFeedbackError(true);
       return;
     }
     const selected = files.map((file) => {
@@ -201,17 +207,25 @@ export function StoryComposerDialog({ canPublish, story }: { canPublish: boolean
     if (pending) return;
     if ((inlineImage || inlinePath) && !draft.inlineImageAlt.trim()) {
       setFeedback("Describe la fotografía de apoyo para que también sea accesible.");
-      setFeedbackError(true);
       return;
     }
     if (gallery.some((image) => !image.alt.trim())) {
       setFeedback("Describe cada fotografía del carrusel antes de guardar.");
-      setFeedbackError(true);
       return;
     }
-    const status = draft.status === "published" && canPublish ? "published" : "draft";
+    const status = draft.status;
+    if (!canPublish && (status === "published" || status === "archived")) {
+      setFeedback(publisherMessage);
+      return;
+    }
+    // Taking a published story off the magazine is visible to readers, so it is confirmed first.
+    if (story?.status === "published" && status !== "published") {
+      const question = status === "archived"
+        ? "¿Archivar esta publicación? Dejará de verse en la revista."
+        : "¿Quitar esta publicación de la revista? Dejará de verse en la web.";
+      if (!window.confirm(question)) return;
+    }
     setFeedback("");
-    setFeedbackError(false);
     startTransition(async () => {
       const uploadedPaths: string[] = [];
       try {
@@ -237,52 +251,31 @@ export function StoryComposerDialog({ canPublish, story }: { canPublish: boolean
         if (content.length > MAX_EDITORIAL_CONTENT_LENGTH) throw new Error("El texto supera el máximo permitido. Reduce el contenido y vuelve a intentar.");
         const result = await createStoryAction({
           storyId: story?.id, title: draft.title, excerpt: draft.excerpt, content,
-          storyType: draft.storyType, status, isPublic: status === "published",
+          storyType: draft.storyType, status,
           coverImagePath: coverImagePath ?? coverPath ?? "",
+          // The save only lands if nobody changed the story since this dialog opened.
+          expectedUpdatedAt: story?.updatedAt,
         });
         if (!result.ok) {
           if (uploadedPaths.length) await createClient().storage.from("club-public").remove(uploadedPaths);
           setFeedback(result.message);
-          setFeedbackError(true);
           return;
         }
-        // Once saved, these images belong to the article; later UI errors must not remove them.
+        // Once saved, these images belong to the article; the parent closes the dialog and reloads the list.
         uploadedPaths.length = 0;
-        for (const url of objectUrls.current) URL.revokeObjectURL(url);
-        objectUrls.current.clear();
-        setCoverImage(null);
-        setInlineImage(null);
-        setSavedAssets({ cover: coverImagePath ?? coverPath ?? null, inline: inlineImagePath ?? inlinePath ?? null });
-        setGallery(savedGallery);
-        if (coverInputRef.current) coverInputRef.current.value = "";
-        if (inlineInputRef.current) inlineInputRef.current.value = "";
-        if (galleryInputRef.current) galleryInputRef.current.value = "";
-        if (!story) { setDraft(draftFromStory()); setLayoutId("portada"); setSavedAssets({ cover: null, inline: null }); setGallery([]); }
-        setLayoutsExpanded(false);
-        setOpen(false);
-        setFeedback(story ? "Los cambios de la publicación quedaron guardados." : status === "published" ? "La publicación ya está en la revista." : "El borrador quedó guardado.");
-        router.refresh();
+        onSaved(result.message);
       } catch (error) {
         if (uploadedPaths.length) await createClient().storage.from("club-public").remove(uploadedPaths);
         setFeedback(error instanceof Error ? error.message : "No se pudo guardar la publicación.");
-        setFeedbackError(true);
       }
     });
   }
 
-  return (
-    <>
-      {story ? <span className={editor.editTrigger}><button className={styles.smallButtonQuiet} type="button" onClick={() => { setFeedback(""); setOpen(true); }}>Editar publicación</button>{feedback && !open ? <span className={styles.feedbackSuccess} role="status">{feedback}</span> : null}</span> : (
-        <article className={editor.composeCard}>
-          <div><p className={styles.cardLabel}>Gestionar la revista</p><h2 className={styles.cardTitle}>Publicaciones del club</h2><p>Escribe el contenido, añade sus fotografías y revisa el diseño antes de guardarlo.</p></div>
-          <button className={editor.newButton} type="button" onClick={() => { setFeedback(""); setOpen(true); }}><span aria-hidden="true">＋</span> Nueva publicación</button>
-          {feedback ? <p className={feedbackError ? styles.feedbackError : styles.feedbackSuccess} role={feedbackError ? "alert" : "status"}>{feedback}</p> : null}
-        </article>
-      )}
+  const saveLabel = story ? "Guardar cambios" : draft.status === "published" ? "Publicar en la revista" : draft.status === "review" ? "Enviar a revisión" : "Guardar borrador";
 
-      <dialog ref={dialogRef} className={editor.dialog} aria-labelledby={titleId}
-        onCancel={(event) => { event.preventDefault(); event.stopPropagation(); }}
-        onClose={() => { if (!pending) setOpen(false); }}>
+  return (
+    <dialog ref={dialogRef} className={editor.dialog} aria-labelledby={titleId}
+      onCancel={(event) => { event.preventDefault(); event.stopPropagation(); }}>
         <div className={editor.dialogHeader}>
           <div><p className={styles.cardLabel}>{story ? "Editar publicación" : "Nueva publicación"} · Revista</p><h2 id={titleId}>{story ? "Editar el contenido y su diseño" : "Preparar una publicación"}</h2><p>Completa el texto y las fotos. Al final podrás elegir el diseño y ver cómo quedará.</p></div>
           <button type="button" className={editor.closeButton} onClick={closeDialog} disabled={pending} aria-label="Cerrar formulario">×</button>
@@ -359,17 +352,21 @@ export function StoryComposerDialog({ canPublish, story }: { canPublish: boolean
           </fieldset>
 
           <div className={editor.publishRow}>
-            <label>Guardar como<select name="status" disabled={pending} value={draft.status} onChange={(event) => changeField("status", event.target.value)}><option value="draft">Borrador para seguir editando</option>{canPublish ? <option value="published">Publicación visible en la revista</option> : null}</select></label>
-            <p>{draft.status === "published" ? "Al guardar, esta publicación y sus fotografías quedarán visibles en la revista de la web." : "El borrador solo estará visible en este gestor. Puedes editarlo y publicarlo después."}</p>
+            <label>Estado<select name="status" disabled={pending} value={draft.status} onChange={(event) => changeField("status", event.target.value)}>
+              <option value="draft">Borrador</option>
+              <option value="review">{canPublish ? "En revisión" : "Enviar a revisión"}</option>
+              {canPublish ? <option value="published">Publicada en la revista</option> : null}
+              {canPublish ? <option value="archived">Archivada</option> : null}
+            </select></label>
+            <p>{statusHelp[draft.status]}</p>
           </div>
-          {feedback && open ? <p className={styles.feedbackError} role="alert">{feedback}</p> : null}
+          {feedback ? <p className={styles.feedbackError} role="alert">{feedback}</p> : null}
           <div className={editor.actions}>
-            <span>Al cerrar, el contenido escrito se conserva mientras sigas en esta página.</span>
+            <span>Al cerrar sin guardar, los cambios de esta ventana se pierden.</span>
             <button type="button" className={styles.buttonQuiet} onClick={closeDialog} disabled={pending}>Cerrar</button>
-            <button type="submit" className={editor.saveButton} disabled={pending}>{pending ? "Guardando…" : story ? "Guardar cambios" : draft.status === "published" ? "Publicar en la revista" : "Guardar borrador"}</button>
+            <button type="submit" className={editor.saveButton} disabled={pending}>{pending ? "Guardando…" : saveLabel}</button>
           </div>
         </form>
-      </dialog>
-    </>
+    </dialog>
   );
 }

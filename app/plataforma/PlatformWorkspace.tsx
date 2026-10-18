@@ -10,7 +10,6 @@ import type { FormEvent, ReactNode } from "react";
 import type { PlatformProposal, PlatformSnapshot, ProposalVoteChoice } from "@/lib/platform";
 import { PROPOSAL_LIMIT } from "@/lib/proposal-limits";
 import { defaultAuditFilters, type AuditPageResult } from "@/lib/audit";
-import { editorialLayouts, parseEditorialContent } from "@/lib/editorial-content";
 
 import {
   addMembershipApplicationNoteAction,
@@ -23,7 +22,6 @@ import {
   markNotificationReadAction,
   reviewMembershipApplicationAction,
   sendInternalMessageAction,
-  setStoryPublicationAction,
   setProposalVotingAction,
   submitProposalAction,
   updateTaskStatusAction,
@@ -39,7 +37,7 @@ import { ProposalCard } from "./ProposalCard";
 import { SignOutButton } from "./SignOutButton";
 import { PlatformEvents } from "./PlatformEvents";
 import { PlatformAudit } from "./PlatformAudit";
-import { StoryComposerDialog } from "./StoryComposerDialog";
+import { MagazineManager } from "./MagazineManager";
 import { MembershipPhotoManager } from "./MembershipPhotoManager";
 import { MfaNotice } from "./MfaNotice";
 import { formatClubDate } from "@/lib/club-date";
@@ -467,29 +465,7 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
         canManageMembers={snapshot.capabilities.canManageMembership} canManageCommittees={snapshot.capabilities.canManageCommittees}
         canManageOrganization={isAdministrator} onOpenApplications={() => selectTab("solicitudes")} />}
 
-      {tab === "revista" && <section className={styles.moduleGrid}>
-        <article className={`${styles.card} ${styles.cardWide} ${styles.storyArchiveCard}`}>
-          <div className={styles.storyArchiveHeading}><div><p className={styles.cardLabel}>Archivo editorial</p><h2 className={styles.cardTitle}>Publicaciones del club</h2></div><span className={styles.storyCount}>{snapshot.stories.length} {snapshot.stories.length === 1 ? "historia" : "historias"}</span></div>
-          {snapshot.stories.map(story => {
-            const editorial = parseEditorialContent(story.content);
-            const layoutName = editorialLayouts.find(layout => layout.id === editorial?.layoutId)?.name ?? "Formato anterior";
-            return <article className={styles.storyAdminRow} key={story.id}>
-              <div className={styles.storyAdminMeta}><span className={story.isPublic ? styles.storyPublished : styles.storyDraft}>{story.isPublic ? "Publicada" : statusLabels[story.status] ?? story.status}</span><span>{layoutName}</span><time>{story.publishedAt ? formatDate(story.publishedAt) : "Aún no publicada"}</time></div>
-              <h3>{story.isPublic ? <Link href={`/revista/${story.slug}`}>{story.title}</Link> : story.title}</h3>
-              <p>{story.excerpt ?? "Sin resumen todavía."}</p>
-              <div className={styles.storyAdminActions}>
-                {story.isPublic ? <Link href={`/revista/${story.slug}`} className={styles.storyTextLink}>Ver publicación ↗</Link> : <span className={styles.storyPrivateNote}>Solo equipo editorial</span>}
-                {snapshot.capabilities.canEdit ? <StoryComposerDialog canPublish={snapshot.capabilities.canEdit} story={story} /> : null}
-                {snapshot.capabilities.canEdit ? <button type="button" className={styles.smallButtonQuiet} disabled={pending} onClick={() => run(setStoryPublicationAction(story.id, !story.isPublic))}>{story.isPublic ? "Pasar a borrador" : "Publicar"}</button> : null}
-              </div>
-            </article>;
-          })}
-          {snapshot.stories.length === 0 ? <div className={styles.storyArchiveEmpty}><span>01 / ARCHIVO ABIERTO</span><h3>Aquí aparecerán las historias del club.</h3><p>La base de datos todavía no contiene publicaciones propias. Las lecturas de ejemplo en Revista son maquetas editoriales, no posts publicados.</p></div> : null}
-        </article>
-        {snapshot.capabilities.canEdit
-          ? <StoryComposerDialog canPublish={snapshot.capabilities.canEdit} />
-          : <article className={styles.card}><p className={styles.cardLabel}>Equipo editorial</p><h2 className={styles.cardTitle}>Una historia bien contada también sirve.</h2><EmptyState>El rol de edición puede preparar y publicar historias verificadas del club.</EmptyState></article>}
-      </section>}
+      {tab === "revista" && <MagazineManager canWrite={snapshot.capabilities.canWriteStories} canPublish={snapshot.capabilities.canPublishStories} />}
 
       {tab === "mensajes" && <section className={styles.moduleGrid}>
         <article className={`${styles.card} ${styles.cardWide}`}><p className={styles.cardLabel}>Avisos y conversaciones</p><h2 className={styles.cardTitle}>Lo importante, cerca.</h2>{snapshot.notifications.slice(0, 8).map(notification => <div className={styles.row} key={notification.id}><div><strong>{notification.title}</strong><small>{formatDate(notification.createdAt, true)} · {notification.readAt ? "Leído" : "Sin leer"}</small><span>{notification.body}</span></div>{!notification.readAt ? <button type="button" className={styles.smallButtonQuiet} disabled={pending} onClick={() => run(markNotificationReadAction(notification.id))}>Marcar leído</button> : null}</div>)}{snapshot.notifications.length === 0 && <EmptyState>No hay avisos nuevos.</EmptyState>}{snapshot.messages.slice(0, 8).map(message => <div className={styles.message} key={`${message.direction}-${message.id}`}><div><span className={styles.messageTag}>{message.direction === "inbox" ? "Recibido" : "Enviado"}</span><strong>{message.subject}</strong><small>{message.direction === "sent" ? `Para ${message.recipientNames.join(", ") || "destinatario no disponible"}` : message.senderName} · {formatDate(message.createdAt, true)}</small></div><p>{message.body}</p>{message.direction === "inbox" && !message.readAt ? <button type="button" className={styles.smallButtonQuiet} disabled={pending} onClick={() => run(markMessageReadAction(message.id))}>Marcar leído</button> : null}</div>)}{snapshot.messages.length === 0 && snapshot.messagingSchema.state === "ready" && <EmptyState>Tu buzón todavía está vacío.</EmptyState>}{snapshot.messagingSchema.state !== "ready" && <p className={styles.noticeMessage}>{snapshot.messagingSchema.message}</p>}</article>

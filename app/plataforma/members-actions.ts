@@ -26,6 +26,8 @@ export type ManagedMember = {
   approvedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  // Editors with this flag may publish in the magazine; management and admins always may.
+  canPublishStories: boolean;
 };
 
 export type PendingMember = {
@@ -57,6 +59,7 @@ type MembershipListRow = {
   approved_at: string | null;
   created_at: string;
   updated_at: string;
+  can_publish_stories: boolean;
 };
 type ProfileRow = { id: string; display_name: string | null; bio: string | null };
 type NoteRow = { user_id: string; notes: string | null };
@@ -138,7 +141,7 @@ export async function listManagedMembersAction(): Promise<PlatformActionResult &
   try {
     const [memberships, profiles] = await Promise.all([
       readEveryPage<MembershipListRow, unknown>((first, last) => actor.supabase.from("memberships")
-        .select("user_id,membership_role,membership_status,joined_at,approved_at,created_at,updated_at")
+        .select("user_id,membership_role,membership_status,joined_at,approved_at,created_at,updated_at,can_publish_stories")
         .order("created_at", { ascending: false }).order("user_id").range(first, last)),
       readEveryPage<ProfileRow, unknown>((first, last) => actor.supabase.from("profiles").select("id,display_name,bio")
         .order("id").range(first, last)),
@@ -153,7 +156,7 @@ export async function listManagedMembersAction(): Promise<PlatformActionResult &
         userId: row.user_id, name: fallbackName(profileById.get(row.user_id)?.display_name),
         bio: profileById.get(row.user_id)?.bio ?? null, role: row.membership_role, status: row.membership_status,
         notes: notes.get(row.user_id) ?? null, joinedAt: row.joined_at, approvedAt: row.approved_at,
-        createdAt: row.created_at, updatedAt: row.updated_at,
+        createdAt: row.created_at, updatedAt: row.updated_at, canPublishStories: row.can_publish_stories === true,
       })),
     };
   } catch {
@@ -226,6 +229,31 @@ export async function updateMemberAccessAction(input: {
   }
   revalidatePath("/plataforma");
   return { ok: true, message: `El acceso y las notas del miembro quedaron guardados.${emailNote}` };
+}
+
+function storyPublisherFailure(error: RpcError): PlatformActionResult {
+  const text = errorText(error);
+  if (error.code === "42501") return moduleFailure("Solo la gestión del club puede dar o quitar el permiso para publicar en la Revista.", "forbidden");
+  if (error.code === "22023" && text.includes("not_editor")) return moduleFailure("Solo se puede dar permiso de publicación a una persona con rol de edición activo.", "invalid");
+  if (error.code === "22023") return moduleFailure("No se puede cambiar este permiso. Revisa la persona indicada.", "invalid");
+  return moduleFailure("No se pudo cambiar el permiso de publicación. Vuelve a intentar.");
+}
+
+// Management grants or removes the magazine publishing flag of an active editor. The database checks the target and refuses self-changes.
+export async function setStoryPublisherAction(userId: string, enabled: boolean): Promise<PlatformActionResult> {
+  const { actor, error } = await requireModuleActor(managementRoles);
+  if (error || !actor) return error!;
+  if (!validUuid(userId) || typeof enabled !== "boolean") return moduleFailure("Elige una persona editora y si puede publicar.", "invalid");
+  if (userId === actor.userId) return moduleFailure("No puedes cambiar tu propio permiso de publicación.", "forbidden");
+  const { error: rpcError } = await actor.supabase.rpc("set_story_publisher", { _user_id: userId, _enabled: enabled });
+  if (rpcError) return storyPublisherFailure(rpcError);
+  revalidatePath("/plataforma");
+  return {
+    ok: true,
+    message: enabled
+      ? "La persona editora ya puede publicar en la Revista."
+      : "La persona editora ya no puede publicar en la Revista.",
+  };
 }
 
 // Deletes a pending account and keeps a rejection record. The database checks that the account is still pending.

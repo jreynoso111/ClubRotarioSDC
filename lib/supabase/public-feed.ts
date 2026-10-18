@@ -1,7 +1,7 @@
 import "server-only";
 
+import { publicImageUrl } from "@/lib/editorial";
 import { isSupabaseConfigured } from "@/utils/supabase/config";
-import { toPublicSupabaseUrl } from "@/utils/supabase/public-url";
 import { createClient } from "@/utils/supabase/server";
 
 import { withPublicContentTimeout } from "./timeout";
@@ -29,17 +29,10 @@ export type PublicStory = {
   imageAlt?: string;
 };
 
-// Public events come from Supabase. Keep this empty so a missing connection
-// never presents synthetic activities as if they were real club events.
-const fallbackEvents: PublicEvent[] = [];
-
-// Evergreen editorial guides, never invented club activities or testimonies.
-const fallbackStories: PublicStory[] = [
-  { index: "01", type: "CONOCE ROTARY", title: "Una idea de amistad que se convirtió en servicio", excerpt: "Descubre el origen de Rotary International y cómo comenzó una red de personas comprometidas con sus comunidades.", color: "story-yellow", image: "/zona-colonial-illustration.png", imageAlt: "Ilustración de la Ciudad Colonial", href: "/revista/historia-de-rotary-international" },
-  { index: "02", type: "VIDA ROTARIA", title: "Un club, muchas maneras de aportar", excerpt: "Compañerismo, liderazgo y proyectos: conoce cómo se organiza Rotary y dónde puede encajar tu vocación de servicio.", color: "story-coral", href: "/revista/como-funciona-rotary" },
-  { index: "03", type: "NUESTRAS CAUSAS", title: "Siete causas para construir un futuro mejor", excerpt: "De la paz al medioambiente: las áreas de interés que orientan el servicio de Rotary en el mundo.", color: "story-teal", image: "/zona-colonial-courtyard.png", imageAlt: "Ilustración de un patio colonial", href: "/revista/areas-de-interes-de-rotary" },
-  { index: "04", type: "CIUDAD COLONIAL", title: "Una plaza que guarda nuestras conversaciones", excerpt: "Una publicación de prueba para contar cómo el lugar que compartimos también puede ser parte de la memoria del club.", color: "story-yellow", image: "/alcazar-colon-illustration.png", imageAlt: "Ilustración del Alcázar de Colón en la Plaza de España", href: "/revista/una-plaza-que-guarda-nuestras-conversaciones" },
-];
+export type PublicFeed = {
+  events: PublicEvent[];
+  stories: PublicStory[];
+};
 
 type EventRecord = {
   slug: string;
@@ -59,6 +52,13 @@ type StoryRecord = {
   story_type: string;
   cover_image_path: string | null;
 };
+
+// The home page only shows what the club has published. When nothing is
+// available (no connection, timeout or an empty store), both lists stay empty
+// and the page renders its own empty states.
+function emptyFeed(): PublicFeed {
+  return { events: [], stories: [] };
+}
 
 function formatEventDate(isoDate: string) {
   const date = new Date(isoDate);
@@ -109,7 +109,7 @@ function mapEvent(record: EventRecord): PublicEvent {
   };
 }
 
-function mapStory(record: StoryRecord, index: number, publicImageUrl?: string): PublicStory {
+function mapStory(record: StoryRecord, index: number, publicImageSrc?: string): PublicStory {
   const type =
     {
       cronica: "CRÓNICA",
@@ -127,18 +127,13 @@ function mapStory(record: StoryRecord, index: number, publicImageUrl?: string): 
     title: record.title,
     excerpt: record.excerpt ?? "Una historia de servicio del Club Rotario Santo Domingo Colonial.",
     color: colors[index % colors.length],
-    image: publicImageUrl,
+    image: publicImageSrc,
     imageAlt: record.title,
   };
 }
 
-export async function getPublicFeed(): Promise<{
-  events: PublicEvent[];
-  stories: PublicStory[];
-}> {
-  if (!isSupabaseConfigured()) {
-    return { events: fallbackEvents, stories: fallbackStories };
-  }
+export async function getPublicFeed(): Promise<PublicFeed> {
+  if (!isSupabaseConfigured()) return emptyFeed();
 
   try {
     const supabase = await createClient();
@@ -172,7 +167,7 @@ export async function getPublicFeed(): Promise<{
       null,
     );
 
-    if (!queryResult) return { events: fallbackEvents, stories: fallbackStories };
+    if (!queryResult) return emptyFeed();
 
     const [{ data: upcomingEventData }, { data: previousEventData }, { data: storyData }] = queryResult;
 
@@ -182,24 +177,12 @@ export async function getPublicFeed(): Promise<{
       ...upcomingEvents,
       ...previousEvents.slice(0, Math.max(0, 3 - upcomingEvents.length)),
     ];
-    const stories = ((storyData ?? []) as StoryRecord[]).map((story, index) => {
-      const imageUrl = story.cover_image_path?.startsWith("/")
-        ? story.cover_image_path
-        : story.cover_image_path?.startsWith("http")
-          ? story.cover_image_path
-          : story.cover_image_path
-            ? toPublicSupabaseUrl(
-                supabase.storage.from("club-public").getPublicUrl(story.cover_image_path).data.publicUrl,
-              )
-            : undefined;
-      return mapStory(story, index, imageUrl);
-    });
+    const stories = ((storyData ?? []) as StoryRecord[]).map((story, index) =>
+      mapStory(story, index, publicImageUrl(supabase, story.cover_image_path) ?? undefined),
+    );
 
-    return {
-      events: events.length > 0 ? events : fallbackEvents,
-      stories: stories.length > 0 ? stories : fallbackStories,
-    };
+    return { events, stories };
   } catch {
-    return { events: fallbackEvents, stories: fallbackStories };
+    return emptyFeed();
   }
 }

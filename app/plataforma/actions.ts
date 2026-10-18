@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { isMissingSchemaError, type ProposalVoteChoice } from "@/lib/platform";
+import { isMissingSchemaError, type PlatformStory, type ProposalVoteChoice } from "@/lib/platform";
 import { isSupabaseConfigured } from "@/utils/supabase/config";
 import { toPublicSupabaseUrl } from "@/utils/supabase/public-url";
 import { createClient } from "@/utils/supabase/server";
@@ -109,6 +109,7 @@ function isUuid(value: unknown): value is string {
   );
 }
 
+// The slug is a public link: it never ends with a dash, even after truncation.
 function slugify(value: string) {
   return value
     .normalize("NFD")
@@ -116,7 +117,8 @@ function slugify(value: string) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
-    .slice(0, 100);
+    .slice(0, 100)
+    .replace(/-+$/g, "");
 }
 
 function dateToIso(value: unknown) {
@@ -209,11 +211,6 @@ async function requireActor(requiredRoles: PlatformRole[] = []):
   }
 
   return { actor: { supabase, userId: userData.user.id, role } };
-}
-
-// Magazine publishing.
-function canPublish(role: PlatformRole) {
-  return role === "editor" || role === "club_manager" || role === "admin";
 }
 
 // Coordination runs the agenda; editors run the magazine.
@@ -1208,100 +1205,340 @@ export async function removeCommitteeMemberAction(input: {
   return success("El integrante fue retirado del comité.");
 }
 
+// Magazine stories. The database owns the publishing rules: a trigger rejects (42501, publisher_required)
+// any change to a published or archived story and any deletion by someone who is not a publisher.
+const storyStatuses = ["draft", "review", "published", "archived"] as const;
+const storyTypes = ["cronica", "voces", "archivo", "noticia", "otro"] as const;
+const storyWriterRoles: PlatformRole[] = ["editor", "club_manager", "admin"];
+const storyPageSize = 20;
+const storySearchMaxLength = 120;
+const storyColumns = "id,title,slug,excerpt,content,story_type,status,is_public,published_at,cover_image_path,author_id,updated_at";
+const storyRecordColumns = "id,slug,status,published_at,cover_image_path,content,updated_at";
+// Static assets shipped with the site, such as /alcazar-colon-illustration.png. They never live in the bucket.
+const staticStoryAssetPattern = /^\/[A-Za-z0-9][A-Za-z0-9._-]{0,200}\.(?:jpe?g|png|webp|svg)$/i;
+
+type StoryStatus = (typeof storyStatuses)[number];
+type StoryType = (typeof storyTypes)[number];
+
+type StoryRow = {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt: string | null;
+  content: string;
+  story_type: string;
+  status: string;
+  is_public: boolean;
+  published_at: string | null;
+  cover_image_path: string | null;
+  author_id: string | null;
+  updated_at: string;
+};
+type StoryRecord = Pick<StoryRow, "id" | "slug" | "status" | "published_at" | "cover_image_path" | "content" | "updated_at">;
+
+export type StoryListResult = PlatformActionResult & {
+  stories: PlatformStory[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
+function storyFromRow(row: StoryRow): PlatformStory {
+  return {
+    id: row.id,
+    title: row.title,
+    slug: row.slug,
+    excerpt: row.excerpt,
+    content: row.content,
+    storyType: row.story_type,
+    status: row.status,
+    isPublic: row.is_public,
+    publishedAt: row.published_at,
+    coverImagePath: row.cover_image_path,
+    authorId: row.author_id,
+    updatedAt: row.updated_at,
+  };
+}
+
+function isStoryCoverPath(value: string) {
+  return isStoryAssetPath(value) || staticStoryAssetPattern.test(value);
+}
+
+// Files a story keeps in the bucket: cover, inline photo and carousel. Static site assets are never listed.
+function storyFilePaths(cover: string | null | undefined, content: string | null | undefined) {
+  const editorial = content ? parseEditorialContent(content) : null;
+  const paths = [cover, editorial?.inlineImagePath, ...(editorial?.gallery ?? []).map(image => image.path)];
+  return [...new Set(paths.filter((path): path is string => isStoryAssetPath(path)))];
+}
+
+// Runs after the database change is saved or deleted. A failed remove leaves a file behind, never a broken article.
+async function removeStoryFiles(supabase: Actor["supabase"], paths: string[]) {
+  const files = paths.filter(path => isStoryAssetPath(path));
+  if (files.length === 0) return;
+  try {
+    await supabase.storage.from("club-public").remove(files);
+  } catch {
+    // Best effort: the article itself is already saved or deleted.
+  }
+}
+
+function storyErrorFor(error: { code?: string | null; message?: string | null; details?: string | null } | null | undefined) {
+  const text = `${error?.message ?? ""} ${error?.details ?? ""}`;
+  if (error?.code === "42501" || text.includes("publisher_required")) {
+    return failure("Solo la gestión o una persona autorizada puede publicar o modificar textos publicados.", "forbidden");
+  }
+  if (error?.code === "23505" && /slug/i.test(text)) {
+    return failure("Ya existe un texto con ese título; cambia el título.", "conflict");
+  }
+  return errorFor(error);
+}
+
+function staleStoryFailure() {
+  return failure("Otra persona modificó este texto. Recarga para ver los cambios.", "conflict");
+}
+
+function missingStoryFailure() {
+  return failure("Esta publicación ya no está disponible. Actualiza la página y vuelve a intentar.", "invalid");
+}
+
+function storyStatusMessage(status: StoryStatus) {
+  if (status === "published") return "La historia ya es visible en el sitio.";
+  if (status === "review") return "La historia quedó en revisión.";
+  if (status === "archived") return "La historia quedó archivada.";
+  return "La historia quedó como borrador.";
+}
+
+function revalidateStoryRoutes(slug: string) {
+  revalidatePath("/plataforma");
+  revalidatePath("/");
+  revalidatePath("/revista");
+  revalidatePath(`/revista/${slug}`);
+}
+
+async function readStoryRecord(actor: Actor, storyId: string): Promise<{ story?: StoryRecord; error?: PlatformActionResult }> {
+  const { data, error } = await actor.supabase.from("stories").select(storyRecordColumns).eq("id", storyId).maybeSingle();
+  if (error) return { error: storyErrorFor(error) };
+  if (!data) return { error: missingStoryFailure() };
+  return { story: data as StoryRecord };
+}
+
+function escapeLikePattern(value: string) {
+  return value.replace(/[\\%_]/g, "\\$&");
+}
+
+function storyListFailure(message: string): StoryListResult {
+  return { ...failure(message, "invalid"), stories: [], total: 0, page: 1, pageSize: storyPageSize };
+}
+
+// Members see published stories only: the database policy filters the rows, so any active member may list.
+export async function listStoriesAction(input: {
+  status?: StoryStatus | "all";
+  type?: StoryType | "all";
+  search?: string;
+  page?: number;
+} = {}): Promise<StoryListResult> {
+  const { actor, error } = await requireActor();
+  if (error) return { ...error, stories: [], total: 0, page: 1, pageSize: storyPageSize };
+
+  const status = input?.status ?? "all";
+  const type = input?.type ?? "all";
+  if (status !== "all" && !storyStatuses.includes(status)) return storyListFailure("Elige un estado válido para la revista.");
+  if (type !== "all" && !storyTypes.includes(type)) return storyListFailure("Elige una sección válida para la revista.");
+  const search = typeof input?.search === "string" ? input.search.trim() : "";
+  if (search.length > storySearchMaxLength) return storyListFailure(`La búsqueda admite hasta ${storySearchMaxLength} caracteres.`);
+  const requestedPage = Math.trunc(Number(input?.page ?? 1));
+  let page = Number.isFinite(requestedPage) ? Math.min(500, Math.max(1, requestedPage)) : 1;
+
+  const loadPage = (pageNumber: number) => {
+    let query = actor!.supabase.from("stories").select(storyColumns, { count: "exact" });
+    if (status !== "all") query = query.eq("status", status);
+    if (type !== "all") query = query.eq("story_type", type);
+    if (search) query = query.ilike("title", `%${escapeLikePattern(search)}%`);
+    const first = (pageNumber - 1) * storyPageSize;
+    // updated_at alone can tie; the id keeps the order stable between pages.
+    return query.order("updated_at", { ascending: false }).order("id", { ascending: false }).range(first, first + storyPageSize - 1);
+  };
+
+  let { data, error: queryError, count } = await loadPage(page);
+  // A page emptied by an edit or a narrower filter falls back to the last page that still has stories.
+  if (!queryError && (data ?? []).length === 0 && page > 1) {
+    const lastPage = Math.max(1, Math.ceil((count ?? 0) / storyPageSize));
+    if (lastPage !== page) {
+      page = lastPage;
+      ({ data, error: queryError, count } = await loadPage(page));
+    }
+  }
+  if (queryError) return { ...errorFor(queryError), stories: [], total: 0, page, pageSize: storyPageSize };
+
+  return {
+    ok: true,
+    message: "",
+    page,
+    pageSize: storyPageSize,
+    total: count ?? 0,
+    stories: ((data ?? []) as StoryRow[]).map(storyFromRow),
+  };
+}
+
 export async function createStoryAction(input: {
   storyId?: string;
   title: string;
   excerpt?: string;
   content: string;
   storyType: string;
-  status?: "draft" | "published";
-  isPublic?: boolean;
+  // Always explicit: the status the user chose in the form, never a value left from an earlier opening.
+  status: StoryStatus;
   coverImagePath?: string;
+  // Required when editing: the updated_at value the editor loaded. A newer save by someone else is refused.
+  expectedUpdatedAt?: string;
 }): Promise<PlatformActionResult> {
-  const { actor, error } = await requireActor(["editor", "club_manager", "admin"]);
+  const { actor, error } = await requireActor(storyWriterRoles);
   if (error) return error;
 
+  const storyId = input?.storyId;
   const title = cleanText(input?.title, 180);
   const excerpt = optionalText(input?.excerpt, 1000);
   const content = typeof input?.content === "string" ? input.content.trim() : "";
-  const storyType = ["cronica", "voces", "archivo", "noticia", "otro"].includes(input?.storyType)
-    ? input.storyType
-    : "cronica";
-  const status = input?.status === "published" ? "published" : "draft";
+  const storyType = storyTypes.includes(input?.storyType as StoryType) ? input.storyType : "cronica";
+  const status = input?.status;
   const coverImagePath = optionalText(input?.coverImagePath, 500);
+  const expectedUpdatedAt = input?.expectedUpdatedAt;
   const editorial = parseEditorialContent(content);
-  if (!title || title.length < 3 || content.length > MAX_EDITORIAL_CONTENT_LENGTH || !editorial || (input?.storyId !== undefined && !isUuid(input.storyId))) {
+  if (!storyStatuses.includes(status)) return failure("Elige el estado de la publicación.", "invalid");
+  if (!title || title.length < 3 || content.length > MAX_EDITORIAL_CONTENT_LENGTH || !editorial || (storyId !== undefined && !isUuid(storyId))) {
     return failure("Completa el título, el texto y las imágenes válidas para una plantilla editorial.", "invalid");
   }
   if (editorial.inlineImagePath && !editorial.inlineImageAlt.trim()) {
     return failure("Describe la fotografía dentro del texto antes de guardar.", "invalid");
   }
-  if (status === "published" && !canPublish(actor!.role)) {
-    return failure("Tu rol puede preparar la publicación, pero un editor o gestor debe publicarla.", "forbidden");
-  }
-  let existing: { id: string; slug: string; published_at: string | null; cover_image_path: string | null } | null = null;
-  if (input.storyId) {
-    const { data, error: readError } = await actor!.supabase
-      .from("stories")
-      .select("id,slug,published_at,cover_image_path")
-      .eq("id", input.storyId)
-      .maybeSingle();
-    if (readError) return errorFor(readError);
-    if (!data) return failure("Esta publicación ya no está disponible. Actualiza la página y vuelve a intentar.", "invalid");
-    existing = data;
-  }
-  if (coverImagePath && !isStoryAssetPath(coverImagePath) && coverImagePath !== existing?.cover_image_path) {
+  if (coverImagePath && !isStoryCoverPath(coverImagePath)) {
     return failure("Selecciona una fotografía válida para esta publicación.", "invalid");
   }
-  // Preserve links and original publication date when editing an existing article.
+
+  let existing: StoryRecord | null = null;
+  if (storyId) {
+    const read = await readStoryRecord(actor!, storyId);
+    if (read.error) return read.error;
+    existing = read.story!;
+    if (!isTimestamp(expectedUpdatedAt)) return failure("Recarga la publicación antes de guardar los cambios.", "invalid");
+    if (existing.updated_at !== expectedUpdatedAt) return staleStoryFailure();
+  }
+
+  // Preserve links and the original publication date when editing an existing article.
   const slug = existing?.slug ?? slugify(title);
   if (!slug) return failure("El título no permite crear un enlace válido.", "invalid");
 
   const values = {
     title, excerpt, content, story_type: storyType, status,
-    is_public: status === "published" && Boolean(input?.isPublic),
-    published_at: status === "published" ? existing?.published_at ?? new Date().toISOString() : null,
+    is_public: status === "published",
+    // The first publication date is kept; leaving published or archived never clears it.
+    published_at: existing?.published_at ?? (status === "published" ? new Date().toISOString() : null),
     cover_image_path: coverImagePath,
+    updated_by: actor!.userId,
   };
-  const query = existing
-    ? actor!.supabase.from("stories").update(values).eq("id", existing.id)
+  const write = existing
+    // The conditional update is the real lock: a save that raced with another one matches no row.
+    ? actor!.supabase.from("stories").update(values).eq("id", existing.id).eq("updated_at", existing.updated_at)
     : actor!.supabase.from("stories").insert({ ...values, slug, author_id: actor!.userId, created_by: actor!.userId });
-  const { data, error: writeError } = await query.select("id").maybeSingle();
-  if (writeError || !data) return errorFor(writeError);
+  const { data, error: writeError } = await write.select("id").maybeSingle();
+  if (writeError) return storyErrorFor(writeError);
+  if (!data) {
+    return existing ? staleStoryFailure() : failure("No se pudo guardar la publicación. Revisa los datos e inténtalo de nuevo.");
+  }
 
-  revalidatePath("/plataforma");
-  revalidatePath("/");
-  revalidatePath("/revista");
-  revalidatePath(`/revista/${slug}`);
-  return success(existing ? "Los cambios de la publicación quedaron guardados." : status === "published" ? "La historia fue publicada." : "La historia quedó como borrador.", data.id);
+  // Images the saved article no longer uses are removed only after the save succeeded.
+  if (existing) {
+    const kept = storyFilePaths(coverImagePath, content);
+    await removeStoryFiles(actor!.supabase, storyFilePaths(existing.cover_image_path, existing.content).filter(path => !kept.includes(path)));
+  }
+
+  revalidateStoryRoutes(slug);
+  const message = existing && existing.status === status ? "Los cambios de la publicación quedaron guardados." : storyStatusMessage(status);
+  return success(message, data.id);
 }
 
-export async function setStoryPublicationAction(
+// Publishing, unpublishing and archiving. The status is explicit and the save is conditional on updated_at.
+export async function setStoryStatusAction(
   storyId: string,
-  published: boolean,
+  status: "draft" | "published" | "archived",
+  expectedUpdatedAt: string,
 ): Promise<PlatformActionResult> {
-  const { actor, error } = await requireActor(["editor", "club_manager", "admin"]);
+  const { actor, error } = await requireActor(storyWriterRoles);
   if (error) return error;
-  if (!isUuid(storyId)) return failure("La publicación indicada no es válida.", "invalid");
+  if (!isUuid(storyId) || !["draft", "published", "archived"].includes(status)) {
+    return failure("La publicación o el estado indicado no son válidos.", "invalid");
+  }
+  if (!isTimestamp(expectedUpdatedAt)) return failure("Recarga la publicación antes de cambiar su estado.", "invalid");
+  const read = await readStoryRecord(actor!, storyId);
+  if (read.error) return read.error;
+  const story = read.story!;
+  if (story.updated_at !== expectedUpdatedAt) return staleStoryFailure();
 
-  const { data, error: updateError } = await actor!.supabase
-    .from("stories")
+  const published = status === "published";
+  const { data, error: updateError } = await actor!.supabase.from("stories")
     .update({
-      status: published ? "published" : "draft",
+      status,
       is_public: published,
-      published_at: published ? new Date().toISOString() : null,
+      published_at: story.published_at ?? (published ? new Date().toISOString() : null),
       updated_by: actor!.userId,
     })
     .eq("id", storyId)
-    .select("id,slug")
+    .eq("updated_at", expectedUpdatedAt)
+    .select("id")
     .maybeSingle();
-  if (updateError || !data) return errorFor(updateError);
+  if (updateError) return storyErrorFor(updateError);
+  if (!data) return staleStoryFailure();
+
+  revalidateStoryRoutes(story.slug);
+  return success(storyStatusMessage(status));
+}
+
+// Only a draft goes to review; the database notifies the publishers.
+export async function submitStoryForReviewAction(storyId: string, expectedUpdatedAt: string): Promise<PlatformActionResult> {
+  const { actor, error } = await requireActor(storyWriterRoles);
+  if (error) return error;
+  if (!isUuid(storyId)) return failure("La publicación indicada no es válida.", "invalid");
+  if (!isTimestamp(expectedUpdatedAt)) return failure("Recarga la publicación antes de enviarla a revisión.", "invalid");
+  const read = await readStoryRecord(actor!, storyId);
+  if (read.error) return read.error;
+  const story = read.story!;
+  if (story.updated_at !== expectedUpdatedAt) return staleStoryFailure();
+  if (story.status !== "draft") return failure("Solo un borrador puede enviarse a revisión.", "invalid");
+
+  const { data, error: updateError } = await actor!.supabase.from("stories")
+    .update({ status: "review", is_public: false, updated_by: actor!.userId })
+    .eq("id", storyId)
+    .eq("updated_at", expectedUpdatedAt)
+    .eq("status", "draft")
+    .select("id")
+    .maybeSingle();
+  if (updateError) return storyErrorFor(updateError);
+  if (!data) return staleStoryFailure();
 
   revalidatePath("/plataforma");
-  revalidatePath("/");
-  revalidatePath("/revista");
-  revalidatePath(`/revista/${data.slug}`);
-  return success(published ? "La historia ya es visible en el sitio." : "La historia volvió a borrador.");
+  return success("La publicación se envió a revisión. La gestión y las personas editoras autorizadas recibirán un aviso.");
+}
+
+// Deleting is publisher-only; the database refuses other roles before any row or file is removed.
+export async function deleteStoryAction(storyId: string): Promise<PlatformActionResult> {
+  const { actor, error } = await requireActor(storyWriterRoles);
+  if (error) return error;
+  if (!isUuid(storyId)) return failure("La publicación indicada no es válida.", "invalid");
+  const read = await readStoryRecord(actor!, storyId);
+  if (read.error) return read.error;
+  const story = read.story!;
+
+  const { data, error: deleteError } = await actor!.supabase.from("stories")
+    .delete()
+    .eq("id", storyId)
+    .select("id")
+    .maybeSingle();
+  if (deleteError) return storyErrorFor(deleteError);
+  if (!data) return missingStoryFailure();
+
+  await removeStoryFiles(actor!.supabase, storyFilePaths(story.cover_image_path, story.content));
+  revalidateStoryRoutes(story.slug);
+  return success("La publicación se eliminó definitivamente. Su registro queda en la auditoría.");
 }
 
 export type MembershipPhotoSlotsActionResult = {
