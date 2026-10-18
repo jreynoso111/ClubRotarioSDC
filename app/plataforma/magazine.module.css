@@ -1,4 +1,4 @@
-.magazineCard { min-height: 300px; }
+.magazineCard { grid-column: 1 / -1; min-height: 300px; }
 .heading { align-items: end; display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-between; margin-bottom: 12px; }
 .heading .cardLabel { margin-bottom: 8px; }
 .heading .cardTitle { margin: 0; }

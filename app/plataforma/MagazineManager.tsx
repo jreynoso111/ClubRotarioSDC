@@ -151,7 +151,7 @@ export function MagazineManager({ canWrite, canPublish }: { canWrite: boolean; c
 
   return (
     <section className={platform.moduleGrid} aria-label="Revista del club">
-      <article className={`${platform.card} ${platform.cardWide} ${styles.magazineCard}`}>
+      <article className={`${platform.card} ${styles.magazineCard}`}>
         <div className={styles.heading}>
           <div><p className={platform.cardLabel}>Revista del club</p><h2 className={platform.cardTitle}>Publicaciones</h2></div>
           <div className={styles.headingActions}>
