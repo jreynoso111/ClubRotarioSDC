@@ -734,3 +734,8 @@ Decisiones del usuario: avisar al miembro (plataforma y correo) al aprobar, camb
 
 - Petición del usuario: la contraseña temporal de «Crear miembro» debe ser una palabra corta y sencilla en español, no un código. `lib/temporary-password.ts` elige al azar (crypto) una palabra de 8 a 10 letras sin tildes ni ñ (p. ej. «mariposa»); el mínimo pasa de 12 a 8, el de Auth, porque se cambia obligatoriamente en el primer acceso. Al generarla se muestra en claro.
 - Commit `39a8098` en `main`; Node 207/207, lint y TypeScript. Publicado en `/srv/club-rotario/releases/20261018-184216`; `verify-deployment.mjs` 34/34 y el bloque público contiene la lista nueva.
+
+## Correo con los datos de acceso al crear un miembro · 2026-10-18
+
+- Petición del usuario: al crear la cuenta desde «Crear miembro», enviar al nuevo miembro un correo con sus credenciales. `memberCredentialsEmail` en `lib/email.ts` (correo, contraseña temporal, enlace `/auth/sign-in`, aviso de cambio obligatorio y de no compartir el mensaje); se envía por Resend solo cuando el alta terminó bien. El mensaje de éxito indica si salió el correo; si falla, pide entregar los datos en persona.
+- Commit `41f2ba1` en `main`; Node 208/208, lint y TypeScript. Publicado en `/srv/club-rotario/releases/20261018-185200` (con `RESEND_API_KEY`); `verify-deployment.mjs` 34/34. No se envió un correo real de prueba.
