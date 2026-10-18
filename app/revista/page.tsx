@@ -10,6 +10,7 @@ import {
   formatLongDate,
 } from "@/components/public/PublicChrome";
 import { getPublicStoriesPage, type PublicStory } from "@/lib/editorial";
+import { getSitePhotos } from "@/lib/site-photo-slots";
 import { getPublicSiteOrigin } from "@/utils/site-url";
 
 import styles from "./magazine.module.css";
@@ -101,7 +102,10 @@ function StoryCard({
 export default async function RevistaPage({ searchParams }: RevistaPageProps) {
   const params = await searchParams;
   const requestedPage = parsePage(params.pagina);
-  const publicationPage = await getPublicStoriesPage(requestedPage, PUBLICATION_PAGE_SIZE);
+  const [publicationPage, photos] = await Promise.all([
+    getPublicStoriesPage(requestedPage, PUBLICATION_PAGE_SIZE),
+    getSitePhotos(),
+  ]);
   const publications = publicationPage.stories;
   const totalPages = Math.max(1, Math.ceil(publicationPage.total / publicationPage.pageSize));
   const paginationItems = getPaginationItems(totalPages, publicationPage.page);
@@ -111,7 +115,7 @@ export default async function RevistaPage({ searchParams }: RevistaPageProps) {
     <PublicShell active="revista">
       <main className={styles.main}>
         <section className={styles.magazineBanner} aria-labelledby="revista-title">
-          <CoverArt src="/revista-banner-illustration.webp" alt="Ilustración editorial de una publicación sobre servicio y comunidad" className={styles.magazineBannerArt} priority />
+          <CoverArt src={photos["revista-banner"].url} alt={photos["revista-banner"].alt} className={styles.magazineBannerArt} priority />
           <div className={styles.bannerMasthead}>
             <span>Club Rotario Santo Domingo Colonial</span>
             <strong>Revista Colonial</strong>

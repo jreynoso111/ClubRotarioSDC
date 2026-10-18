@@ -1,0 +1,394 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1500 1000" width="1500" height="1000">
+<title>Retrato de grupo de los miembros del club frente a una arcada colonial</title>
+<defs>
+  <linearGradient id="skyG" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#7fb0d8"/>
+    <stop offset="0.6" stop-color="#cfe3ea"/>
+    <stop offset="1" stop-color="#f5dea6"/>
+  </linearGradient>
+  <linearGradient id="wallG" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#f1e3c2"/>
+    <stop offset="1" stop-color="#e2cb98"/>
+  </linearGradient>
+  <linearGradient id="plazaG" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#e6d3a8"/>
+    <stop offset="1" stop-color="#cfab7a"/>
+  </linearGradient>
+  <linearGradient id="shadeBand" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#5a3a22" stop-opacity="0.32"/>
+    <stop offset="1" stop-color="#5a3a22" stop-opacity="0"/>
+  </linearGradient>
+  <radialGradient id="archIn" cx="0.5" cy="0.85" r="0.85">
+    <stop offset="0" stop-color="#9a7550"/>
+    <stop offset="0.6" stop-color="#4a3424"/>
+    <stop offset="1" stop-color="#2a1d14"/>
+  </radialGradient>
+  <radialGradient id="vignette" cx="0.5" cy="0.45" r="0.75">
+    <stop offset="0.55" stop-color="#ffcf7a" stop-opacity="0"/>
+    <stop offset="0.85" stop-color="#5a3018" stop-opacity="0.16"/>
+    <stop offset="1" stop-color="#2e1a0c" stop-opacity="0.38"/>
+  </radialGradient>
+  <linearGradient id="sunWash" x1="0" y1="0" x2="1" y2="0.4">
+    <stop offset="0" stop-color="#ffe2a0" stop-opacity="0.25"/>
+    <stop offset="0.6" stop-color="#ffe2a0" stop-opacity="0"/>
+  </linearGradient>
+  <pattern id="stone" width="60" height="30" patternUnits="userSpaceOnUse">
+    <path d="M0,0.5 H60 M0,15.5 H60 M0.5,0 V15.5 M30.5,15.5 V30" fill="none" stroke="#b59f76" stroke-width="1.5" opacity="0.5"/>
+  </pattern>
+  <pattern id="tile" width="28" height="14" patternUnits="userSpaceOnUse">
+    <path d="M0,14 Q14,0 28,14" fill="none" stroke="#8f4a36" stroke-width="2"/>
+  </pattern>
+  <pattern id="bal" width="14" height="30" patternUnits="userSpaceOnUse">
+    <path d="M7,0 V30" stroke="#f1e4c6" stroke-width="2.2" opacity="0.8"/>
+  </pattern>
+  <pattern id="flags" width="90" height="45" patternUnits="userSpaceOnUse">
+    <path d="M0,0.5 H90 M0,22.5 H90 M0.5,0 V22.5 M45.5,22.5 V45 M22.5,0 V22.5" fill="none" stroke="#b09670" stroke-width="1.5" opacity="0.55"/>
+  </pattern>
+  <filter id="paint" x="-5%" y="-5%" width="110%" height="110%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="2" seed="13" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="5" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+  <filter id="grain" x="0" y="0" width="100%" height="100%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" seed="8" result="n"/>
+    <feColorMatrix in="n" type="matrix" values="0 0 0 0 0.24  0 0 0 0 0.15  0 0 0 0 0.08  1.2 0 0 0 -0.62"/>
+  </filter>
+
+  <!-- Engranaje dorado de Rotary (emblema simple) -->
+  <g id="wheel">
+    <circle r="40" fill="#f7a81b"/>
+    <g fill="#f7a81b">
+      <rect x="-7" y="-55" width="14" height="18"/>
+      <rect x="-7" y="-55" width="14" height="18" transform="rotate(45)"/>
+      <rect x="-7" y="-55" width="14" height="18" transform="rotate(90)"/>
+      <rect x="-7" y="-55" width="14" height="18" transform="rotate(135)"/>
+      <rect x="-7" y="-55" width="14" height="18" transform="rotate(180)"/>
+      <rect x="-7" y="-55" width="14" height="18" transform="rotate(225)"/>
+      <rect x="-7" y="-55" width="14" height="18" transform="rotate(270)"/>
+      <rect x="-7" y="-55" width="14" height="18" transform="rotate(315)"/>
+    </g>
+    <circle r="27" fill="#17458f"/>
+    <circle r="13" fill="#f7a81b"/>
+  </g>
+
+  <!-- Piezas reutilizables de las personas (color heredado desde el use) -->
+  <g id="p-torso"><path d="M-37,-238 Q-37,-252 -20,-252 L20,-252 Q37,-252 37,-238 L38,-150 Q38,-131 24,-130 L-24,-130 Q-38,-131 -38,-150 Z"/></g>
+  <g id="p-legs"><rect x="-27" y="-142" width="25" height="142" rx="9"/><rect x="2" y="-142" width="25" height="142" rx="9"/></g>
+  <g id="p-skirt"><path d="M-30,-136 L30,-136 Q40,-70 50,-14 Q0,-6 -50,-14 Q-40,-70 -30,-136 Z"/></g>
+  <g id="p-shoes"><ellipse cx="-14" cy="-4" rx="15" ry="6" fill="#3b2a20"/><ellipse cx="15" cy="-4" rx="15" ry="6" fill="#3b2a20"/></g>
+  <g id="p-neck"><rect x="-8" y="-266" width="16" height="22" rx="6"/></g>
+  <g id="p-head"><ellipse cx="0" cy="-278" rx="23" ry="26"/><ellipse cx="-23" cy="-276" rx="4" ry="6"/><ellipse cx="23" cy="-276" rx="4" ry="6"/></g>
+  <g id="p-hair-cap"><path d="M-25,-276 C-30,-318 30,-318 25,-276 C22,-292 12,-297 0,-296 C-12,-297 -22,-292 -25,-276 Z"/></g>
+  <g id="p-hair-long"><path d="M-28,-284 C-34,-322 34,-322 28,-284 L46,-196 Q0,-180 -46,-196 Z"/></g>
+  <g id="p-face"><circle cx="-8" cy="-279" r="2.3" fill="#2a1c14"/><circle cx="8" cy="-279" r="2.3" fill="#2a1c14"/><path d="M-6,-266 Q0,-260 6,-266" fill="none" stroke="#7a3f2e" stroke-width="2" stroke-linecap="round"/></g>
+</defs>
+
+<g filter="url(#paint)">
+  <!-- Cielo dorado -->
+  <rect x="0" y="0" width="1500" height="270" fill="url(#skyG)"/>
+  <g fill="#fff8ea" opacity="0.5">
+    <circle cx="220" cy="92" r="26"/><circle cx="270" cy="82" r="34"/><circle cx="326" cy="92" r="28"/><circle cx="180" cy="98" r="18"/><circle cx="372" cy="100" r="18"/>
+  </g>
+  <g fill="#fff8ea" opacity="0.5">
+    <circle cx="1120" cy="74" r="30"/><circle cx="1180" cy="60" r="40"/><circle cx="1246" cy="74" r="32"/><circle cx="1290" cy="84" r="20"/><circle cx="1080" cy="86" r="18"/>
+  </g>
+  <g fill="#fff8ea" opacity="0.45">
+    <circle cx="660" cy="42" r="20"/><circle cx="706" cy="34" r="26"/><circle cx="752" cy="44" r="18"/>
+  </g>
+
+  <!-- Fachada colonial: cornisa, galería superior y arcada -->
+  <rect x="0" y="226" width="1500" height="30" fill="#b5654a"/>
+  <rect x="0" y="226" width="1500" height="30" fill="url(#tile)"/>
+  <rect x="0" y="256" width="1500" height="12" fill="#efe2c2"/>
+  <rect x="0" y="268" width="1500" height="144" fill="url(#wallG)"/>
+  <rect x="0" y="268" width="1500" height="144" fill="url(#stone)" opacity="0.6"/>
+
+  <!-- Galería superior: aberturas con balaustres -->
+  <g>
+    <path d="M72,412 V326 A48,48 0 0 1 168,326 V412 Z" fill="#4d3a2a"/>
+    <path d="M72,412 V326 A48,48 0 0 1 168,326 V412 Z" fill="url(#bal)"/>
+    <path d="M282,412 V326 A48,48 0 0 1 378,326 V412 Z" fill="#4d3a2a"/>
+    <path d="M282,412 V326 A48,48 0 0 1 378,326 V412 Z" fill="url(#bal)"/>
+    <path d="M492,412 V326 A48,48 0 0 1 588,326 V412 Z" fill="#4d3a2a"/>
+    <path d="M492,412 V326 A48,48 0 0 1 588,326 V412 Z" fill="url(#bal)"/>
+    <path d="M702,412 V326 A48,48 0 0 1 798,326 V412 Z" fill="#4d3a2a"/>
+    <path d="M702,412 V326 A48,48 0 0 1 798,326 V412 Z" fill="url(#bal)"/>
+    <path d="M912,412 V326 A48,48 0 0 1 1008,326 V412 Z" fill="#4d3a2a"/>
+    <path d="M912,412 V326 A48,48 0 0 1 1008,326 V412 Z" fill="url(#bal)"/>
+    <path d="M1122,412 V326 A48,48 0 0 1 1218,326 V412 Z" fill="#4d3a2a"/>
+    <path d="M1122,412 V326 A48,48 0 0 1 1218,326 V412 Z" fill="url(#bal)"/>
+    <path d="M1332,412 V326 A48,48 0 0 1 1428,326 V412 Z" fill="#4d3a2a"/>
+    <path d="M1332,412 V326 A48,48 0 0 1 1428,326 V412 Z" fill="url(#bal)"/>
+  </g>
+  <rect x="0" y="412" width="1500" height="14" fill="#d9c49a"/>
+  <rect x="0" y="426" width="1500" height="8" fill="#5a3a22" opacity="0.18"/>
+
+  <!-- Arcada de la planta baja -->
+  <rect x="0" y="434" width="1500" height="166" fill="url(#wallG)"/>
+  <rect x="0" y="434" width="1500" height="166" fill="url(#stone)" opacity="0.6"/>
+  <g fill="none" stroke="#f7eedb" stroke-width="10">
+    <path d="M46,600 V500 A74,74 0 0 1 194,500 V600"/>
+    <path d="M256,600 V500 A74,74 0 0 1 404,500 V600"/>
+    <path d="M466,600 V500 A74,74 0 0 1 614,500 V600"/>
+    <path d="M676,600 V500 A74,74 0 0 1 824,500 V600"/>
+    <path d="M886,600 V500 A74,74 0 0 1 1034,500 V600"/>
+    <path d="M1096,600 V500 A74,74 0 0 1 1244,500 V600"/>
+    <path d="M1306,600 V500 A74,74 0 0 1 1454,500 V600"/>
+  </g>
+  <g fill="url(#archIn)">
+    <path d="M55,600 V500 A65,65 0 0 1 185,500 V600 Z"/>
+    <path d="M265,600 V500 A65,65 0 0 1 395,500 V600 Z"/>
+    <path d="M475,600 V500 A65,65 0 0 1 605,500 V600 Z"/>
+    <path d="M685,600 V500 A65,65 0 0 1 815,500 V600 Z"/>
+    <path d="M895,600 V500 A65,65 0 0 1 1025,500 V600 Z"/>
+    <path d="M1105,600 V500 A65,65 0 0 1 1235,500 V600 Z"/>
+    <path d="M1315,600 V500 A65,65 0 0 1 1445,500 V600 Z"/>
+  </g>
+  <rect x="0" y="600" width="1500" height="14" fill="#cdb88f"/>
+
+  <!-- Plaza -->
+  <rect x="0" y="614" width="1500" height="386" fill="url(#plazaG)"/>
+  <rect x="0" y="614" width="1500" height="386" fill="url(#flags)"/>
+  <rect x="0" y="614" width="1500" height="46" fill="url(#shadeBand)"/>
+  <ellipse cx="750" cy="790" rx="720" ry="170" fill="#fff1c8" opacity="0.18"/>
+
+  <!-- Palmeras laterales -->
+  <g>
+    <path d="M44,650 Q52,460 60,300 L72,300 Q64,460 58,650 Z" fill="#9a7650"/>
+    <g transform="translate(66 296)">
+      <g fill="#4f6e3d">
+        <ellipse cx="0" cy="-54" rx="12" ry="58" transform="rotate(-80)"/>
+        <ellipse cx="0" cy="-54" rx="12" ry="58" transform="rotate(-50)"/>
+        <ellipse cx="0" cy="-54" rx="12" ry="58" transform="rotate(-15)"/>
+        <ellipse cx="0" cy="-54" rx="12" ry="58" transform="rotate(20)"/>
+        <ellipse cx="0" cy="-54" rx="12" ry="58" transform="rotate(55)"/>
+        <ellipse cx="0" cy="-54" rx="12" ry="58" transform="rotate(85)"/>
+      </g>
+      <g fill="#6f8f5e">
+        <ellipse cx="0" cy="-48" rx="8" ry="50" transform="rotate(-35)"/>
+        <ellipse cx="0" cy="-48" rx="8" ry="50" transform="rotate(5)"/>
+        <ellipse cx="0" cy="-48" rx="8" ry="50" transform="rotate(40)"/>
+      </g>
+      <circle cx="-6" cy="14" r="9" fill="#6b4a2a"/>
+      <circle cx="8" cy="16" r="9" fill="#6b4a2a"/>
+    </g>
+  </g>
+  <g transform="translate(1500 0) scale(-1 1)">
+    <path d="M44,650 Q52,460 60,300 L72,300 Q64,460 58,650 Z" fill="#9a7650"/>
+    <g transform="translate(66 296)">
+      <g fill="#4f6e3d">
+        <ellipse cx="0" cy="-54" rx="12" ry="58" transform="rotate(-80)"/>
+        <ellipse cx="0" cy="-54" rx="12" ry="58" transform="rotate(-50)"/>
+        <ellipse cx="0" cy="-54" rx="12" ry="58" transform="rotate(-15)"/>
+        <ellipse cx="0" cy="-54" rx="12" ry="58" transform="rotate(20)"/>
+        <ellipse cx="0" cy="-54" rx="12" ry="58" transform="rotate(55)"/>
+        <ellipse cx="0" cy="-54" rx="12" ry="58" transform="rotate(85)"/>
+      </g>
+      <g fill="#6f8f5e">
+        <ellipse cx="0" cy="-48" rx="8" ry="50" transform="rotate(-35)"/>
+        <ellipse cx="0" cy="-48" rx="8" ry="50" transform="rotate(5)"/>
+        <ellipse cx="0" cy="-48" rx="8" ry="50" transform="rotate(40)"/>
+      </g>
+      <circle cx="-6" cy="14" r="9" fill="#6b4a2a"/>
+      <circle cx="8" cy="16" r="9" fill="#6b4a2a"/>
+    </g>
+  </g>
+
+  <!-- Sombras de los pies -->
+  <g fill="#5a3a22" opacity="0.22">
+    <ellipse cx="150" cy="702" rx="50" ry="9"/>
+    <ellipse cx="370" cy="702" rx="50" ry="9"/>
+    <ellipse cx="590" cy="702" rx="50" ry="9"/>
+    <ellipse cx="910" cy="702" rx="50" ry="9"/>
+    <ellipse cx="1130" cy="702" rx="50" ry="9"/>
+    <ellipse cx="1350" cy="702" rx="50" ry="9"/>
+    <ellipse cx="350" cy="884" rx="60" ry="12"/>
+    <ellipse cx="580" cy="884" rx="60" ry="12"/>
+    <ellipse cx="920" cy="884" rx="60" ry="12"/>
+    <ellipse cx="1150" cy="884" rx="60" ry="12"/>
+  </g>
+
+  <!-- Fila trasera (escala 0.98, pies en y=700) -->
+  <!-- B1: mujer, polo azul con cuello dorado -->
+  <g transform="translate(150 700) scale(0.98)">
+    <use href="#p-hair-long" fill="#2a1f1a"/>
+    <use href="#p-legs" fill="#3a4456"/>
+    <use href="#p-shoes"/>
+    <use href="#p-torso" fill="#17458f"/>
+    <path d="M-12,-252 L0,-240 L12,-252" fill="none" stroke="#f7a81b" stroke-width="3"/>
+    <circle cx="-17" cy="-220" r="5.5" fill="#f7a81b"/>
+    <path d="M-33,-236 L-40,-188" stroke="#17458f" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M-40,-188 L-44,-132" stroke="#8d5a3b" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <path d="M33,-236 L40,-188" stroke="#17458f" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M40,-188 L44,-132" stroke="#8d5a3b" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <use href="#p-neck" fill="#8d5a3b"/>
+    <g transform="rotate(-3 0 -270)"><use href="#p-head" fill="#8d5a3b"/><use href="#p-hair-cap" fill="#2a1f1a"/><use href="#p-face"/></g>
+  </g>
+
+  <!-- B2: hombre, polo dorado con cuello azul -->
+  <g transform="translate(370 700) scale(0.98)">
+    <use href="#p-legs" fill="#5c4d3e"/>
+    <use href="#p-shoes"/>
+    <use href="#p-torso" fill="#f7a81b"/>
+    <path d="M-12,-252 L0,-240 L12,-252" fill="none" stroke="#17458f" stroke-width="3"/>
+    <circle cx="-17" cy="-220" r="5.5" fill="#17458f"/>
+    <path d="M-33,-236 L-40,-188" stroke="#f7a81b" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M-40,-188 L-44,-132" stroke="#c68c63" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <path d="M33,-236 L40,-188" stroke="#f7a81b" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M40,-188 L44,-132" stroke="#c68c63" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <use href="#p-neck" fill="#c68c63"/>
+    <g transform="rotate(3 0 -270)"><use href="#p-head" fill="#c68c63"/><use href="#p-hair-cap" fill="#241c18"/><use href="#p-face"/></g>
+  </g>
+
+  <!-- B3: mujer, blusa crema y falda -->
+  <g transform="translate(590 700) scale(0.98)">
+    <use href="#p-hair-long" fill="#5a3a28"/>
+    <use href="#p-skirt" fill="#e8d9b8"/>
+    <use href="#p-shoes"/>
+    <use href="#p-torso" fill="#f4efe4"/>
+    <path d="M-33,-236 L-40,-188" stroke="#f4efe4" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M-40,-188 L-44,-132" stroke="#e0b48d" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <path d="M33,-236 L40,-188" stroke="#f4efe4" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M40,-188 L44,-132" stroke="#e0b48d" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <use href="#p-neck" fill="#e0b48d"/>
+    <g transform="rotate(-4 0 -270)"><use href="#p-head" fill="#e0b48d"/><use href="#p-hair-cap" fill="#5a3a28"/><use href="#p-face"/></g>
+  </g>
+
+  <!-- B4: hombre, polo azul con cuello dorado -->
+  <g transform="translate(910 700) scale(0.98)">
+    <use href="#p-legs" fill="#3a4456"/>
+    <use href="#p-shoes"/>
+    <use href="#p-torso" fill="#17458f"/>
+    <path d="M-12,-252 L0,-240 L12,-252" fill="none" stroke="#f7a81b" stroke-width="3"/>
+    <circle cx="-17" cy="-220" r="5.5" fill="#f7a81b"/>
+    <path d="M-33,-236 L-40,-188" stroke="#17458f" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M-40,-188 L-44,-132" stroke="#6b4227" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <path d="M33,-236 L40,-188" stroke="#17458f" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M40,-188 L44,-132" stroke="#6b4227" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <use href="#p-neck" fill="#6b4227"/>
+    <g transform="rotate(2 0 -270)"><use href="#p-head" fill="#6b4227"/><use href="#p-hair-cap" fill="#1c1714"/><use href="#p-face"/></g>
+  </g>
+
+  <!-- B5: mujer, vestido sage y cabello largo -->
+  <g transform="translate(1130 700) scale(0.98)">
+    <use href="#p-hair-long" fill="#3b2519"/>
+    <use href="#p-skirt" fill="#6f8f5e"/>
+    <use href="#p-shoes"/>
+    <use href="#p-torso" fill="#6f8f5e"/>
+    <path d="M-33,-236 L-40,-188" stroke="#6f8f5e" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M-40,-188 L-44,-132" stroke="#f0c9a5" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <path d="M33,-236 L40,-188" stroke="#6f8f5e" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M40,-188 L44,-132" stroke="#f0c9a5" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <use href="#p-neck" fill="#f0c9a5"/>
+    <g transform="rotate(4 0 -270)"><use href="#p-head" fill="#f0c9a5"/><use href="#p-hair-cap" fill="#3b2519"/><use href="#p-face"/></g>
+  </g>
+
+  <!-- B6: hombre mayor, camisa azul, cabello gris -->
+  <g transform="translate(1350 700) scale(0.98)">
+    <use href="#p-legs" fill="#5c4d3e"/>
+    <use href="#p-shoes"/>
+    <use href="#p-torso" fill="#2d5a94"/>
+    <path d="M-33,-236 L-40,-188" stroke="#2d5a94" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M-40,-188 L-44,-132" stroke="#8d5a3b" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <path d="M33,-236 L40,-188" stroke="#2d5a94" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M40,-188 L44,-132" stroke="#8d5a3b" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <use href="#p-neck" fill="#8d5a3b"/>
+    <g transform="rotate(-2 0 -270)"><use href="#p-head" fill="#8d5a3b"/><use href="#p-hair-cap" fill="#bdb6ad"/><use href="#p-face"/></g>
+  </g>
+
+  <!-- Fila delantera (escala 1.12, pies en y=880) -->
+  <!-- F1: hombre, polo azul con cuello dorado -->
+  <g transform="translate(350 880) scale(1.12)">
+    <use href="#p-legs" fill="#3a4456"/>
+    <use href="#p-shoes"/>
+    <use href="#p-torso" fill="#17458f"/>
+    <path d="M-12,-252 L0,-240 L12,-252" fill="none" stroke="#f7a81b" stroke-width="3"/>
+    <circle cx="-17" cy="-220" r="5.5" fill="#f7a81b"/>
+    <path d="M-33,-236 L-40,-188" stroke="#17458f" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M-40,-188 L-44,-132" stroke="#e0b48d" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <path d="M33,-236 L40,-188" stroke="#17458f" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M40,-188 L44,-132" stroke="#e0b48d" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <use href="#p-neck" fill="#e0b48d"/>
+    <g transform="rotate(-5 0 -270)"><use href="#p-head" fill="#e0b48d"/><use href="#p-hair-cap" fill="#3a2c24"/><use href="#p-face"/></g>
+  </g>
+
+  <!-- Estandarte azul con engranaje dorado (queda detrás de las manos de F2 y F3) -->
+  <rect x="632" y="594" width="236" height="226" fill="#17458f"/>
+  <rect x="642" y="604" width="216" height="206" fill="none" stroke="#f7a81b" stroke-width="5"/>
+  <use href="#wheel" transform="translate(750 705) scale(0.95)"/>
+  <rect x="632" y="812" width="236" height="8" fill="#f7a81b"/>
+
+  <!-- F2: mujer, sostiene el estandarte con la mano derecha -->
+  <g transform="translate(580 880) scale(1.12)">
+    <use href="#p-hair-long" fill="#6b3d22"/>
+    <use href="#p-skirt" fill="#2d5a94"/>
+    <use href="#p-shoes"/>
+    <use href="#p-torso" fill="#6f8f5e"/>
+    <path d="M-33,-236 L-40,-188" stroke="#6f8f5e" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M-40,-188 L-44,-132" stroke="#c68c63" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <path d="M33,-236 L50,-214" stroke="#6f8f5e" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M50,-214 L46,-258" stroke="#c68c63" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <use href="#p-neck" fill="#c68c63"/>
+    <g transform="rotate(4 0 -270)"><use href="#p-head" fill="#c68c63"/><use href="#p-hair-cap" fill="#6b3d22"/><use href="#p-face"/></g>
+  </g>
+
+  <!-- F3: hombre, sostiene el estandarte con la mano izquierda -->
+  <g transform="translate(920 880) scale(1.12)">
+    <use href="#p-legs" fill="#5c4d3e"/>
+    <use href="#p-shoes"/>
+    <use href="#p-torso" fill="#f7a81b"/>
+    <path d="M-12,-252 L0,-240 L12,-252" fill="none" stroke="#17458f" stroke-width="3"/>
+    <circle cx="-17" cy="-220" r="5.5" fill="#17458f"/>
+    <path d="M-33,-236 L-50,-214" stroke="#f7a81b" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M-50,-214 L-46,-258" stroke="#6b4227" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <path d="M33,-236 L40,-188" stroke="#f7a81b" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M40,-188 L44,-132" stroke="#6b4227" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <use href="#p-neck" fill="#6b4227"/>
+    <g transform="rotate(-2 0 -270)"><use href="#p-head" fill="#6b4227"/><use href="#p-hair-cap" fill="#1c1714"/><use href="#p-face"/></g>
+  </g>
+
+  <!-- F4: mujer, vestido rosado -->
+  <g transform="translate(1150 880) scale(1.12)">
+    <use href="#p-hair-long" fill="#1c1714"/>
+    <use href="#p-skirt" fill="#c97b7b"/>
+    <use href="#p-shoes"/>
+    <use href="#p-torso" fill="#c97b7b"/>
+    <path d="M-33,-236 L-40,-188" stroke="#c97b7b" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M-40,-188 L-44,-132" stroke="#e0b48d" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <path d="M33,-236 L40,-188" stroke="#c97b7b" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M40,-188 L44,-132" stroke="#e0b48d" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <use href="#p-neck" fill="#e0b48d"/>
+    <g transform="rotate(-3 0 -270)"><use href="#p-head" fill="#e0b48d"/><use href="#p-hair-cap" fill="#1c1714"/><use href="#p-face"/></g>
+  </g>
+
+  <!-- Asta del estandarte, sostenida en los extremos por F2 y F3 -->
+  <line x1="631" y1="591" x2="869" y2="591" stroke="#8a6a3c" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="631" cy="591" r="7" fill="#f7a81b"/>
+  <circle cx="869" cy="591" r="7" fill="#f7a81b"/>
+
+  <!-- Macetas de piedra en las esquinas -->
+  <g>
+    <rect x="18" y="930" width="130" height="60" rx="6" fill="#d9c49a"/>
+    <rect x="12" y="922" width="142" height="14" rx="4" fill="#efe2c2"/>
+    <circle cx="50" cy="906" r="24" fill="#5e7d4a"/>
+    <circle cx="92" cy="898" r="26" fill="#6f8f5e"/>
+    <circle cx="128" cy="912" r="20" fill="#4f6e3d"/>
+    <circle cx="60" cy="890" r="9" fill="#c94f7c"/>
+    <circle cx="84" cy="880" r="8" fill="#f7a81b"/>
+    <circle cx="112" cy="892" r="9" fill="#e07a9b"/>
+    <circle cx="40" cy="904" r="7" fill="#f7a81b"/>
+    <rect x="1350" y="930" width="130" height="60" rx="6" fill="#d9c49a"/>
+    <rect x="1346" y="922" width="142" height="14" rx="4" fill="#efe2c2"/>
+    <circle cx="1400" cy="906" r="24" fill="#5e7d4a"/>
+    <circle cx="1362" cy="898" r="26" fill="#6f8f5e"/>
+    <circle cx="1424" cy="912" r="20" fill="#4f6e3d"/>
+    <circle cx="1440" cy="890" r="9" fill="#c94f7c"/>
+    <circle cx="1414" cy="880" r="8" fill="#f7a81b"/>
+    <circle cx="1388" cy="892" r="9" fill="#e07a9b"/>
+    <circle cx="1460" cy="904" r="7" fill="#f7a81b"/>
+  </g>
+</g>
+
+<rect x="0" y="0" width="1500" height="1000" fill="url(#sunWash)"/>
+<rect x="0" y="0" width="1500" height="1000" fill="url(#vignette)"/>
+<rect x="0" y="0" width="1500" height="1000" filter="url(#grain)" opacity="0.5"/>
+</svg>

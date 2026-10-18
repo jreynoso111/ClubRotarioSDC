@@ -7,6 +7,8 @@ import {
   PublicShell,
   SectionLabel,
 } from "@/components/public/PublicChrome";
+import { getSitePhotos } from "@/lib/site-photo-slots";
+import { SITE_PHOTO_SLOTS } from "@/lib/site-photos";
 
 import styles from "./about.module.css";
 
@@ -119,12 +121,17 @@ const clubStructure = [
   },
 ];
 
-export default function NosotrosPage() {
+// The three photos of "La vida del club", in display order. Each shows its caption or the default one.
+const lifeSlots = SITE_PHOTO_SLOTS.filter((slot) => slot.section === "nosotros" && slot.hasCaption);
+
+export default async function NosotrosPage() {
+  const photos = await getSitePhotos();
+
   return (
     <PublicShell active="nosotros">
       <main className={styles.main}>
         <section className={styles.aboutBanner} aria-labelledby="about-title">
-          <CoverArt src="/alcazar-colon-illustration.png" alt="Ilustración del Alcázar de Colón en la Ciudad Colonial de Santo Domingo" className={styles.aboutBannerArt} priority />
+          <CoverArt src={photos["nosotros-banner"].url} alt={photos["nosotros-banner"].alt} className={styles.aboutBannerArt} priority />
           <div className={styles.aboutBannerContent}>
             <div className={styles.aboutBannerTop}>
               <SectionLabel>El club · Historia y relación</SectionLabel>
@@ -162,7 +169,7 @@ export default function NosotrosPage() {
           </div>
           <div className={styles.historyLead}>
             <p>El Club Rotario Santo Domingo Colonial nació en 1969 y desde entonces forma parte de la conversación rotaria en la República Dominicana: personas que se reúnen, se reconocen y se organizan para servir.</p>
-            <p>Esta línea de tiempo reúne referencias públicas. La plataforma permitirá sumar actas, fotografías, presidentes y proyectos cuando el club los entregue y valide.</p>
+            <p>Esta línea de tiempo reúne referencias públicas. La plataforma permitirá sumar actas, presidentes y proyectos cuando el club los entregue y valide.</p>
           </div>
           <div className={`${styles.timeline} ${styles.localTimeline}`}>
             {clubTimeline.map((item) => (
@@ -173,6 +180,28 @@ export default function NosotrosPage() {
             ))}
           </div>
           <a className={styles.sourceLink} href="https://rotaryca.org/publicaciones/personajes-inolvidables-leonidas-heyaime-valenzuela-pdg-1968-196/" target="_blank" rel="noreferrer">Ver la referencia histórica del club <ArrowUpRight /></a>
+        </section>
+
+        <section className={styles.life} id="vida-del-club" aria-labelledby="life-title">
+          <div className={styles.sectionHeading}>
+            <div><SectionLabel>La vida del club</SectionLabel><h2 id="life-title">Compañerismo, servicio y <span>personas de acción.</span></h2></div>
+            <p>Momentos reales de los socios: encuentros, proyectos y la foto de grupo que nos reúne.</p>
+          </div>
+          <div className={styles.lifeGrid}>
+            {lifeSlots.map((slot) => {
+              const photo = photos[slot.key];
+              const caption = photo.caption ?? slot.defaultCaption ?? "";
+              const [label, ...details] = caption.split(" · ");
+              return (
+                <figure className={styles.lifeCard} key={slot.key}>
+                  <CoverArt src={photo.url} alt={photo.alt} className={styles.lifeMedia} />
+                  <figcaption className={styles.lifeCaption}>
+                    {details.length > 0 ? <><strong>{label}</strong><span>{details.join(" · ")}</span></> : <span>{caption}</span>}
+                  </figcaption>
+                </figure>
+              );
+            })}
+          </div>
         </section>
 
         <section className={`${styles.history} ${styles.historyRotary}`} id="rotary-international">

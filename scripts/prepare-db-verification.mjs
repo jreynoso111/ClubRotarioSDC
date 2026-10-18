@@ -17,6 +17,7 @@ const suites = requested.length ? requested : [
   "club_membership_applications_rls_test.sql",
   "membership_application_rules_test.sql",
   "membership_photo_gallery_rls_test.sql",
+  "site_photo_slots_all_pages_test.sql",
 ];
 
 const blocks = suites.map((file) => {

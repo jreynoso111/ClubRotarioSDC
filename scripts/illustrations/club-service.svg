@@ -1,0 +1,396 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1500 1000" width="1500" height="1000">
+<title>Jornada de servicio comunitario en una calle colonial</title>
+<defs>
+  <linearGradient id="skyS" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#8fbadb"/>
+    <stop offset="0.5" stop-color="#d7e6e6"/>
+    <stop offset="0.85" stop-color="#f7e4bc"/>
+    <stop offset="1" stop-color="#f6d69a"/>
+  </linearGradient>
+  <radialGradient id="sunG">
+    <stop offset="0" stop-color="#fff6d8" stop-opacity="0.95"/>
+    <stop offset="0.5" stop-color="#ffe7a8" stop-opacity="0.4"/>
+    <stop offset="1" stop-color="#ffe7a8" stop-opacity="0"/>
+  </radialGradient>
+  <radialGradient id="lampGlow">
+    <stop offset="0" stop-color="#fff1b8" stop-opacity="0.9"/>
+    <stop offset="0.45" stop-color="#ffd27a" stop-opacity="0.4"/>
+    <stop offset="1" stop-color="#ffd27a" stop-opacity="0"/>
+  </radialGradient>
+  <linearGradient id="sunWash" x1="0" y1="0" x2="1" y2="0.4">
+    <stop offset="0" stop-color="#ffe2a0" stop-opacity="0.28"/>
+    <stop offset="0.6" stop-color="#ffe2a0" stop-opacity="0"/>
+  </linearGradient>
+  <radialGradient id="vignette" cx="0.5" cy="0.45" r="0.75">
+    <stop offset="0.55" stop-color="#ffcf7a" stop-opacity="0"/>
+    <stop offset="0.85" stop-color="#5a3018" stop-opacity="0.16"/>
+    <stop offset="1" stop-color="#2e1a0c" stop-opacity="0.38"/>
+  </radialGradient>
+  <pattern id="stone" width="60" height="30" patternUnits="userSpaceOnUse">
+    <path d="M0,0.5 H60 M0,15.5 H60 M0.5,0 V15.5 M30.5,15.5 V30" fill="none" stroke="#b59f76" stroke-width="1.5" opacity="0.5"/>
+  </pattern>
+  <pattern id="tile" width="28" height="14" patternUnits="userSpaceOnUse">
+    <path d="M0,14 Q14,0 28,14" fill="none" stroke="#8f4a36" stroke-width="2"/>
+  </pattern>
+  <pattern id="rail" width="10" height="40" patternUnits="userSpaceOnUse">
+    <path d="M5,0 V40" stroke="#2f2b28" stroke-width="2.5"/>
+  </pattern>
+  <pattern id="cobbles" width="44" height="26" patternUnits="userSpaceOnUse">
+    <ellipse cx="11" cy="7" rx="10" ry="5.5" fill="#c3a878" stroke="#8f7a55" stroke-width="1.2"/>
+    <ellipse cx="33" cy="20" rx="10" ry="5.5" fill="#c3a878" stroke="#8f7a55" stroke-width="1.2"/>
+    <ellipse cx="33" cy="-6" rx="10" ry="5.5" fill="#c3a878" stroke="#8f7a55" stroke-width="1.2"/>
+  </pattern>
+  <pattern id="flags" width="60" height="30" patternUnits="userSpaceOnUse">
+    <path d="M0,0.5 H60 M0,15.5 H60 M30,0 V15 M0,15 V30" fill="none" stroke="#b09670" stroke-width="1.5" opacity="0.6"/>
+  </pattern>
+  <filter id="paint" x="-5%" y="-5%" width="110%" height="110%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="2" seed="11" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="5" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+  <filter id="grain" x="0" y="0" width="100%" height="100%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" seed="5" result="n"/>
+    <feColorMatrix in="n" type="matrix" values="0 0 0 0 0.24  0 0 0 0 0.15  0 0 0 0 0.08  1.2 0 0 0 -0.62"/>
+  </filter>
+
+  <!-- Engranaje dorado de Rotary (emblema simple) -->
+  <g id="wheel">
+    <circle r="40" fill="#f7a81b"/>
+    <g fill="#f7a81b">
+      <rect x="-7" y="-55" width="14" height="18"/>
+      <rect x="-7" y="-55" width="14" height="18" transform="rotate(45)"/>
+      <rect x="-7" y="-55" width="14" height="18" transform="rotate(90)"/>
+      <rect x="-7" y="-55" width="14" height="18" transform="rotate(135)"/>
+      <rect x="-7" y="-55" width="14" height="18" transform="rotate(180)"/>
+      <rect x="-7" y="-55" width="14" height="18" transform="rotate(225)"/>
+      <rect x="-7" y="-55" width="14" height="18" transform="rotate(270)"/>
+      <rect x="-7" y="-55" width="14" height="18" transform="rotate(315)"/>
+    </g>
+    <circle r="27" fill="#17458f"/>
+    <circle r="13" fill="#f7a81b"/>
+  </g>
+
+  <!-- Ventana arqueada (origen en la base izquierda) y puerta azul -->
+  <g id="win">
+    <path d="M0,0 V-68 A32,32 0 0 1 64,-68 V0 Z" fill="#3b2d24"/>
+    <rect x="-10" y="-68" width="10" height="68" fill="#2d5a94"/>
+    <rect x="64" y="-68" width="10" height="68" fill="#2d5a94"/>
+  </g>
+  <g id="door">
+    <path d="M0,0 V-94 A37,37 0 0 1 74,-94 V0 Z" fill="#2d5a94"/>
+    <path d="M37,-94 V0 M10,-60 V-20 M64,-60 V-20" stroke="#1f416b" stroke-width="2" fill="none"/>
+  </g>
+  <g id="balc">
+    <rect x="0" y="-8" width="290" height="8" fill="#d6c294"/>
+    <rect x="0" y="-44" width="290" height="36" fill="url(#rail)"/>
+  </g>
+
+  <!-- Piezas reutilizables de las personas (color heredado desde el use) -->
+  <g id="p-torso"><path d="M-37,-238 Q-37,-252 -20,-252 L20,-252 Q37,-252 37,-238 L38,-150 Q38,-131 24,-130 L-24,-130 Q-38,-131 -38,-150 Z"/></g>
+  <g id="p-legs"><rect x="-27" y="-142" width="25" height="142" rx="9"/><rect x="2" y="-142" width="25" height="142" rx="9"/></g>
+  <g id="p-skirt"><path d="M-30,-136 L30,-136 Q40,-70 50,-14 Q0,-6 -50,-14 Q-40,-70 -30,-136 Z"/></g>
+  <g id="p-shoes"><ellipse cx="-14" cy="-4" rx="15" ry="6" fill="#3b2a20"/><ellipse cx="15" cy="-4" rx="15" ry="6" fill="#3b2a20"/></g>
+  <g id="p-neck"><rect x="-8" y="-266" width="16" height="22" rx="6"/></g>
+  <g id="p-head"><ellipse cx="0" cy="-278" rx="23" ry="26"/><ellipse cx="-23" cy="-276" rx="4" ry="6"/><ellipse cx="23" cy="-276" rx="4" ry="6"/></g>
+  <g id="p-hair-cap"><path d="M-25,-276 C-30,-318 30,-318 25,-276 C22,-292 12,-297 0,-296 C-12,-297 -22,-292 -25,-276 Z"/></g>
+  <g id="p-hair-long"><path d="M-28,-284 C-34,-322 34,-322 28,-284 L46,-196 Q0,-180 -46,-196 Z"/></g>
+  <g id="p-face"><circle cx="-8" cy="-279" r="2.3" fill="#2a1c14"/><circle cx="8" cy="-279" r="2.3" fill="#2a1c14"/><path d="M-6,-266 Q0,-260 6,-266" fill="none" stroke="#7a3f2e" stroke-width="2" stroke-linecap="round"/></g>
+</defs>
+
+<g filter="url(#paint)">
+  <!-- Cielo y sol de media tarde -->
+  <rect x="0" y="0" width="1500" height="660" fill="url(#skyS)"/>
+  <ellipse cx="250" cy="170" rx="420" ry="260" fill="url(#sunG)"/>
+
+  <!-- Iglesia y torre al fondo -->
+  <rect x="480" y="318" width="240" height="262" fill="#ece0c4"/>
+  <rect x="480" y="316" width="240" height="14" fill="#c4a27a"/>
+  <rect x="598" y="200" width="76" height="378" fill="#efe2c2"/>
+  <rect x="590" y="150" width="92" height="50" fill="#e6d4a8"/>
+  <g fill="#4a3a2c">
+    <rect x="606" y="160" width="8" height="34" rx="4"/>
+    <rect x="626" y="160" width="8" height="34" rx="4"/>
+    <rect x="646" y="160" width="8" height="34" rx="4"/>
+    <rect x="666" y="160" width="8" height="34" rx="4"/>
+  </g>
+  <path d="M590,150 Q636,62 682,150 Z" fill="#c9a878"/>
+  <path d="M636,106 V78 M626,90 H646" stroke="#6b4e2e" stroke-width="3"/>
+  <path d="M580,575 V512 A24,24 0 0 1 628,512 V575 Z" fill="#8a5a34"/>
+  <circle cx="650" cy="410" r="16" fill="#d9c49a" stroke="#a88b5c" stroke-width="3"/>
+  <rect x="598" y="420" width="76" height="6" fill="#c4a27a"/>
+
+  <!-- Edificios lejanos -->
+  <rect x="900" y="340" width="140" height="236" fill="#efe2c2"/>
+  <g fill="#3b2d24">
+    <rect x="922" y="380" width="22" height="40"/>
+    <rect x="960" y="380" width="22" height="40"/>
+    <rect x="922" y="450" width="22" height="40"/>
+    <rect x="960" y="450" width="22" height="40"/>
+  </g>
+  <rect x="470" y="330" width="90" height="246" fill="#d9a282"/>
+  <g fill="#7a4a34">
+    <rect x="488" y="370" width="18" height="34"/>
+    <rect x="516" y="370" width="18" height="34"/>
+    <rect x="488" y="440" width="18" height="34"/>
+    <rect x="516" y="440" width="18" height="34"/>
+  </g>
+
+  <!-- Hilo de banderines azules y dorados -->
+  <path d="M300,360 Q680,420 1060,350" fill="none" stroke="#3a2e24" stroke-width="1.5"/>
+  <path d="M369,371 H383 L376,387 Z" fill="#17458f"/>
+  <path d="M445,379 H459 L452,395 Z" fill="#f7a81b"/>
+  <path d="M521,384 H535 L528,400 Z" fill="#17458f"/>
+  <path d="M597,387 H611 L604,403 Z" fill="#f7a81b"/>
+  <path d="M673,388 H687 L680,404 Z" fill="#17458f"/>
+  <path d="M749,385 H763 L756,401 Z" fill="#f7a81b"/>
+  <path d="M825,380 H839 L832,396 Z" fill="#17458f"/>
+  <path d="M901,373 H915 L908,389 Z" fill="#f7a81b"/>
+  <path d="M977,363 H991 L984,379 Z" fill="#17458f"/>
+
+  <!-- Fachada intermedia izquierda -->
+  <rect x="330" y="250" width="140" height="400" fill="#efd9a4"/>
+  <rect x="330" y="250" width="140" height="400" fill="url(#stone)" opacity="0.5"/>
+  <rect x="330" y="240" width="140" height="16" fill="#c4a27a"/>
+  <use href="#win" x="360" y="330"/>
+  <use href="#win" x="360" y="460"/>
+  <rect x="352" y="560" width="50" height="60" fill="#3b2d24"/>
+
+  <!-- Fachada intermedia derecha -->
+  <rect x="1040" y="250" width="150" height="360" fill="#efd9a4"/>
+  <rect x="1040" y="250" width="150" height="360" fill="url(#stone)" opacity="0.5"/>
+  <rect x="1040" y="240" width="150" height="16" fill="#c4a27a"/>
+  <use href="#win" x="1064" y="330"/>
+  <use href="#win" x="1064" y="460"/>
+  <use href="#door" x="1092" y="640"/>
+
+  <!-- Fachada cercana izquierda -->
+  <rect x="0" y="170" width="330" height="500" fill="#e6d9bc"/>
+  <rect x="0" y="170" width="330" height="500" fill="url(#stone)" opacity="0.6"/>
+  <rect x="0" y="168" width="330" height="20" fill="#c4a27a"/>
+  <use href="#win" x="36" y="320"/>
+  <use href="#win" x="126" y="320"/>
+  <use href="#win" x="216" y="320"/>
+  <use href="#balc" x="20" y="448"/>
+  <use href="#win" x="36" y="440"/>
+  <use href="#win" x="216" y="440"/>
+  <rect x="40" y="560" width="84" height="80" fill="#3b2d24"/>
+  <rect x="40" y="560" width="84" height="80" fill="url(#rail)"/>
+  <use href="#door" x="176" y="660"/>
+
+  <!-- Fachada cercana derecha (terracota con cantería) -->
+  <rect x="1190" y="170" width="310" height="500" fill="#b5654a"/>
+  <rect x="1190" y="170" width="310" height="500" fill="url(#stone)" opacity="0.4"/>
+  <rect x="1190" y="170" width="22" height="500" fill="#efe2c2"/>
+  <rect x="1478" y="170" width="22" height="500" fill="#efe2c2"/>
+  <rect x="1190" y="166" width="310" height="16" fill="#efe2c2"/>
+  <rect x="1190" y="166" width="310" height="16" fill="url(#tile)" opacity="0.6"/>
+  <use href="#win" x="1236" y="320"/>
+  <use href="#win" x="1400" y="320"/>
+  <use href="#balc" x="1214" y="448"/>
+  <use href="#win" x="1236" y="440"/>
+  <use href="#win" x="1400" y="440"/>
+  <use href="#door" x="1236" y="660"/>
+
+  <!-- Manchas de color en las fachadas -->
+  <g fill="#f3e0b0" opacity="0.12">
+    <ellipse cx="180" cy="430" rx="160" ry="40"/>
+    <ellipse cx="1340" cy="260" rx="170" ry="40"/>
+    <ellipse cx="1100" cy="500" rx="80" ry="40"/>
+  </g>
+
+  <!-- Acera y calzada -->
+  <path d="M0,640 L700,575 L800,575 L1500,640 V1000 H0 Z" fill="#d8c49c"/>
+  <path d="M0,640 L700,575 L800,575 L1500,640 V1000 H0 Z" fill="url(#flags)"/>
+  <path d="M200,1000 L700,575 L800,575 L1260,1000 Z" fill="#b89c70"/>
+  <path d="M200,1000 L700,575 L800,575 L1260,1000 Z" fill="url(#cobbles)"/>
+  <path d="M200,1000 L700,575 M1260,1000 L800,575" stroke="#efe3c8" stroke-width="10" fill="none"/>
+
+  <!-- Árboles de la acera -->
+  <rect x="52" y="630" width="18" height="190" fill="#6e4a30"/>
+  <g fill="#5e7d4a">
+    <circle cx="60" cy="500" r="80"/>
+    <circle cx="20" cy="560" r="60"/>
+    <circle cx="110" cy="560" r="62"/>
+  </g>
+  <g fill="#6f8f5e">
+    <circle cx="70" cy="470" r="52"/>
+    <circle cx="36" cy="520" r="36"/>
+  </g>
+  <rect x="1430" y="640" width="18" height="180" fill="#6e4a30"/>
+  <g fill="#4f6e3d">
+    <circle cx="1440" cy="520" r="74"/>
+    <circle cx="1480" cy="560" r="60"/>
+    <circle cx="1380" cy="600" r="60"/>
+  </g>
+  <g fill="#5e7d4a">
+    <circle cx="1420" cy="490" r="48"/>
+  </g>
+
+  <!-- Faroles -->
+  <rect x="357" y="596" width="6" height="110" fill="#2a2a2a"/>
+  <rect x="352" y="582" width="16" height="18" rx="3" fill="#2a2a2a"/>
+  <circle cx="360" cy="591" r="24" fill="url(#lampGlow)"/>
+  <rect x="1107" y="604" width="6" height="120" fill="#2a2a2a"/>
+  <rect x="1102" y="590" width="16" height="18" rx="3" fill="#2a2a2a"/>
+  <circle cx="1110" cy="599" r="24" fill="url(#lampGlow)"/>
+
+  <!-- Árbol joven recién plantado (junto al voluntario) -->
+  <rect x="1236" y="880" width="110" height="56" rx="6" fill="#b5654a"/>
+  <rect x="1230" y="872" width="122" height="12" rx="3" fill="#9a5139"/>
+  <rect x="1244" y="878" width="94" height="6" fill="#5a3d2a"/>
+  <rect x="1270" y="700" width="8" height="180" fill="#6e4a30"/>
+  <rect x="1292" y="760" width="4" height="120" fill="#a77f52"/>
+  <rect x="1286" y="800" width="16" height="4" fill="#5a3d2a"/>
+  <g fill="#5e7d4a">
+    <circle cx="1274" cy="690" r="46"/>
+    <circle cx="1262" cy="745" r="26"/>
+  </g>
+  <g fill="#6f8f5e">
+    <circle cx="1240" cy="720" r="34"/>
+  </g>
+  <g fill="#4f6e3d">
+    <circle cx="1308" cy="720" r="34"/>
+  </g>
+  <circle cx="1274" cy="650" r="30" fill="#7f9f6e"/>
+
+  <!-- Voluntario plantando (agachado sobre la jardinera) -->
+  <g transform="translate(1210 1000) scale(1.15)">
+    <use href="#p-legs" fill="#2d3e5a"/>
+    <use href="#p-shoes"/>
+    <use href="#p-torso" fill="#17458f"/>
+    <path d="M-12,-252 L0,-240 L12,-252" fill="none" stroke="#f7a81b" stroke-width="3"/>
+    <circle cx="-17" cy="-220" r="5.5" fill="#f7a81b"/>
+    <path d="M-33,-236 L-40,-188" stroke="#17458f" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M-40,-188 L-44,-132" stroke="#e0b48d" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <path d="M33,-236 L44,-186" stroke="#17458f" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M44,-186 L56,-124" stroke="#e0b48d" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <use href="#p-neck" fill="#e0b48d"/>
+    <g transform="rotate(-10 0 -270)"><use href="#p-head" fill="#e0b48d"/><use href="#p-hair-cap" fill="#2a1f1a"/><use href="#p-face"/></g>
+  </g>
+
+  <!-- Voluntario 1 (detrás de la mesa) -->
+  <g transform="translate(470 790) scale(0.95)">
+    <use href="#p-torso" fill="#17458f"/>
+    <path d="M-12,-252 L0,-240 L12,-252" fill="none" stroke="#f7a81b" stroke-width="3"/>
+    <circle cx="-17" cy="-220" r="5.5" fill="#f7a81b"/>
+    <path d="M-33,-236 L-40,-188" stroke="#17458f" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M-40,-188 L-44,-132" stroke="#8d5a3b" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <path d="M33,-236 L40,-188" stroke="#17458f" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M40,-188 L44,-132" stroke="#8d5a3b" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <use href="#p-neck" fill="#8d5a3b"/>
+    <g transform="rotate(-4 0 -270)"><use href="#p-head" fill="#8d5a3b"/><use href="#p-hair-cap" fill="#1c1714"/><use href="#p-face"/></g>
+  </g>
+
+  <!-- Niña detrás de la mesa -->
+  <g transform="translate(600 760) scale(0.7)">
+    <use href="#p-torso" fill="#e8b75a"/>
+    <path d="M-33,-236 L-40,-188" stroke="#e8b75a" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M-40,-188 L-44,-132" stroke="#6b4227" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <path d="M33,-236 L40,-188" stroke="#e8b75a" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M40,-188 L44,-132" stroke="#6b4227" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <use href="#p-neck" fill="#6b4227"/>
+    <g transform="rotate(6 0 -270)"><use href="#p-head" fill="#6b4227"/><use href="#p-hair-cap" fill="#1c1714"/><use href="#p-face"/></g>
+  </g>
+
+  <!-- Voluntaria 2 (detrás de la mesa) -->
+  <g transform="translate(720 790) scale(0.95)">
+    <use href="#p-hair-long" fill="#2a1f1a"/>
+    <use href="#p-torso" fill="#17458f"/>
+    <path d="M-12,-252 L0,-240 L12,-252" fill="none" stroke="#f7a81b" stroke-width="3"/>
+    <circle cx="-17" cy="-220" r="5.5" fill="#f7a81b"/>
+    <path d="M-33,-236 L-40,-188" stroke="#17458f" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M-40,-188 L-44,-132" stroke="#c68c63" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <path d="M33,-236 L40,-188" stroke="#17458f" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M40,-188 L44,-132" stroke="#c68c63" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <use href="#p-neck" fill="#c68c63"/>
+    <g transform="rotate(5 0 -270)"><use href="#p-head" fill="#c68c63"/><use href="#p-hair-cap" fill="#2a1f1a"/><use href="#p-face"/></g>
+  </g>
+
+  <!-- Mesa de entrega: mantel y cajas -->
+  <rect x="396" y="674" width="468" height="22" fill="#f7f2e6"/>
+  <rect x="396" y="694" width="468" height="5" fill="#1f416b" opacity="0.6"/>
+  <rect x="400" y="699" width="460" height="122" fill="#2d5a94"/>
+  <rect x="400" y="712" width="460" height="4" fill="#f7a81b"/>
+  <use href="#wheel" transform="translate(630 760) scale(0.55)"/>
+  <rect x="400" y="812" width="460" height="10" fill="#1f416b" opacity="0.5"/>
+
+  <!-- Cajas sobre la mesa -->
+  <g>
+    <rect x="430" y="608" width="72" height="66" fill="#c99a5b"/>
+    <path d="M430,608 H502 L512,598 H440 Z" fill="#dcb27a"/>
+    <rect x="462" y="608" width="6" height="66" fill="#efd9a4"/>
+    <rect x="442" y="628" width="16" height="14" fill="#fff8ea"/>
+    <rect x="442" y="628" width="16" height="3" fill="#17458f"/>
+    <rect x="438" y="572" width="56" height="36" fill="#d4a86a"/>
+    <path d="M438,572 H494 L500,566 H444 Z" fill="#e6c07f"/>
+    <rect x="516" y="622" width="82" height="54" fill="#c99a5b"/>
+    <path d="M516,622 H598 L608,612 H526 Z" fill="#dcb27a"/>
+    <rect x="550" y="622" width="6" height="54" fill="#efd9a4"/>
+    <rect x="528" y="640" width="16" height="14" fill="#fff8ea"/>
+    <rect x="528" y="640" width="16" height="3" fill="#17458f"/>
+    <rect x="620" y="630" width="56" height="46" rx="14" fill="#17458f"/>
+    <rect x="626" y="640" width="44" height="5" rx="2" fill="#f7a81b"/>
+    <rect x="634" y="650" width="28" height="18" rx="4" fill="#1f416b"/>
+    <rect x="688" y="620" width="70" height="56" fill="#c99a5b"/>
+    <path d="M688,620 H758 L766,612 H696 Z" fill="#dcb27a"/>
+    <rect x="720" y="620" width="6" height="56" fill="#efd9a4"/>
+    <rect x="770" y="650" width="58" height="26" fill="#fff8ea"/>
+    <rect x="770" y="650" width="58" height="6" fill="#17458f"/>
+    <rect x="770" y="664" width="58" height="4" fill="#f7a81b"/>
+  </g>
+
+  <!-- Familia: madre recibiendo una caja -->
+  <g transform="translate(250 990) scale(1.2)">
+    <use href="#p-hair-long" fill="#2a1f1a"/>
+    <use href="#p-skirt" fill="#c97b7b"/>
+    <use href="#p-shoes"/>
+    <use href="#p-torso" fill="#c97b7b"/>
+    <path d="M-33,-236 L-42,-200" stroke="#c97b7b" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M-42,-200 L-20,-178" stroke="#8d5a3b" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <path d="M33,-236 L42,-200" stroke="#c97b7b" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M42,-200 L20,-178" stroke="#8d5a3b" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <rect x="-28" y="-206" width="56" height="46" rx="2" fill="#c99a5b"/>
+    <path d="M-28,-206 H28 L36,-214 H-20 Z" fill="#dcb27a"/>
+    <rect x="-3" y="-206" width="6" height="46" fill="#efd9a4"/>
+    <rect x="-22" y="-194" width="16" height="14" fill="#fff8ea"/>
+    <rect x="-22" y="-194" width="16" height="3" fill="#17458f"/>
+    <use href="#p-neck" fill="#8d5a3b"/>
+    <g transform="rotate(-5 0 -270)"><use href="#p-head" fill="#8d5a3b"/><use href="#p-hair-cap" fill="#2a1f1a"/><use href="#p-face"/></g>
+  </g>
+
+  <!-- Familia: niña -->
+  <g transform="translate(370 955) scale(0.82)">
+    <use href="#p-hair-long" fill="#1c1714"/>
+    <use href="#p-legs" fill="#2d5a94"/>
+    <use href="#p-shoes"/>
+    <use href="#p-torso" fill="#f7d36b"/>
+    <path d="M-33,-236 L-40,-188" stroke="#f7d36b" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M-40,-188 L-44,-132" stroke="#6b4227" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <path d="M33,-236 L40,-188" stroke="#f7d36b" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M40,-188 L44,-132" stroke="#6b4227" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <use href="#p-neck" fill="#6b4227"/>
+    <g transform="rotate(-3 0 -270)"><use href="#p-head" fill="#6b4227"/><use href="#p-hair-cap" fill="#1c1714"/><use href="#p-face"/></g>
+  </g>
+
+  <!-- Adulto mayor con bastón y sombrero -->
+  <g transform="translate(1010 960) scale(1.12)">
+    <use href="#p-legs" fill="#5c4d3e"/>
+    <use href="#p-shoes"/>
+    <use href="#p-torso" fill="#efe6d2"/>
+    <path d="M-33,-236 L-40,-188" stroke="#efe6d2" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M-40,-188 L-44,-132" stroke="#6b4227" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <path d="M33,-236 L40,-188" stroke="#efe6d2" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M40,-188 L44,-132" stroke="#6b4227" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <path d="M44,-134 L50,0" stroke="#5a3a22" stroke-width="5" stroke-linecap="round"/>
+    <path d="M44,-134 Q39,-146 50,-146" fill="none" stroke="#5a3a22" stroke-width="5" stroke-linecap="round"/>
+    <use href="#p-neck" fill="#6b4227"/>
+    <g transform="rotate(3 0 -270)"><use href="#p-head" fill="#6b4227"/><use href="#p-hair-cap" fill="#d9d4cc"/><use href="#p-face"/></g>
+    <ellipse cx="0" cy="-306" rx="38" ry="9" fill="#e3c27a"/>
+    <path d="M-20,-306 Q-20,-332 0,-332 Q20,-332 20,-306 Z" fill="#e3c27a"/>
+    <rect x="-20" y="-313" width="40" height="5" fill="#17458f"/>
+  </g>
+</g>
+
+<rect x="0" y="0" width="1500" height="1000" fill="url(#sunWash)"/>
+<rect x="0" y="0" width="1500" height="1000" fill="url(#vignette)"/>
+<rect x="0" y="0" width="1500" height="1000" filter="url(#grain)" opacity="0.5"/>
+</svg>

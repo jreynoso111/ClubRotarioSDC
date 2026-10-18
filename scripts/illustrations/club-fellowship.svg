@@ -1,0 +1,494 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1500 1000" width="1500" height="1000">
+<title>Cena de confraternidad en un patio colonial</title>
+<defs>
+  <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#8fb9d9"/>
+    <stop offset="0.4" stop-color="#cfe0e4"/>
+    <stop offset="0.75" stop-color="#f3e1b8"/>
+    <stop offset="1" stop-color="#f6d99c"/>
+  </linearGradient>
+  <linearGradient id="shade" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#6a3d22" stop-opacity="0.28"/>
+    <stop offset="1" stop-color="#6a3d22" stop-opacity="0"/>
+  </linearGradient>
+  <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#f4e8cb"/>
+    <stop offset="0.6" stop-color="#eedcaf"/>
+    <stop offset="1" stop-color="#e2cc9b"/>
+  </linearGradient>
+  <linearGradient id="floorGrad" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#c98262"/>
+    <stop offset="1" stop-color="#a95f45"/>
+  </linearGradient>
+  <radialGradient id="archGlow" cx="0.5" cy="0.45" r="0.65">
+    <stop offset="0" stop-color="#ffd98a"/>
+    <stop offset="0.45" stop-color="#8f5d36"/>
+    <stop offset="1" stop-color="#2e2019"/>
+  </radialGradient>
+  <radialGradient id="lampGlow">
+    <stop offset="0" stop-color="#fff1b8" stop-opacity="0.9"/>
+    <stop offset="0.45" stop-color="#ffd27a" stop-opacity="0.4"/>
+    <stop offset="1" stop-color="#ffd27a" stop-opacity="0"/>
+  </radialGradient>
+  <radialGradient id="vignette" cx="0.5" cy="0.42" r="0.75">
+    <stop offset="0.55" stop-color="#ffcf7a" stop-opacity="0"/>
+    <stop offset="0.85" stop-color="#5a3018" stop-opacity="0.18"/>
+    <stop offset="1" stop-color="#2e1a0c" stop-opacity="0.4"/>
+  </radialGradient>
+  <pattern id="stone" width="60" height="30" patternUnits="userSpaceOnUse">
+    <path d="M0,0.5 H60 M0,15.5 H60 M0.5,0 V15.5 M30.5,15.5 V30" fill="none" stroke="#b59f76" stroke-width="1.5" opacity="0.5"/>
+  </pattern>
+  <pattern id="tile" width="28" height="14" patternUnits="userSpaceOnUse">
+    <path d="M0,14 Q14,0 28,14" fill="none" stroke="#8f4a36" stroke-width="2"/>
+  </pattern>
+  <pattern id="floorTiles" width="96" height="48" patternUnits="userSpaceOnUse">
+    <path d="M0,0.5 H96 M0,24.5 H96 M0.5,0 V24 M48.5,24 V48 M24.5,0 V24" fill="none" stroke="#8c4a33" stroke-width="2" opacity="0.4"/>
+  </pattern>
+  <pattern id="rail" width="10" height="40" patternUnits="userSpaceOnUse">
+    <path d="M5,0 V40" stroke="#2f2b28" stroke-width="2.5"/>
+  </pattern>
+  <filter id="paint" x="-5%" y="-5%" width="110%" height="110%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="2" seed="7" result="warp"/>
+    <feDisplacementMap in="SourceGraphic" in2="warp" scale="5" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+  <filter id="grain" x="0" y="0" width="100%" height="100%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" seed="3" result="n"/>
+    <feColorMatrix in="n" type="matrix" values="0 0 0 0 0.24  0 0 0 0 0.15  0 0 0 0 0.08  1.2 0 0 0 -0.62"/>
+  </filter>
+
+  <!-- Piezas reutilizables de las personas (color heredado desde el use) -->
+  <g id="p-torso"><path d="M-37,-238 Q-37,-252 -20,-252 L20,-252 Q37,-252 37,-238 L38,-150 Q38,-131 24,-130 L-24,-130 Q-38,-131 -38,-150 Z"/></g>
+  <g id="p-legs"><rect x="-27" y="-142" width="25" height="142" rx="9"/><rect x="2" y="-142" width="25" height="142" rx="9"/></g>
+  <g id="p-skirt"><path d="M-30,-136 L30,-136 Q40,-70 50,-14 Q0,-6 -50,-14 Q-40,-70 -30,-136 Z"/></g>
+  <g id="p-shoes"><ellipse cx="-14" cy="-4" rx="15" ry="6" fill="#3b2a20"/><ellipse cx="15" cy="-4" rx="15" ry="6" fill="#3b2a20"/></g>
+  <g id="p-neck"><rect x="-8" y="-266" width="16" height="22" rx="6"/></g>
+  <g id="p-head"><ellipse cx="0" cy="-278" rx="23" ry="26"/><ellipse cx="-23" cy="-276" rx="4" ry="6"/><ellipse cx="23" cy="-276" rx="4" ry="6"/></g>
+  <g id="p-hair-cap"><path d="M-25,-276 C-30,-318 30,-318 25,-276 C22,-292 12,-297 0,-296 C-12,-297 -22,-292 -25,-276 Z"/></g>
+  <g id="p-hair-long"><path d="M-28,-284 C-34,-322 34,-322 28,-284 L46,-196 Q0,-180 -46,-196 Z"/></g>
+  <g id="p-face"><circle cx="-8" cy="-279" r="2.3" fill="#2a1c14"/><circle cx="8" cy="-279" r="2.3" fill="#2a1c14"/><path d="M-6,-266 Q0,-260 6,-266" fill="none" stroke="#7a3f2e" stroke-width="2" stroke-linecap="round"/></g>
+</defs>
+
+<g filter="url(#paint)">
+  <!-- Cielo visible sobre los tejados -->
+  <rect x="0" y="0" width="1500" height="200" fill="url(#sky)"/>
+
+  <!-- Muro superior con balcón -->
+  <rect x="0" y="196" width="1500" height="180" fill="url(#wall)"/>
+  <rect x="0" y="196" width="1500" height="180" fill="url(#stone)" opacity="0.6"/>
+  <rect x="0" y="196" width="1500" height="26" fill="url(#shade)"/>
+  <g fill="#d4a86f" opacity="0.12">
+    <ellipse cx="260" cy="250" rx="180" ry="40"/>
+    <ellipse cx="980" cy="300" rx="220" ry="36"/>
+    <ellipse cx="1420" cy="230" rx="110" ry="50"/>
+    <ellipse cx="520" cy="420" rx="200" ry="60"/>
+    <ellipse cx="1280" cy="520" rx="170" ry="50"/>
+  </g>
+  <rect x="0" y="168" width="1500" height="30" fill="#b5654a"/>
+  <rect x="0" y="168" width="1500" height="30" fill="url(#tile)"/>
+
+  <g id="upper-windows">
+    <g fill="#3b2d24">
+      <rect x="60" y="216" width="84" height="112"/>
+      <rect x="300" y="216" width="84" height="112"/>
+      <rect x="540" y="216" width="84" height="112"/>
+      <rect x="780" y="216" width="84" height="112"/>
+      <rect x="1020" y="216" width="84" height="112"/>
+      <rect x="1260" y="216" width="84" height="112"/>
+    </g>
+    <g fill="#2d5a94">
+      <rect x="60" y="216" width="18" height="112"/><rect x="126" y="216" width="18" height="112"/>
+      <rect x="300" y="216" width="18" height="112"/><rect x="366" y="216" width="18" height="112"/>
+      <rect x="540" y="216" width="18" height="112"/><rect x="606" y="216" width="18" height="112"/>
+      <rect x="780" y="216" width="18" height="112"/><rect x="846" y="216" width="18" height="112"/>
+      <rect x="1020" y="216" width="18" height="112"/><rect x="1086" y="216" width="18" height="112"/>
+      <rect x="1260" y="216" width="18" height="112"/><rect x="1326" y="216" width="18" height="112"/>
+    </g>
+    <g fill="#d6c294">
+      <rect x="50" y="326" width="104" height="10"/>
+      <rect x="290" y="326" width="104" height="10"/>
+      <rect x="530" y="326" width="104" height="10"/>
+      <rect x="770" y="326" width="104" height="10"/>
+      <rect x="1010" y="326" width="104" height="10"/>
+      <rect x="1250" y="326" width="104" height="10"/>
+    </g>
+    <g fill="url(#rail)">
+      <rect x="50" y="296" width="104" height="30"/>
+      <rect x="290" y="296" width="104" height="30"/>
+      <rect x="530" y="296" width="104" height="30"/>
+      <rect x="770" y="296" width="104" height="30"/>
+      <rect x="1010" y="296" width="104" height="30"/>
+      <rect x="1250" y="296" width="104" height="30"/>
+    </g>
+  </g>
+
+  <!-- Arcada de la planta baja -->
+  <rect x="0" y="360" width="1500" height="240" fill="url(#wall)"/>
+  <rect x="0" y="360" width="1500" height="240" fill="url(#stone)" opacity="0.6"/>
+  <g fill="#f7eedb">
+    <path d="M17,600 V470 A103,103 0 0 1 223,470 V600 Z"/>
+    <path d="M277,600 V470 A103,103 0 0 1 483,470 V600 Z"/>
+    <path d="M537,600 V470 A103,103 0 0 1 743,470 V600 Z"/>
+    <path d="M797,600 V470 A103,103 0 0 1 1003,470 V600 Z"/>
+    <path d="M1057,600 V470 A103,103 0 0 1 1263,470 V600 Z"/>
+  </g>
+  <g fill="url(#archGlow)">
+    <path d="M25,600 V470 A95,95 0 0 1 215,470 V600 Z"/>
+    <path d="M285,600 V470 A95,95 0 0 1 475,470 V600 Z"/>
+    <path d="M545,600 V470 A95,95 0 0 1 735,470 V600 Z"/>
+    <path d="M805,600 V470 A95,95 0 0 1 995,470 V600 Z"/>
+    <path d="M1065,600 V470 A95,95 0 0 1 1255,470 V600 Z"/>
+  </g>
+  <!-- Plantas dentro de dos arcos -->
+  <g transform="translate(380 566)">
+    <rect x="-18" y="0" width="36" height="34" rx="4" fill="#a75f4a"/>
+    <g fill="#3e5a36">
+      <ellipse cx="0" cy="-30" rx="7" ry="32" transform="rotate(-70)"/>
+      <ellipse cx="0" cy="-30" rx="7" ry="32" transform="rotate(-35)"/>
+      <ellipse cx="0" cy="-30" rx="7" ry="32"/>
+      <ellipse cx="0" cy="-30" rx="7" ry="32" transform="rotate(35)"/>
+      <ellipse cx="0" cy="-30" rx="7" ry="32" transform="rotate(70)"/>
+    </g>
+  </g>
+  <g transform="translate(900 566)">
+    <rect x="-18" y="0" width="36" height="34" rx="4" fill="#a75f4a"/>
+    <g fill="#4d6b41">
+      <ellipse cx="0" cy="-30" rx="7" ry="32" transform="rotate(-60)"/>
+      <ellipse cx="0" cy="-30" rx="7" ry="32" transform="rotate(-20)"/>
+      <ellipse cx="0" cy="-30" rx="7" ry="32" transform="rotate(20)"/>
+      <ellipse cx="0" cy="-30" rx="7" ry="32" transform="rotate(60)"/>
+    </g>
+  </g>
+  <!-- Puerta azul en el último arco -->
+  <g transform="translate(120 566)">
+    <rect x="-18" y="0" width="36" height="34" rx="4" fill="#a75f4a"/>
+    <g fill="#3e5a36">
+      <ellipse cx="0" cy="-30" rx="7" ry="32" transform="rotate(-65)"/>
+      <ellipse cx="0" cy="-30" rx="7" ry="32" transform="rotate(-25)"/>
+      <ellipse cx="0" cy="-30" rx="7" ry="32" transform="rotate(15)"/>
+      <ellipse cx="0" cy="-30" rx="7" ry="32" transform="rotate(55)"/>
+    </g>
+  </g>
+  <!-- Pilares de la arcada -->
+  <g fill="#d8c49a" opacity="0.5">
+    <rect x="223" y="470" width="54" height="130"/>
+    <rect x="483" y="470" width="54" height="130"/>
+    <rect x="743" y="470" width="54" height="130"/>
+    <rect x="1003" y="470" width="54" height="130"/>
+  </g>
+  <rect x="0" y="596" width="1500" height="18" fill="#cdb88f"/>
+
+  <!-- Piso de patio -->
+  <rect x="0" y="612" width="1500" height="388" fill="url(#floorGrad)"/>
+  <rect x="0" y="612" width="1500" height="388" fill="url(#floorTiles)" opacity="0.5"/>
+  <rect x="0" y="612" width="1500" height="90" fill="#5e2f1e" opacity="0.22"/>
+  <g stroke="#8c4a33" stroke-width="2.5" opacity="0.45" fill="none">
+    <path d="M0,752 H1500 M0,818 H1500 M0,900 H1500 M0,978 H1500"/>
+    <path d="M750,600 L-300,1000 M750,600 L-60,1000 M750,600 L180,1000 M750,600 L420,1000 M750,600 L660,1000 M750,600 L840,1000 M750,600 L1080,1000 M750,600 L1320,1000 M750,600 L1560,1000"/>
+  </g>
+  <ellipse cx="750" cy="800" rx="720" ry="210" fill="url(#lampGlow)" opacity="0.5"/>
+  <g fill="#e8a070" opacity="0.14">
+    <ellipse cx="300" cy="700" rx="160" ry="34"/>
+    <ellipse cx="1180" cy="690" rx="200" ry="30"/>
+    <ellipse cx="520" cy="960" rx="190" ry="40"/>
+    <ellipse cx="1200" cy="930" rx="170" ry="46"/>
+  </g>
+
+  <!-- Buganvilias (izquierda y derecha) -->
+  <g>
+    <circle cx="30" cy="206" r="38" fill="#c94f7c"/>
+    <circle cx="76" cy="176" r="30" fill="#e07a9b"/>
+    <circle cx="118" cy="212" r="32" fill="#c94f7c"/>
+    <circle cx="44" cy="252" r="28" fill="#f0a0bb"/>
+    <circle cx="152" cy="184" r="24" fill="#9a2e5c"/>
+    <circle cx="96" cy="150" r="22" fill="#e07a9b"/>
+    <circle cx="10" cy="262" r="26" fill="#5e7d4a"/>
+    <circle cx="62" cy="232" r="22" fill="#5e7d4a"/>
+    <circle cx="136" cy="250" r="24" fill="#6f8f5e"/>
+    <circle cx="1482" cy="200" r="38" fill="#c94f7c"/>
+    <circle cx="1424" cy="186" r="30" fill="#e07a9b"/>
+    <circle cx="1386" cy="236" r="30" fill="#c94f7c"/>
+    <circle cx="1458" cy="262" r="28" fill="#f0a0bb"/>
+    <circle cx="1330" cy="206" r="24" fill="#9a2e5c"/>
+    <circle cx="1400" cy="150" r="22" fill="#e07a9b"/>
+    <circle cx="1496" cy="290" r="26" fill="#5e7d4a"/>
+    <circle cx="1440" cy="310" r="24" fill="#6f8f5e"/>
+    <circle cx="1352" cy="282" r="22" fill="#5e7d4a"/>
+    <path d="M1342,300 Q1356,380 1330,440 M1452,320 Q1470,400 1446,470" fill="none" stroke="#5e7d4a" stroke-width="4"/>
+    <circle cx="1338" cy="372" r="14" fill="#c94f7c"/>
+    <circle cx="1446" cy="420" r="13" fill="#e07a9b"/>
+    <circle cx="18" cy="240" r="10" fill="#e07a9b"/>
+    <circle cx="92" cy="196" r="9" fill="#f0a0bb"/>
+    <circle cx="130" cy="230" r="11" fill="#9a2e5c"/>
+    <circle cx="60" cy="200" r="8" fill="#f0a0bb"/>
+    <circle cx="150" cy="262" r="10" fill="#c94f7c"/>
+    <circle cx="30" cy="290" r="12" fill="#e07a9b"/>
+    <circle cx="100" cy="268" r="9" fill="#5e7d4a"/>
+    <circle cx="172" cy="215" r="8" fill="#e07a9b"/>
+    <circle cx="80" cy="160" r="8" fill="#f0a0bb"/>
+    <circle cx="1360" cy="180" r="10" fill="#f0a0bb"/>
+    <circle cx="1408" cy="260" r="11" fill="#e07a9b"/>
+    <circle cx="1470" cy="240" r="9" fill="#9a2e5c"/>
+    <circle cx="1322" cy="250" r="11" fill="#c94f7c"/>
+    <circle cx="1440" cy="176" r="8" fill="#f0a0bb"/>
+    <circle cx="1478" cy="320" r="10" fill="#e07a9b"/>
+    <circle cx="1392" cy="320" r="9" fill="#f0a0bb"/>
+    <circle cx="1318" cy="330" r="8" fill="#5e7d4a"/>
+  </g>
+
+  <!-- Hilera de luces colgantes -->
+  <path d="M0,250 Q750,430 1500,250" fill="none" stroke="#3a2e24" stroke-width="2"/>
+  <g>
+    <circle cx="107" cy="274" r="16" fill="url(#lampGlow)"/><circle cx="107" cy="274" r="4" fill="#fff4c2"/>
+    <circle cx="214" cy="294" r="16" fill="url(#lampGlow)"/><circle cx="214" cy="294" r="4" fill="#fff4c2"/>
+    <circle cx="321" cy="311" r="16" fill="url(#lampGlow)"/><circle cx="321" cy="311" r="4" fill="#fff4c2"/>
+    <circle cx="429" cy="324" r="16" fill="url(#lampGlow)"/><circle cx="429" cy="324" r="4" fill="#fff4c2"/>
+    <circle cx="536" cy="333" r="16" fill="url(#lampGlow)"/><circle cx="536" cy="333" r="4" fill="#fff4c2"/>
+    <circle cx="643" cy="338" r="16" fill="url(#lampGlow)"/><circle cx="643" cy="338" r="4" fill="#fff4c2"/>
+    <circle cx="750" cy="340" r="16" fill="url(#lampGlow)"/><circle cx="750" cy="340" r="4" fill="#fff4c2"/>
+    <circle cx="857" cy="338" r="16" fill="url(#lampGlow)"/><circle cx="857" cy="338" r="4" fill="#fff4c2"/>
+    <circle cx="964" cy="333" r="16" fill="url(#lampGlow)"/><circle cx="964" cy="333" r="4" fill="#fff4c2"/>
+    <circle cx="1071" cy="324" r="16" fill="url(#lampGlow)"/><circle cx="1071" cy="324" r="4" fill="#fff4c2"/>
+    <circle cx="1179" cy="311" r="16" fill="url(#lampGlow)"/><circle cx="1179" cy="311" r="4" fill="#fff4c2"/>
+    <circle cx="1286" cy="294" r="16" fill="url(#lampGlow)"/><circle cx="1286" cy="294" r="4" fill="#fff4c2"/>
+    <circle cx="1393" cy="274" r="16" fill="url(#lampGlow)"/><circle cx="1393" cy="274" r="4" fill="#fff4c2"/>
+  </g>
+
+  <!-- Faroles colgados de los arcos -->
+  <g>
+    <line x1="120" y1="378" x2="120" y2="392" stroke="#3a2e24" stroke-width="2"/>
+    <rect x="111" y="392" width="18" height="26" rx="3" fill="#2b2420"/>
+    <rect x="114" y="396" width="12" height="18" fill="#ffd27a"/>
+    <circle cx="120" cy="410" r="40" fill="url(#lampGlow)"/>
+    <line x1="640" y1="378" x2="640" y2="392" stroke="#3a2e24" stroke-width="2"/>
+    <rect x="631" y="392" width="18" height="26" rx="3" fill="#2b2420"/>
+    <rect x="634" y="396" width="12" height="18" fill="#ffd27a"/>
+    <circle cx="640" cy="410" r="40" fill="url(#lampGlow)"/>
+    <line x1="1160" y1="378" x2="1160" y2="392" stroke="#3a2e24" stroke-width="2"/>
+    <rect x="1151" y="392" width="18" height="26" rx="3" fill="#2b2420"/>
+    <rect x="1154" y="396" width="12" height="18" fill="#ffd27a"/>
+    <circle cx="1160" cy="410" r="40" fill="url(#lampGlow)"/>
+  </g>
+
+  <!-- Sillas detrás de los comensales -->
+  <g fill="#6e4a30">
+    <rect x="169" y="474" width="92" height="130" rx="14"/>
+    <rect x="319" y="474" width="92" height="130" rx="14"/>
+    <rect x="469" y="474" width="92" height="130" rx="14"/>
+    <rect x="619" y="474" width="92" height="130" rx="14"/>
+    <rect x="769" y="474" width="92" height="130" rx="14"/>
+    <rect x="919" y="474" width="92" height="130" rx="14"/>
+    <rect x="1069" y="474" width="92" height="130" rx="14"/>
+    <rect x="1219" y="474" width="92" height="130" rx="14"/>
+  </g>
+  <g fill="#8a5d3c">
+    <rect x="169" y="474" width="92" height="10" rx="5"/>
+    <rect x="319" y="474" width="92" height="10" rx="5"/>
+    <rect x="469" y="474" width="92" height="10" rx="5"/>
+    <rect x="619" y="474" width="92" height="10" rx="5"/>
+    <rect x="769" y="474" width="92" height="10" rx="5"/>
+    <rect x="919" y="474" width="92" height="10" rx="5"/>
+    <rect x="1069" y="474" width="92" height="10" rx="5"/>
+    <rect x="1219" y="474" width="92" height="10" rx="5"/>
+  </g>
+
+  <!-- Comensales (sentados al otro lado de la mesa) -->
+  <!-- 1: mujer, vestido granate -->
+  <g transform="translate(215 715) scale(0.9)">
+    <use href="#p-hair-long" fill="#2a1f1a"/>
+    <use href="#p-torso" fill="#8a3b4a"/>
+    <path d="M-33,-236 L-40,-188" stroke="#8a3b4a" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M-40,-188 L-44,-132" stroke="#8d5a3b" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <path d="M33,-236 L40,-188" stroke="#8a3b4a" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M40,-188 L44,-132" stroke="#8d5a3b" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <use href="#p-neck" fill="#8d5a3b"/>
+    <g transform="rotate(-6 0 -270)"><use href="#p-head" fill="#8d5a3b"/><use href="#p-hair-cap" fill="#2a1f1a"/><use href="#p-face"/></g>
+  </g>
+  <!-- 2: hombre, camisa blanca -->
+  <g transform="translate(365 715) scale(0.9)">
+    <use href="#p-torso" fill="#f4efe4"/>
+    <path d="M-33,-236 L-40,-188" stroke="#f4efe4" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M-40,-188 L-44,-132" stroke="#c68c63" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <path d="M33,-236 L40,-188" stroke="#f4efe4" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M40,-188 L44,-132" stroke="#c68c63" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <use href="#p-neck" fill="#c68c63"/>
+    <g transform="rotate(4 0 -270)"><use href="#p-head" fill="#c68c63"/><use href="#p-hair-cap" fill="#241c18"/><use href="#p-face"/></g>
+  </g>
+  <!-- 3: mujer, vestido verde salvia, brinda con la mano derecha -->
+  <g transform="translate(515 715) scale(0.9)">
+    <use href="#p-hair-long" fill="#5a3a28"/>
+    <use href="#p-torso" fill="#6f8f5e"/>
+    <path d="M-33,-236 L-40,-188" stroke="#6f8f5e" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M-40,-188 L-44,-132" stroke="#e0b48d" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <path d="M33,-236 L52,-206" stroke="#6f8f5e" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M52,-206 L50,-274" stroke="#e0b48d" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <path d="M42,-302 H58 Q57,-284 50,-282 Q43,-284 42,-302 Z" fill="#f4f1e6" stroke="#c9b98f" stroke-width="1"/>
+    <path d="M44,-297 H56 Q55,-287 50,-286 Q45,-287 44,-297 Z" fill="#e8b75a"/>
+    <rect x="49.3" y="-283" width="1.5" height="10" fill="#f4f1e6"/>
+    <use href="#p-neck" fill="#e0b48d"/>
+    <g transform="rotate(8 0 -270)"><use href="#p-head" fill="#e0b48d"/><use href="#p-hair-cap" fill="#5a3a28"/><use href="#p-face"/></g>
+  </g>
+  <!-- 4: hombre mayor, camisa azul, cabello gris -->
+  <g transform="translate(665 715) scale(0.9)">
+    <use href="#p-torso" fill="#2d5a94"/>
+    <path d="M-33,-236 L-40,-188" stroke="#2d5a94" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M-40,-188 L-44,-132" stroke="#6b4227" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <path d="M33,-236 L40,-188" stroke="#2d5a94" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M40,-188 L44,-132" stroke="#6b4227" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <use href="#p-neck" fill="#6b4227"/>
+    <g transform="rotate(-3 0 -270)"><use href="#p-head" fill="#6b4227"/><use href="#p-hair-cap" fill="#bdb6ad"/><use href="#p-face"/></g>
+  </g>
+  <!-- 5: mujer, vestido ocre, cabello largo -->
+  <g transform="translate(815 715) scale(0.9)">
+    <use href="#p-hair-long" fill="#3b2519"/>
+    <use href="#p-torso" fill="#d7a04b"/>
+    <path d="M-33,-236 L-40,-188" stroke="#d7a04b" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M-40,-188 L-44,-132" stroke="#f0c9a5" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <path d="M33,-236 L40,-188" stroke="#d7a04b" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M40,-188 L44,-132" stroke="#f0c9a5" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <use href="#p-neck" fill="#f0c9a5"/>
+    <g transform="rotate(5 0 -270)"><use href="#p-head" fill="#f0c9a5"/><use href="#p-hair-cap" fill="#3b2519"/><use href="#p-face"/></g>
+  </g>
+  <!-- 6: hombre, camisa verde salvia, brinda con la izquierda -->
+  <g transform="translate(965 715) scale(0.9)">
+    <use href="#p-torso" fill="#5e7d4a"/>
+    <path d="M-33,-236 L-52,-206" stroke="#5e7d4a" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M-52,-206 L-50,-274" stroke="#8d5a3b" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <path d="M33,-236 L40,-188" stroke="#5e7d4a" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M40,-188 L44,-132" stroke="#8d5a3b" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <path d="M-42,-302 H-58 Q-57,-284 -50,-282 Q-43,-284 -42,-302 Z" fill="#f4f1e6" stroke="#c9b98f" stroke-width="1"/>
+    <path d="M-44,-297 H-56 Q-55,-287 -50,-286 Q-45,-287 -44,-297 Z" fill="#e8b75a"/>
+    <rect x="-50.8" y="-283" width="1.5" height="10" fill="#f4f1e6"/>
+    <use href="#p-neck" fill="#8d5a3b"/>
+    <g transform="rotate(-8 0 -270)"><use href="#p-head" fill="#8d5a3b"/><use href="#p-hair-cap" fill="#1c1714"/><use href="#p-face"/></g>
+  </g>
+  <!-- 7: mujer, vestido rosado, cabello castaño -->
+  <g transform="translate(1115 715) scale(0.9)">
+    <use href="#p-hair-long" fill="#6b3d22"/>
+    <use href="#p-torso" fill="#c97b7b"/>
+    <path d="M-33,-236 L-40,-188" stroke="#c97b7b" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M-40,-188 L-44,-132" stroke="#c68c63" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <path d="M33,-236 L40,-188" stroke="#c97b7b" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M40,-188 L44,-132" stroke="#c68c63" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <use href="#p-neck" fill="#c68c63"/>
+    <g transform="rotate(3 0 -270)"><use href="#p-head" fill="#c68c63"/><use href="#p-hair-cap" fill="#6b3d22"/><use href="#p-face"/></g>
+  </g>
+  <!-- 8: hombre, camisa azul marino -->
+  <g transform="translate(1265 715) scale(0.9)">
+    <use href="#p-torso" fill="#3d4a5c"/>
+    <path d="M-33,-236 L-40,-188" stroke="#3d4a5c" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M-40,-188 L-44,-132" stroke="#e0b48d" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <path d="M33,-236 L40,-188" stroke="#3d4a5c" stroke-width="17" stroke-linecap="round" fill="none"/>
+    <path d="M40,-188 L44,-132" stroke="#e0b48d" stroke-width="13" stroke-linecap="round" fill="none"/>
+    <use href="#p-neck" fill="#e0b48d"/>
+    <g transform="rotate(-4 0 -270)"><use href="#p-head" fill="#e0b48d"/><use href="#p-hair-cap" fill="#3a2c24"/><use href="#p-face"/></g>
+  </g>
+
+  <!-- Mesa con mantel blanco -->
+  <rect x="140" y="574" width="1220" height="26" fill="#faf4e4"/>
+  <rect x="140" y="598" width="1220" height="6" fill="#cfc1a0" opacity="0.6"/>
+  <path d="M150,598 H1350 L1360,676 Q1338,706 1300,694 Q1240,676 1180,698 Q1100,720 1030,696 Q960,676 890,698 Q820,718 750,694 Q680,676 610,698 Q540,718 470,696 Q400,676 330,698 Q260,718 200,694 Q170,684 140,676 Z" fill="#fbf6ea"/>
+  <path d="M260,604 Q272,660 258,708 M420,604 Q434,668 418,706 M590,604 Q602,662 586,704 M760,604 Q772,668 756,700 M930,604 Q942,664 926,702 M1100,604 Q1112,668 1098,704 M1270,604 Q1282,664 1266,700" fill="none" stroke="#dccfb0" stroke-width="3" opacity="0.9"/>
+  <ellipse cx="750" cy="718" rx="620" ry="14" fill="#5a2f1a" opacity="0.22"/>
+
+  <!-- Platos y copas, una pareja por puesto -->
+  <g>
+    <ellipse cx="215" cy="586" rx="34" ry="9" fill="#fffdf7" stroke="#e2d6bb" stroke-width="2"/>
+    <ellipse cx="365" cy="586" rx="34" ry="9" fill="#fffdf7" stroke="#e2d6bb" stroke-width="2"/>
+    <ellipse cx="515" cy="586" rx="34" ry="9" fill="#fffdf7" stroke="#e2d6bb" stroke-width="2"/>
+    <ellipse cx="665" cy="586" rx="34" ry="9" fill="#fffdf7" stroke="#e2d6bb" stroke-width="2"/>
+    <ellipse cx="815" cy="586" rx="34" ry="9" fill="#fffdf7" stroke="#e2d6bb" stroke-width="2"/>
+    <ellipse cx="965" cy="586" rx="34" ry="9" fill="#fffdf7" stroke="#e2d6bb" stroke-width="2"/>
+    <ellipse cx="1115" cy="586" rx="34" ry="9" fill="#fffdf7" stroke="#e2d6bb" stroke-width="2"/>
+    <ellipse cx="1265" cy="586" rx="34" ry="9" fill="#fffdf7" stroke="#e2d6bb" stroke-width="2"/>
+  </g>
+  <g fill="#f2efe6" stroke="#cfc3a2" stroke-width="1">
+    <path d="M243,562 H255 Q254,576 249,580 Q244,576 243,562 Z"/>
+    <path d="M393,562 H405 Q404,576 399,580 Q394,576 393,562 Z"/>
+    <path d="M543,562 H555 Q554,576 549,580 Q544,576 543,562 Z"/>
+    <path d="M693,562 H705 Q704,576 699,580 Q694,576 693,562 Z"/>
+    <path d="M843,562 H855 Q854,576 849,580 Q844,576 843,562 Z"/>
+    <path d="M993,562 H1005 Q1004,576 999,580 Q994,576 993,562 Z"/>
+    <path d="M1143,562 H1155 Q1154,576 1149,580 Q1144,576 1143,562 Z"/>
+    <path d="M1293,562 H1305 Q1304,576 1299,580 Q1294,576 1293,562 Z"/>
+  </g>
+  <g fill="#9b3446">
+    <path d="M244,566 H254 Q253,575 249,577 Q245,575 244,566 Z"/>
+    <path d="M394,566 H404 Q403,575 399,577 Q395,575 394,566 Z"/>
+    <path d="M544,566 H554 Q553,575 549,577 Q545,575 544,566 Z"/>
+    <path d="M694,566 H704 Q703,575 699,577 Q695,575 694,566 Z"/>
+    <path d="M844,566 H854 Q853,575 849,577 Q845,575 844,566 Z"/>
+    <path d="M994,566 H1004 Q1003,575 999,577 Q995,575 994,566 Z"/>
+    <path d="M1144,566 H1154 Q1153,575 1149,577 Q1145,575 1144,566 Z"/>
+    <path d="M1294,566 H1304 Q1303,575 1299,577 Q1295,575 1294,566 Z"/>
+  </g>
+
+  <!-- Velas, botellas y centro de mesa -->
+  <rect x="427" y="560" width="10" height="26" fill="#fff4d6"/>
+  <ellipse cx="432" cy="553" rx="4" ry="8" fill="#ffb347"/>
+  <circle cx="432" cy="553" r="34" fill="url(#lampGlow)"/>
+  <rect x="995" y="560" width="10" height="26" fill="#fff4d6"/>
+  <ellipse cx="1000" cy="553" rx="4" ry="8" fill="#ffb347"/>
+  <circle cx="1000" cy="553" r="34" fill="url(#lampGlow)"/>
+
+  <g>
+    <rect x="576" y="524" width="18" height="68" rx="6" fill="#2f4a33"/>
+    <rect x="581" y="506" width="8" height="20" fill="#2f4a33"/>
+    <rect x="580" y="504" width="10" height="6" fill="#c9a14a"/>
+    <rect x="578" y="548" width="14" height="20" fill="#f4e8cb"/>
+    <rect x="1076" y="524" width="18" height="68" rx="6" fill="#2f4a33"/>
+    <rect x="1081" y="506" width="8" height="20" fill="#2f4a33"/>
+    <rect x="1080" y="504" width="10" height="6" fill="#c9a14a"/>
+    <rect x="1078" y="548" width="14" height="20" fill="#f4e8cb"/>
+  </g>
+  <g>
+    <path d="M698,588 Q750,602 802,588 Q790,604 750,604 Q710,604 698,588 Z" fill="#d8c3a0"/>
+    <path d="M716,582 Q732,572 738,586 Z M784,582 Q768,572 762,586 Z" fill="#5e7d4a"/>
+    <circle cx="750" cy="560" r="14" fill="#d86a8f"/>
+    <circle cx="728" cy="568" r="11" fill="#f2a7bd"/>
+    <circle cx="772" cy="568" r="11" fill="#c94f7c"/>
+    <circle cx="750" cy="548" r="12" fill="#f0a0bb"/>
+    <circle cx="738" cy="578" r="9" fill="#e07a9b"/>
+    <circle cx="762" cy="578" r="9" fill="#9a2e5c"/>
+  </g>
+
+  <!-- Brindis: copas en alto sobre la mesa ya dibujada -->
+  <!-- Pan y canastas -->
+  <ellipse cx="290" cy="584" rx="26" ry="8" fill="#b8864f"/>
+  <ellipse cx="290" cy="580" rx="18" ry="6" fill="#d9a85b"/>
+
+  <!-- Fuente central y macetas del primer plano -->
+  <ellipse cx="750" cy="900" rx="170" ry="46" fill="#e6d9bc" stroke="#c8b48f" stroke-width="6"/>
+  <ellipse cx="750" cy="896" rx="150" ry="34" fill="#8fb8c9" opacity="0.85"/>
+  <ellipse cx="732" cy="890" rx="40" ry="8" fill="#d8ecf2" opacity="0.8"/>
+  <rect x="733" y="800" width="34" height="92" fill="#e6d9bc"/>
+  <ellipse cx="750" cy="800" rx="44" ry="10" fill="#efe3c8"/>
+  <circle cx="750" cy="778" r="12" fill="#e6d9bc"/>
+
+  <g>
+    <path d="M30,760 H110 Q128,820 118,880 Q120,930 96,960 H44 Q20,930 22,880 Q12,820 30,760 Z" fill="#b5654a"/>
+    <rect x="24" y="748" width="92" height="14" rx="4" fill="#9a5139"/>
+    <g>
+      <circle cx="44" cy="742" r="24" fill="#4f6e3d"/>
+      <circle cx="78" cy="726" r="28" fill="#5e7d4a"/>
+      <circle cx="108" cy="748" r="22" fill="#4f6e3d"/>
+      <circle cx="58" cy="712" r="20" fill="#6f8f5e"/>
+      <circle cx="96" cy="708" r="18" fill="#7f9f6e"/>
+    </g>
+  </g>
+  <g transform="translate(1500 0) scale(-1 1)">
+    <path d="M30,760 H110 Q128,820 118,880 Q120,930 96,960 H44 Q20,930 22,880 Q12,820 30,760 Z" fill="#b5654a"/>
+    <rect x="24" y="748" width="92" height="14" rx="4" fill="#9a5139"/>
+    <g>
+      <circle cx="44" cy="742" r="24" fill="#4f6e3d"/>
+      <circle cx="78" cy="726" r="28" fill="#6f8f5e"/>
+      <circle cx="108" cy="748" r="22" fill="#4f6e3d"/>
+      <circle cx="58" cy="712" r="20" fill="#7f9f6e"/>
+      <circle cx="96" cy="708" r="18" fill="#5e7d4a"/>
+    </g>
+  </g>
+</g>
+
+<!-- Ambiente cálido y grano de papel -->
+<rect x="0" y="0" width="1500" height="1000" fill="url(#vignette)"/>
+<rect x="0" y="0" width="1500" height="1000" filter="url(#grain)" opacity="0.5"/>
+</svg>

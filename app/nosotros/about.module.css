@@ -28,6 +28,18 @@
 .aboutBannerFoot { align-items: center; border-top: 1px solid rgba(255, 253, 248, .24); color: rgba(255, 253, 248, .62); display: flex; font-family: var(--font-geist-mono); font-size: 9px; gap: 18px; justify-content: space-between; letter-spacing: .11em; margin-top: 54px; padding-top: 11px; position: relative; text-transform: uppercase; z-index: 1; }
 .aboutBannerFoot span:last-child { color: var(--rotary-gold); }
 
+/* La vida del club: real photos get the same soft treatment as the banners (desaturated, a blue wash). */
+.life { animation: reveal .8s .2s ease-out both; padding: 40px 0 86px; }
+.lifeGrid { display: grid; gap: 22px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.lifeCard { display: grid; gap: 14px; margin: 0; min-width: 0; }
+.lifeMedia { aspect-ratio: 4 / 3; border-radius: 14px; box-shadow: 0 16px 36px rgba(0, 64, 122, .14); filter: saturate(.74) contrast(.94); min-height: 0; overflow: hidden; }
+.lifeMedia::after { background: linear-gradient(180deg, rgba(0, 64, 122, 0) 46%, rgba(0, 64, 122, .42)); content: ""; inset: 0; pointer-events: none; position: absolute; }
+.lifeMedia img { object-position: center 45%; }
+.lifeCaption { color: var(--ink); font-size: 14px; line-height: 1.55; margin: 0; }
+.lifeCaption strong { display: block; font-family: Georgia, "Times New Roman", serif; font-size: 22px; font-weight: 400; letter-spacing: -.02em; line-height: 1.1; margin-bottom: 6px; }
+.lifeCaption span { color: var(--ink-soft); }
+@media (max-width: 760px) { .lifeGrid { grid-template-columns: minmax(0, 1fr); } .life { padding: 30px 0 64px; } }
+
 .clubHistory { animation: reveal .8s .25s ease-out both; padding: 40px 0 86px; }
 .localTimeline { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .localTimeline .timelineItem { min-height: 302px; }

@@ -1,3 +1,4 @@
+import { sitePhotosModule } from "./helpers/site-photos-module.mjs";
 import { mfaDependencies } from "./helpers/mfa-deps.mjs";
 import { toPublicSupabaseUrl } from "./helpers/supabase-public-url.mjs";
 import assert from "node:assert/strict";
@@ -299,6 +300,7 @@ function setupPlatformActions({ role = "member", status = "active", signedIn = t
     "@/lib/platform": { isMissingSchemaError: (error) => ["42P01", "42703", "PGRST202", "PGRST205"].includes(error?.code) },
     "@/lib/audit": { auditCursorFilter() {}, auditPageCursor() {}, defaultAuditSort: {}, normalizeAuditQuery() {} },
     "@/lib/editorial-content": { isStoryAssetPath() { return true; }, parseEditorialContent() { return null; } },
+    "@/lib/site-photos": sitePhotosModule,
     "@/lib/email": { ...emailBuilders, sendClubEmail: emailSender },
     "@/lib/membership-applications": helpers,
     "@/utils/site-url": { getPublicSiteOrigin: () => siteOrigin },

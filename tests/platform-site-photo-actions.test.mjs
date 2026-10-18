@@ -11,12 +11,14 @@ function compile(relativePath) {
   }).outputText;
 }
 
-const photoHelpers = {};
-new Function("exports", compile("../lib/site-photos.ts"))(photoHelpers);
+const sitePhotos = {};
+new Function("exports", compile("../lib/site-photos.ts"))(sitePhotos);
 const compiledActions = compile("../app/plataforma/actions.ts");
 const actorId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const oldAsset = "site-photos/membership-application/membership-service/00000000-0000-4000-8000-000000000001.jpg";
 const nextAsset = "site-photos/membership-application/membership-service/00000000-0000-4000-8000-000000000002.webp";
+const homeAsset = "site-photos/home/home-hero-1/00000000-0000-4000-8000-000000000003.webp";
+const homeNextAsset = "site-photos/home/home-hero-1/00000000-0000-4000-8000-000000000004.png";
 
 function setup({ role = "editor", status = "active", signedIn = true } = {}) {
   const writes = [];
@@ -26,6 +28,7 @@ function setup({ role = "editor", status = "active", signedIn = true } = {}) {
     { slot_key: "membership-community", display_order: 1, image_path: null, alt_text: "", caption: null, is_published: false, updated_at: "2026-09-30T12:00:00Z" },
     { slot_key: "membership-service", display_order: 2, image_path: oldAsset, alt_text: "Voluntarios colaborando", caption: "Una jornada de servicio", is_published: true, updated_at: "2026-09-30T12:00:00Z" },
     { slot_key: "membership-fellowship", display_order: 3, image_path: null, alt_text: "", caption: null, is_published: false, updated_at: "2026-09-30T12:00:00Z" },
+    { slot_key: "home-hero-1", display_order: 4, image_path: homeAsset, alt_text: "Patio colonial con fuente", caption: null, is_published: true, updated_at: "2026-10-18T12:00:00Z" },
   ];
   const client = {
     rpc: async name => { assert.equal(name, "has_privileged_session"); return { data: true, error: null }; },
@@ -66,6 +69,7 @@ function setup({ role = "editor", status = "active", signedIn = true } = {}) {
     "@/lib/platform": { isMissingSchemaError: () => false },
     "@/lib/audit": { auditCursorFilter() {}, auditPageCursor() {}, defaultAuditSort: {}, normalizeAuditQuery() {} },
     "@/lib/editorial-content": { isStoryAssetPath() { return true; }, parseEditorialContent() { return null; } },
+    "@/lib/site-photos": sitePhotos,
     "@/utils/supabase/public-url": { toPublicSupabaseUrl },
     "@/utils/supabase/config": { isSupabaseConfigured: () => true }, "@/lib/email": {}, "@/lib/membership-applications": {}, "@/utils/site-url": {},
     ...mfaDependencies, "@/utils/supabase/server": { createClient: async () => client },
@@ -78,22 +82,26 @@ function setup({ role = "editor", status = "active", signedIn = true } = {}) {
   return { actions, writes, removed, invalidations };
 }
 
-test("photo slot validation accepts only approved image formats and a slot-specific UUID path", () => {
-  assert.equal(photoHelpers.isSupportedMembershipPhotoType("image/jpeg"), true);
-  assert.equal(photoHelpers.isSupportedMembershipPhotoType("image/svg+xml"), false);
-  assert.equal(photoHelpers.membershipPhotoExtension("image/webp"), "webp");
-  assert.equal(photoHelpers.isMembershipPhotoAssetPath(nextAsset, "membership-service"), true);
-  assert.equal(photoHelpers.isMembershipPhotoAssetPath(nextAsset, "membership-community"), false);
-  assert.equal(photoHelpers.isMembershipPhotoAssetPath("../photo.webp", "membership-service"), false);
+test("site photo helpers accept only approved formats and the folder of each slot", () => {
+  assert.equal(sitePhotos.isSupportedSitePhotoType("image/jpeg"), true);
+  assert.equal(sitePhotos.isSupportedSitePhotoType("image/svg+xml"), false);
+  assert.equal(sitePhotos.sitePhotoExtension("image/webp"), "webp");
+  assert.equal(sitePhotos.isSitePhotoAssetPath(nextAsset, "membership-service"), true);
+  assert.equal(sitePhotos.isSitePhotoAssetPath(nextAsset, "membership-community"), false);
+  assert.equal(sitePhotos.isSitePhotoAssetPath(homeAsset, "home-hero-1"), true);
+  assert.equal(sitePhotos.isSitePhotoAssetPath(homeAsset, "nosotros-banner"), false);
+  assert.equal(sitePhotos.isSitePhotoAssetPath(nextAsset.toUpperCase(), "membership-service"), false);
+  assert.equal(sitePhotos.isSitePhotoAssetPath("../photo.webp", "membership-service"), false);
 });
 
-test("only active editors, club managers, and admins can load unpublished photo slots", async () => {
+test("only active editors, club managers, and admins can load every photo slot", async () => {
   const editor = setup();
-  const result = await editor.actions.getMembershipPhotoSlotsAction();
+  const result = await editor.actions.getSitePhotoSlotsAction();
   assert.equal(result.ok, true);
-  assert.equal(result.slots.length, 3);
-  assert.deepEqual(result.slots.map((slot) => slot.order), [1, 2, 3]);
+  assert.equal(result.slots.length, 4);
+  assert.deepEqual(result.slots.map((slot) => slot.order), [1, 2, 3, 4]);
   assert.equal(result.slots[1].imageUrl, `https://club.example/storage/${oldAsset}`);
+  assert.equal(result.slots[3].key, "home-hero-1");
   assert.ok(editor.writes.some((write) =>
     write.table === "site_photo_slots" &&
     write.operation === "select" &&
@@ -108,36 +116,32 @@ test("only active editors, club managers, and admins can load unpublished photo 
 
   for (const input of [{ role: "member" }, { role: "admin", status: "pending" }, { signedIn: false }]) {
     const denied = setup(input);
-    assert.equal((await denied.actions.getMembershipPhotoSlotsAction()).ok, false);
+    assert.equal((await denied.actions.getSitePhotoSlotsAction()).ok, false);
     assert.equal(denied.writes.some((write) => write.table === "site_photo_slots"), false);
   }
 });
 
-test("photo edits reject untrusted paths and publishing without accessible image text", async () => {
+test("photo edits reject unknown slots, foreign paths, and publishing without accessible text", async () => {
   const editor = setup();
-  const badPath = await editor.actions.updateMembershipPhotoSlotAction({
-    slotKey: "membership-service",
-    imagePath: "../cover.jpg",
-    altText: "Una foto",
-    caption: null,
-    isPublished: true,
-  });
-  const missingAlt = await editor.actions.updateMembershipPhotoSlotAction({
-    slotKey: "membership-service",
-    imagePath: nextAsset,
-    altText: " ",
-    caption: null,
-    isPublished: true,
-  });
-
-  assert.equal(badPath.code, "invalid");
-  assert.equal(missingAlt.code, "invalid");
+  const cases = [
+    { slotKey: "membership-service", imagePath: "../cover.jpg", altText: "Una foto", caption: null, isPublished: true },
+    { slotKey: "membership-service", imagePath: nextAsset, altText: " ", caption: null, isPublished: true },
+    { slotKey: "home-hero-99", imagePath: homeNextAsset, altText: "Una foto", caption: null, isPublished: true },
+    { slotKey: "membership-service", imagePath: homeNextAsset, altText: "Una foto", caption: null, isPublished: true },
+    { slotKey: "nosotros-banner", imagePath: homeNextAsset, altText: "Una foto", caption: null, isPublished: true },
+    { slotKey: "home-hero-1", imagePath: null, altText: "", caption: null, isPublished: true },
+  ];
+  for (const input of cases) {
+    const result = await editor.actions.updateSitePhotoSlotAction(input);
+    assert.equal(result.ok, false, JSON.stringify(input));
+    assert.equal(result.code, "invalid", JSON.stringify(input));
+  }
   assert.equal(editor.writes.some((write) => write.table === "site_photo_slots" && write.operation === "update"), false);
 });
 
 test("authorized photo changes record the editor, clean up the replaced file, and refresh the public page", async () => {
   const { actions, writes, removed, invalidations } = setup({ role: "club_manager" });
-  const result = await actions.updateMembershipPhotoSlotAction({
+  const result = await actions.updateSitePhotoSlotAction({
     slotKey: "membership-service",
     imagePath: nextAsset,
     altText: "Voluntarios preparando materiales",
@@ -156,4 +160,71 @@ test("authorized photo changes record the editor, clean up the replaced file, an
   });
   assert.deepEqual(removed, [oldAsset]);
   assert.deepEqual(invalidations, ["/plataforma", "/solicitar-membresia"]);
+});
+
+test("a home photo is saved under its own folder and revalidates the home page", async () => {
+  const { actions, writes, removed, invalidations } = setup();
+  const result = await actions.updateSitePhotoSlotAction({
+    slotKey: "home-hero-1",
+    imagePath: homeNextAsset,
+    altText: "Patio colonial con arcos",
+    caption: null,
+    isPublished: true,
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(writes.find((write) => write.operation === "update").value.image_path, homeNextAsset);
+  assert.deepEqual(removed, [homeAsset]);
+  assert.deepEqual(invalidations, ["/plataforma", "/"]);
+});
+
+test("a nosotros card revalidates its page without the in-page anchor", async () => {
+  const { actions, invalidations } = setup();
+  const result = await actions.updateSitePhotoSlotAction({
+    slotKey: "nosotros-group",
+    imagePath: null,
+    altText: "",
+    caption: "Nuestro club · Personas de acción",
+    isPublished: false,
+  });
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(invalidations, ["/plataforma", "/nosotros"]);
+});
+
+test("restoring the original clears the upload, unpublishes it, and deletes the file", async () => {
+  const { actions, writes, removed, invalidations } = setup();
+  const result = await actions.restoreSitePhotoAction("home-hero-1");
+
+  assert.equal(result.ok, true);
+  const update = writes.find((write) => write.table === "site_photo_slots" && write.operation === "update");
+  assert.deepEqual(update.value, {
+    image_path: null,
+    alt_text: "",
+    caption: null,
+    is_published: false,
+    updated_by: actorId,
+  });
+  assert.deepEqual(removed, [homeAsset]);
+  assert.deepEqual(invalidations, ["/plataforma", "/"]);
+});
+
+test("restoring is refused for unknown slots and for roles without photo editing", async () => {
+  const editor = setup();
+  const unknown = await editor.actions.restoreSitePhotoAction("slot-inexistente");
+  assert.equal(unknown.ok, false);
+  assert.equal(unknown.code, "invalid");
+
+  const member = setup({ role: "member" });
+  assert.equal((await member.actions.restoreSitePhotoAction("home-hero-1")).ok, false);
+  assert.equal(member.writes.some((write) => write.table === "site_photo_slots"), false);
+  assert.deepEqual(member.removed, []);
+});
+
+test("restoring a slot that has no upload changes nothing in storage", async () => {
+  const { actions, removed } = setup();
+  const result = await actions.restoreSitePhotoAction("membership-community");
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(removed, []);
 });

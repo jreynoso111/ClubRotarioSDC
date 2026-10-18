@@ -3,7 +3,8 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { PublicShell, SectionLabel } from "@/components/public/PublicChrome";
-import { getPublishedMembershipPhotoSlots } from "@/lib/membership-photo-gallery";
+import { getSitePhotos } from "@/lib/site-photo-slots";
+import { SITE_PHOTO_SLOTS } from "@/lib/site-photos";
 
 import { MembershipApplicationForm } from "./MembershipApplicationForm";
 import styles from "./membership-application.module.css";
@@ -13,8 +14,10 @@ export const metadata: Metadata = {
   description: "Comparte tu interés en servir con el Club Rotario Santo Domingo Colonial.",
 };
 
+const gallerySlots = SITE_PHOTO_SLOTS.filter((slot) => slot.section === "membership-application");
+
 export default async function MembershipApplicationPage() {
-  const photoSlots = await getPublishedMembershipPhotoSlots();
+  const photos = await getSitePhotos();
 
   return (
     <PublicShell>
@@ -28,30 +31,26 @@ export default async function MembershipApplicationPage() {
             <div className={styles.introFoot}><span>Club Rotario Santo Domingo Colonial</span><span>Dar de si antes de pensar en si</span></div>
           </div>
           <div className={styles.photoGallery} aria-label="Fotografías sociales del club">
-            {photoSlots.map((slot, index) => (
-              <figure className={styles.photoSlot} data-featured={index === 0 ? "true" : "false"} id={slot.key} key={slot.key}>
-                <div className={styles.photoFrame}>
-                  {slot.imageUrl ? (
+            {gallerySlots.map((slot, index) => {
+              const photo = photos[slot.key];
+              return (
+                <figure className={styles.photoSlot} data-featured={index === 0 ? "true" : "false"} id={slot.key} key={slot.key}>
+                  <div className={styles.photoFrame}>
                     <Image
-                      src={slot.imageUrl}
-                      alt={slot.altText}
+                      src={photo.url}
+                      alt={photo.alt}
                       fill
                       sizes="(max-width: 760px) 31vw, 18vw"
-                      unoptimized
+                      unoptimized={photo.isCustom}
                     />
-                  ) : (
-                    <div className={styles.photoPlaceholder}>
-                      <span className={styles.photoPlaceholderMark} aria-hidden="true">+</span>
-                      <span>Espacio para fotografía</span>
-                    </div>
-                  )}
-                </div>
-                <figcaption>
-                  <span>{slot.title}</span>
-                  {slot.caption ? <small>{slot.caption}</small> : null}
-                </figcaption>
-              </figure>
-            ))}
+                  </div>
+                  <figcaption>
+                    <span>{slot.title}</span>
+                    {photo.caption ? <small>{photo.caption}</small> : null}
+                  </figcaption>
+                </figure>
+              );
+            })}
           </div>
         </section>
 

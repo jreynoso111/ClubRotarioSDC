@@ -10,6 +10,7 @@ import {
   formatEventDate,
 } from "@/components/public/PublicChrome";
 import { getPublicEvents, isUpcoming, type PublicEvent } from "@/lib/editorial";
+import { getSitePhotos } from "@/lib/site-photo-slots";
 
 import AgendaCalendar from "./AgendaCalendar";
 import styles from "./events.module.css";
@@ -59,13 +60,13 @@ function currentMonthKey() {
 }
 
 export default async function EventosPage() {
-  const events = await getPublicEvents();
+  const [events, photos] = await Promise.all([getPublicEvents(), getSitePhotos()]);
 
   return (
     <PublicShell active="eventos">
       <main className={styles.main}>
         <section className={styles.agendaBanner} aria-labelledby="agenda-title">
-          <CoverArt src="/agenda-banner-illustration.webp" alt="Ilustración editorial de un encuentro en una plaza de la Ciudad Colonial" className={styles.agendaBannerArt} priority />
+          <CoverArt src={photos["eventos-banner"].url} alt={photos["eventos-banner"].alt} className={styles.agendaBannerArt} priority />
           <div className={styles.agendaBannerContent}>
             <div className={styles.agendaBannerTop}>
               <SectionLabel>Agenda pública · Ciudad Colonial</SectionLabel>

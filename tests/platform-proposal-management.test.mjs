@@ -1,3 +1,4 @@
+import { sitePhotosModule } from "./helpers/site-photos-module.mjs";
 import { mfaDependencies } from "./helpers/mfa-deps.mjs";
 import { toPublicSupabaseUrl } from "./helpers/supabase-public-url.mjs";
 import assert from "node:assert/strict";
@@ -68,6 +69,7 @@ function setup({ role = "member", membershipStatus = "active", proposalStatus = 
     "@/lib/platform": { isMissingSchemaError: () => false },
     "@/lib/audit": {},
     "@/lib/editorial-content": {},
+    "@/lib/site-photos": sitePhotosModule,
     "@/lib/finance": {},
     "./members-actions": {},
   };

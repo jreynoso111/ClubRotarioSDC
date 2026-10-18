@@ -5,37 +5,11 @@ import type { ReactNode } from "react";
 import { PublicHeader } from "@/components/public/PublicChrome";
 import StoriesCarousel from "@/components/public/StoriesCarousel";
 import { getPublicFeed } from "@/lib/supabase/public-feed";
+import { getSitePhotos } from "@/lib/site-photo-slots";
+import { SITE_PHOTO_SLOTS } from "@/lib/site-photos";
 
-const heroIllustrations = [
-  {
-    src: "/alcazar-colon-illustration.png",
-    alt: "Ilustración editorial del Alcázar de Colón frente a la Plaza de España en Santo Domingo",
-  },
-  {
-    src: "/zona-colonial-illustration.png",
-    alt: "Ilustración editorial de una calle empedrada de la Ciudad Colonial de Santo Domingo",
-  },
-  {
-    src: "/zona-colonial-dusk.png",
-    alt: "Ilustración editorial de las murallas de la Ciudad Colonial al anochecer",
-  },
-  {
-    src: "/zona-colonial-courtyard.png",
-    alt: "Ilustración editorial de un patio colonial con arcos y fuente en Santo Domingo",
-  },
-  {
-    src: "/zona-colonial-las-damas.png",
-    alt: "Ilustración editorial de la calle Las Damas en la Ciudad Colonial de Santo Domingo",
-  },
-  {
-    src: "/zona-colonial-fortaleza.png",
-    alt: "Ilustración editorial de la Fortaleza Ozama junto al río en Santo Domingo",
-  },
-  {
-    src: "/zona-colonial-illustration.png",
-    alt: "",
-  },
-];
+// Six hero photos, in the order the crossfade shows them (home-hero-1 is the first).
+const heroSlots = SITE_PHOTO_SLOTS.filter((slot) => slot.section === "home");
 
 function ArrowUpRight() {
   return (
@@ -96,7 +70,7 @@ function DateBadge({ date, tone }: { date: string; tone: string }) {
 }
 
 export default async function Home() {
-  const { events, stories } = await getPublicFeed();
+  const [{ events, stories }, photos] = await Promise.all([getPublicFeed(), getSitePhotos()]);
   const agendaClassName = events.length < 3
     ? "agenda-section agenda-section-compact section-shell"
     : "agenda-section section-shell";
@@ -130,19 +104,23 @@ export default async function Home() {
         </div>
 
         <figure className="hero-art">
-          {heroIllustrations.map((illustration, index) => (
-            <Image
-              key={illustration.src + "-" + index}
-              src={illustration.src}
-              alt={index === 0 ? illustration.alt : ""}
-              aria-hidden={index === 0 ? undefined : true}
-              className={"hero-art-image hero-art-image-" + index}
-              fill
-              loading="eager"
-              priority={index === 0}
-              sizes="(max-width: 760px) 100vw, 50vw"
-            />
-          ))}
+          {heroSlots.map((slot, index) => {
+            const photo = photos[slot.key];
+            return (
+              <Image
+                key={slot.key}
+                src={photo.url}
+                alt={index === 0 ? photo.alt : ""}
+                aria-hidden={index === 0 ? undefined : true}
+                className={"hero-art-image hero-art-image-" + index}
+                fill
+                loading="eager"
+                priority={index === 0}
+                sizes="(max-width: 760px) 100vw, 50vw"
+                unoptimized={photo.isCustom}
+              />
+            );
+          })}
           <div className="hero-photo-wash" />
           <div className="hero-photo-sweep" />
           <div className="hero-photo-frame" />

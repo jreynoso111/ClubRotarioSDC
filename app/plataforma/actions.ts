@@ -24,6 +24,12 @@ import {
   type MembershipApplicationNote,
   type MembershipApplicationStatus,
 } from "@/lib/membership-applications";
+import {
+  isSitePhotoAssetPath,
+  isSitePhotoSlotKey,
+  sitePhotoPagePath,
+  type SitePhotoSlotKey,
+} from "@/lib/site-photos";
 import { getPublicSiteOrigin } from "@/utils/site-url";
 import type {
   FinanceCategory,
@@ -54,7 +60,6 @@ export type PlatformActionResult = {
 
 type PlatformRole = "member" | "coordinator" | "editor" | "club_manager" | "admin";
 type MembershipStatus = "pending" | "active" | "suspended";
-type MembershipPhotoSlotKey = "membership-community" | "membership-service" | "membership-fellowship";
 type CommitteeRole = "member" | "chair" | "secretary" | "treasurer";
 
 type Actor = {
@@ -218,23 +223,6 @@ async function requireActor(requiredRoles: PlatformRole[] = []):
 
 // Coordination runs the agenda; editors run the magazine.
 const eventRoles: PlatformRole[] = ["coordinator", "club_manager", "admin"];
-
-const membershipPhotoSlotKeys = [
-  "membership-community",
-  "membership-service",
-  "membership-fellowship",
-] as const;
-
-function isMembershipPhotoSlotKey(value: unknown): value is MembershipPhotoSlotKey {
-  return membershipPhotoSlotKeys.includes(value as MembershipPhotoSlotKey);
-}
-
-function isMembershipPhotoAssetPath(value: unknown, slotKey: MembershipPhotoSlotKey) {
-  if (typeof value !== "string") return false;
-  const prefix = `site-photos/membership-application/${slotKey}/`;
-  return value.startsWith(prefix) &&
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(jpg|png|webp)$/i.test(value.slice(prefix.length));
-}
 
 export async function createProposalAction(input: {
   title: string;
@@ -1545,15 +1533,15 @@ export async function deleteStoryAction(storyId: string): Promise<PlatformAction
   return success("La publicación se eliminó definitivamente. Su registro queda en la auditoría.");
 }
 
-export type MembershipPhotoSlotsActionResult = {
+export type SitePhotoSlotsActionResult = {
   ok: boolean;
   message: string;
-  slots: MembershipPhotoSlotRecord[];
+  slots: SitePhotoSlotRecord[];
   code?: ActionCode;
 };
 
-export type MembershipPhotoSlotRecord = {
-  key: MembershipPhotoSlotKey;
+export type SitePhotoSlotRecord = {
+  key: SitePhotoSlotKey;
   order: number;
   imagePath: string | null;
   imageUrl: string | null;
@@ -1563,8 +1551,8 @@ export type MembershipPhotoSlotRecord = {
   updatedAt: string | null;
 };
 
-type MembershipPhotoSlotRow = {
-  slot_key: MembershipPhotoSlotKey;
+type SitePhotoSlotRow = {
+  slot_key: string;
   image_path: string | null;
   alt_text: string;
   caption: string | null;
@@ -1573,7 +1561,13 @@ type MembershipPhotoSlotRow = {
   display_order: number;
 };
 
-export async function getMembershipPhotoSlotsAction(): Promise<MembershipPhotoSlotsActionResult> {
+// Pages whose cached HTML shows a slot: the platform list and the slot's public page.
+function revalidateSitePhotoPaths(slotKey: SitePhotoSlotKey) {
+  revalidatePath("/plataforma");
+  revalidatePath(sitePhotoPagePath(slotKey));
+}
+
+export async function getSitePhotoSlotsAction(): Promise<SitePhotoSlotsActionResult> {
   const { actor, error } = await requireActor(["editor", "club_manager", "admin"]);
   if (error) return { ok: false, message: error.message, slots: [], code: error.code };
 
@@ -1586,9 +1580,11 @@ export async function getMembershipPhotoSlotsAction(): Promise<MembershipPhotoSl
     return { ok: false, message: result.message, slots: [], code: result.code };
   }
 
-  const rows = (data ?? []) as MembershipPhotoSlotRow[];
-  const slots = rows.map((row) => ({
-      key: row.slot_key,
+  const rows = (data ?? []) as SitePhotoSlotRow[];
+  const slots = rows
+    .filter((row) => isSitePhotoSlotKey(row.slot_key))
+    .map((row) => ({
+      key: row.slot_key as SitePhotoSlotKey,
       order: row.display_order,
       imagePath: row.image_path,
       imageUrl: row.image_path
@@ -1600,12 +1596,12 @@ export async function getMembershipPhotoSlotsAction(): Promise<MembershipPhotoSl
       caption: row.caption,
       isPublished: row.is_published,
       updatedAt: row.updated_at,
-    } satisfies MembershipPhotoSlotRecord));
+    } satisfies SitePhotoSlotRecord));
 
   return { ok: true, message: "", slots };
 }
 
-export async function updateMembershipPhotoSlotAction(input: {
+export async function updateSitePhotoSlotAction(input: {
   slotKey: unknown;
   imagePath: unknown;
   altText: unknown;
@@ -1614,7 +1610,7 @@ export async function updateMembershipPhotoSlotAction(input: {
 }): Promise<PlatformActionResult> {
   const { actor, error } = await requireActor(["editor", "club_manager", "admin"]);
   if (error) return error;
-  if (!isMembershipPhotoSlotKey(input?.slotKey) || typeof input?.isPublished !== "boolean") {
+  if (!isSitePhotoSlotKey(input?.slotKey) || typeof input?.isPublished !== "boolean") {
     return failure("El espacio fotográfico indicado no es válido.", "invalid");
   }
 
@@ -1633,7 +1629,7 @@ export async function updateMembershipPhotoSlotAction(input: {
     caption === undefined ||
     altText.length > 250 ||
     (caption !== null && caption.length > 300) ||
-    (imagePath !== null && (!isMembershipPhotoAssetPath(imagePath, slotKey) || altText.length === 0)) ||
+    (imagePath !== null && (!isSitePhotoAssetPath(imagePath, slotKey) || altText.length === 0)) ||
     (input.isPublished && imagePath === null)
   ) {
     return failure("Revisa la foto, su descripción accesible y el pie de foto.", "invalid");
@@ -1665,7 +1661,7 @@ export async function updateMembershipPhotoSlotAction(input: {
   if (
     typeof current.image_path === "string" &&
     current.image_path !== imagePath &&
-    isMembershipPhotoAssetPath(current.image_path, slotKey)
+    isSitePhotoAssetPath(current.image_path, slotKey)
   ) {
     const { error: removeError } = await actor!.supabase.storage
       .from("club-public")
@@ -1673,8 +1669,47 @@ export async function updateMembershipPhotoSlotAction(input: {
     if (removeError) message = "La foto se actualizó, pero no se pudo retirar el archivo anterior.";
   }
 
-  revalidatePath("/plataforma");
-  revalidatePath("/solicitar-membresia");
+  revalidateSitePhotoPaths(slotKey);
+  return success(message);
+}
+
+// Puts the slot back to the original site image: clears the upload, unpublishes it and deletes the file.
+export async function restoreSitePhotoAction(slotKey: unknown): Promise<PlatformActionResult> {
+  const { actor, error } = await requireActor(["editor", "club_manager", "admin"]);
+  if (error) return error;
+  if (!isSitePhotoSlotKey(slotKey)) return failure("El espacio fotográfico indicado no es válido.", "invalid");
+
+  const { data: current, error: currentError } = await actor!.supabase
+    .from("site_photo_slots")
+    .select("image_path")
+    .eq("slot_key", slotKey)
+    .maybeSingle();
+  if (currentError) return errorFor(currentError);
+  if (!current) return failure("El espacio fotográfico ya no existe. Actualiza la plataforma.", "invalid");
+
+  const { data: updated, error: updateError } = await actor!.supabase
+    .from("site_photo_slots")
+    .update({
+      image_path: null,
+      alt_text: "",
+      caption: null,
+      is_published: false,
+      updated_by: actor!.userId,
+    })
+    .eq("slot_key", slotKey)
+    .select("slot_key")
+    .maybeSingle();
+  if (updateError || !updated) return errorFor(updateError);
+
+  let message = "Se restauró la imagen original de esta ubicación.";
+  if (typeof current.image_path === "string" && isSitePhotoAssetPath(current.image_path, slotKey)) {
+    const { error: removeError } = await actor!.supabase.storage
+      .from("club-public")
+      .remove([current.image_path]);
+    if (removeError) message = "La imagen original se restauró, pero no se pudo borrar el archivo subido.";
+  }
+
+  revalidateSitePhotoPaths(slotKey);
   return success(message);
 }
 

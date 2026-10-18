@@ -39,7 +39,7 @@ import { SignOutButton } from "./SignOutButton";
 import { PlatformEvents } from "./PlatformEvents";
 import { PlatformAudit } from "./PlatformAudit";
 import { MagazineManager } from "./MagazineManager";
-import { MembershipPhotoManager } from "./MembershipPhotoManager";
+import { SitePhotoManager } from "./SitePhotoManager";
 import { MfaNotice } from "./MfaNotice";
 import { PlatformNavigation } from "./PlatformNavigation";
 import { formatClubDate } from "@/lib/club-date";
@@ -472,7 +472,7 @@ export function PlatformWorkspace({ snapshot, initialTab }: { snapshot: Platform
 
       {tab === "finanzas" && <FinanceModule canManage={snapshot.capabilities.canManageFinances} onOpenActivities={() => selectTab("actividades")} />}
 
-      {tab === "fotografias" && snapshot.capabilities.canEdit && <MembershipPhotoManager onOpenMagazine={() => selectTab("revista")} />}
+      {tab === "fotografias" && snapshot.capabilities.canEdit && <SitePhotoManager onOpenMagazine={() => selectTab("revista")} />}
 
       {tab === "solicitudes" && <MembershipApplicationsModule
         loadApplications={getMembershipApplicationsAction}

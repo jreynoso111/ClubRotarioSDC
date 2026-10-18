@@ -1,3 +1,4 @@
+import { sitePhotosModule } from "./helpers/site-photos-module.mjs";
 import { mfaDependencies } from "./helpers/mfa-deps.mjs";
 import { toPublicSupabaseUrl } from "./helpers/supabase-public-url.mjs";
 import assert from "node:assert/strict";
@@ -130,6 +131,7 @@ function setup(role = "editor", story = storyRecord(), options = {}) {
     "@/lib/platform": { isMissingSchemaError: () => false },
     "@/lib/audit": { auditCursorFilter() {}, auditPageCursor() {}, defaultAuditSort: {}, normalizeAuditQuery() {} },
     "@/lib/editorial-content": editorialContent,
+    "@/lib/site-photos": sitePhotosModule,
     "@/utils/supabase/public-url": { toPublicSupabaseUrl },
     "@/utils/supabase/config": { isSupabaseConfigured: () => true }, "@/lib/email": {}, "@/lib/membership-applications": {}, "@/utils/site-url": {},
     ...mfaDependencies, "@/utils/supabase/server": { createClient: async () => client },

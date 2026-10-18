@@ -13,7 +13,7 @@ for each row execute function pg_temp.club_fixture_session();
 select set_config('request.jwt.claims', jsonb_build_object('aal', 'aal2', 'amr', jsonb_build_array(jsonb_build_object('method', 'totp', 'timestamp', extract(epoch from now())::bigint)))::text, true); -- privileged fixtures act with a recent second factor (privileged_mfa_test.sql covers its absence)
 select plan(20);
 
-select is((select count(*)::integer from public.site_photo_slots), 3,
+select is((select count(*)::integer from public.site_photo_slots where slot_key like 'membership-%'), 3,
   'the gallery retains its three curated slots');
 select ok((select relrowsecurity from pg_class where oid = 'public.site_photo_slots'::regclass),
   'photo content has row-level security');

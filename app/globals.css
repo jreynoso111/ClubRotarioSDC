@@ -505,12 +505,13 @@ h2 em {
   opacity: 1;
 }
 
+/* Six layers share the 32s cycle; each starts 32s / 6 (5.333s) after the previous one. */
 .hero-art-image-1 {
-  animation: hero-illustration-lift 32s cubic-bezier(.2, .65, .2, 1) 8s infinite;
+  animation: hero-illustration-lift 32s cubic-bezier(.2, .65, .2, 1) 5.333s infinite;
 }
 
 .hero-art-image-2 {
-  animation: hero-illustration-pan 32s cubic-bezier(.2, .65, .2, 1) 12s infinite;
+  animation: hero-illustration-pan 32s cubic-bezier(.2, .65, .2, 1) 10.667s infinite;
 }
 
 .hero-art-image-3 {
@@ -518,15 +519,11 @@ h2 em {
 }
 
 .hero-art-image-4 {
-  animation: hero-illustration-drift 32s cubic-bezier(.2, .65, .2, 1) 20s infinite;
+  animation: hero-illustration-drift 32s cubic-bezier(.2, .65, .2, 1) 21.333s infinite;
 }
 
 .hero-art-image-5 {
-  animation: hero-illustration-loop 32s ease-in-out 24s infinite;
-}
-
-.hero-art-image-6 {
-  animation: hero-illustration-lift 32s cubic-bezier(.2, .65, .2, 1) 28s infinite;
+  animation: hero-illustration-loop 32s ease-in-out 26.667s infinite;
 }
 
 .hero-photo-wash {
@@ -2154,8 +2151,7 @@ h2 span {
   .hero-art-image-2,
   .hero-art-image-3,
   .hero-art-image-4,
-  .hero-art-image-5,
-  .hero-art-image-6 {
+  .hero-art-image-5 {
     opacity: 0;
   }
 
