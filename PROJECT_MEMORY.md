@@ -686,3 +686,10 @@ Decisiones del usuario: avisar al miembro (plataforma y correo) al aprobar, camb
 - **Publicado en Ubuntu:** `release.conf` apunta a `/srv/club-rotario/releases/20261018-153344` (commit 67a7afb); `verify-deployment.mjs` 34/34. Entre aplicar la migración y publicar (unos 10 minutos) la versión anterior no podía leer las notas propias de un miembro.
 - Datos QA eliminados (comité, avisos —también los del Administrador real—, registro de rechazo, cuentas). Pendiente opcional: mostrar en la interfaz el listado de rechazos (hoy solo está en la base).
 
+
+## Revista · 2026-10-18 (publicado; prueba en navegador parcial)
+
+- Causa del reclamo: la base tenía 0 artículos; los 14 visibles estaban fijos en `lib/editorial.ts`. Migración `20261018180000_magazine_rules.sql` aplicada en Ubuntu (historial 24; respaldo `/var/backups/club-rotario/before-magazine-rules-20261018T170232Z.dump`): los 14 pasan a la base como publicados; estados draft/review/published/archived; publican, editan lo publicado, archivan y eliminan solo la gestión y editores con `memberships.can_publish_stories` (`set_story_publisher`); avisos de revisión y de primera publicación; reglas de portada y de almacenamiento `stories/`.
+- Commit `06912f6` publicado en `/srv/club-rotario/releases/20261018-170234`; verify-deployment 34/34. SQL 513/513, Node 192/192.
+- Probado en el navegador: los 14 aparecen con Editar/Pasar a borrador/Archivar/Eliminar y editar uno publicado lo mantiene publicado. **Pendiente de probar:** flujo de editor sin permiso (enviar a revisión), interruptor «Puede publicar» en Miembros, archivar/eliminar, web pública /revista, sitemap y metadatos. Los textos de los 14 dicen «de muestra/de prueba»: editarlos o archivarlos.
+- Datos QA eliminados; el resumen editado en la prueba se restauró.
