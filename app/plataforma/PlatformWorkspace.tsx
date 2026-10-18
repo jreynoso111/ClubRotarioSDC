@@ -9,6 +9,7 @@ import type { FormEvent, ReactNode } from "react";
 
 import type { PlatformProposal, PlatformSnapshot, ProposalVoteChoice } from "@/lib/platform";
 import { PROPOSAL_LIMIT } from "@/lib/proposal-limits";
+import { navigationItems, type NavigationItemId } from "@/lib/platform-navigation";
 import { defaultAuditFilters, type AuditPageResult } from "@/lib/audit";
 
 import {
@@ -40,6 +41,7 @@ import { PlatformAudit } from "./PlatformAudit";
 import { MagazineManager } from "./MagazineManager";
 import { MembershipPhotoManager } from "./MembershipPhotoManager";
 import { MfaNotice } from "./MfaNotice";
+import { PlatformNavigation } from "./PlatformNavigation";
 import { formatClubDate } from "@/lib/club-date";
 import styles from "./platform.module.css";
 const PlatformDiagnostics = dynamic(() => import("./PlatformDiagnostics").then(module => module.PlatformDiagnostics), { loading: () => <p role="status">Cargando diagnóstico…</p> });
@@ -55,21 +57,11 @@ const proposalFilters: Array<{ id: string; label: string; match: (proposal: Plat
 ];
 const PROPOSAL_PAGE = 10;
 
-type Tab = "resumen" | "propuestas" | "agenda" | "actividades" | "finanzas" | "solicitudes" | "organizacion" | "revista" | "fotografias" | "mensajes" | "auditoria" | "diagnostico";
+type Tab = NavigationItemId | "mensajes";
 
 const tabs: Array<{ id: Tab; label: string }> = [
-  { id: "resumen", label: "Resumen" },
-  { id: "propuestas", label: "Propuestas" },
-  { id: "agenda", label: "Agenda" },
-  { id: "actividades", label: "Actividades y tareas" },
-  { id: "finanzas", label: "Finanzas" },
-  { id: "solicitudes", label: "Solicitudes" },
-  { id: "organizacion", label: "Miembros y comités" },
-  { id: "revista", label: "Revista" },
-  { id: "fotografias", label: "Fotos de la web" },
+  ...navigationItems,
   { id: "mensajes", label: "Mensajes" },
-  { id: "auditoria", label: "Auditoría" },
-  { id: "diagnostico", label: "Diagnóstico" },
 ];
 
 const administrationTabs: Tab[] = ["fotografias", "auditoria", "diagnostico"];
@@ -329,7 +321,7 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
   const unreadMessages = snapshot.messages.filter((item) => item.direction === "inbox" && !item.readAt).length;
   const needsSecondFactor = snapshot.security.state === "enroll" || snapshot.security.state === "verify";
   const isAdministrator = snapshot.membership?.role === "admin" && !needsSecondFactor;
-  const availableTabs = tabs.filter(item =>
+  const availableTabs = navigationItems.filter(item =>
     (item.id !== "diagnostico" || snapshot.capabilities.canAudit) &&
     (item.id !== "auditoria" || snapshot.capabilities.canAudit) &&
     (item.id !== "fotografias" || snapshot.capabilities.canEdit)
@@ -341,9 +333,8 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
     <aside className={styles.sidebar}>
       <Link href="/" className={styles.clubBrand}><Image src="/club-santo-domingo-colonial-logo.png" alt="Rotary Club Santo Domingo Colonial" width={1401} height={310} preload /></Link>
       <div className={styles.sideSection}>ESPACIO DE TRABAJO</div>
-      <nav className={styles.sideNav} aria-label="Módulos de la plataforma">
-        {mainTabs.map((item) => <button type="button" key={item.id} className={tab === item.id ? styles.tabActive : styles.tab} aria-current={tab === item.id ? "page" : undefined} onClick={() => selectTab(item.id)}><ModuleIcon module={item.id} /><span>{item.label}</span>{item.id === "mensajes" && (unreadNotifications + unreadMessages > 0) ? <span className={styles.tabBadge}>{unreadNotifications + unreadMessages}</span> : null}</button>)}
-      </nav>
+      <PlatformNavigation initial={snapshot.navigation} selected={tab} canReorder={isAdministrator}
+        items={mainTabs.map(item => ({ ...item, icon: <ModuleIcon module={item.id} /> }))} onSelect={selectTab} />
       <div className={styles.sidebarFooter}><span className={styles.memberDot} /> Membresía activa<p>Personas de acción.<br />Un club, muchas formas de servir.</p><Link href="/">Visitar sitio público ↗</Link></div>
     </aside>
     {isAdministrator && <aside className={`${styles.adminRail} ${administrationExpanded ? styles.adminRailExpanded : ""}`} aria-label="Herramientas de administración">
@@ -373,6 +364,12 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
             onMarkRead={id => run(markNotificationReadAction(id))}
             onViewAll={() => selectTab("mensajes")}
             onOpen={next => selectTab(next as Tab)} />
+          <button type="button" className={`${styles.notificationButton} ${styles.messagesButton}`} aria-current={tab === "mensajes" ? "page" : undefined}
+            aria-label={unreadMessages > 0 ? `Mensajes, ${unreadMessages} sin leer` : "Mensajes"}
+            onClick={() => selectTab("mensajes")}>
+            <ModuleIcon module="mensajes" /><span>Mensajes</span>
+            {unreadMessages > 0 ? <span className={styles.notificationBadge}>{unreadMessages > 99 ? "99+" : unreadMessages}</span> : null}
+          </button>
           <SignOutButton />
         </div>
       </div>

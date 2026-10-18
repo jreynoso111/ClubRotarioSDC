@@ -82,6 +82,7 @@ test("the platform snapshot keeps notes out of the own membership, pages the dir
     "@/lib/mfa-session": mfaDependencies["@/lib/mfa-session"],
     "@/lib/proposal-limits": loadTypeScript("../lib/proposal-limits.ts"),
     "@/lib/read-every-page": loadTypeScript("../lib/read-every-page.ts"),
+    "@/lib/platform-navigation": loadTypeScript("../lib/platform-navigation.ts"),
   });
 
   const snapshot = await platform.getPlatformSnapshot();

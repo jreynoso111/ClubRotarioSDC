@@ -76,6 +76,7 @@
 .headerActions {
   align-items: center;
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
@@ -955,6 +956,23 @@
 .brandMark > span { color: #d99a16; position: absolute; font-size: 20px; right: -3px; bottom: -5px; }
 .sideSection { color: #7b8799; font-size: 9px; font-weight: 700; letter-spacing: .1em; margin: 44px 12px 14px; }
 .sideNav { display: grid; gap: 5px; }
+.navigationItem { align-items: center; display: flex; min-width: 0; border-radius: 9px; }
+.navigationItem > button { flex: 1; min-width: 0; width: 100%; }
+.navigationItem[data-editing="true"] > button { cursor: grab; }
+.navigationItem[data-editing="true"] > button:active { cursor: grabbing; }
+.navigationItem[data-dragging="true"] { opacity: .5; }
+.navigationItem[data-drop-target="true"] { outline: 2px solid #337fcb; outline-offset: 2px; background: #eaf3ff; }
+.navigationControls { margin: 0 12px 12px; }
+.navigationEditButton { background: #f5f7fb; border: 1px solid var(--line); border-radius: 7px; color: #005daa; cursor: pointer; font: inherit; font-size: 11px; padding: 8px 10px; }
+.navigationControls p, .navigationNotice { color: var(--ink-soft); font-size: 11px; line-height: 1.6; margin: 8px 0; }
+.navigationNotice { padding-inline: 12px; }
+.navigationNotice[role="alert"] { color: #8e2424; }
+.navigationGrip { flex-shrink: 0; font-size: 20px; line-height: 1; }
+.navigationMoveButtons { display: flex; flex-direction: column; padding-right: 3px; }
+.navigationMoveButtons button { background: transparent; border: 0; border-radius: 4px; color: #005daa; cursor: pointer; font-size: 15px; min-height: 28px; width: 28px; }
+.navigationMoveButtons button:hover { background: #eaf3ff; }
+.navigationMoveButtons button:disabled { cursor: default; opacity: .3; }
+.messagesButton[aria-current="page"] { background: #eaf3ff; color: #005daa; }
 .sideNav .tab, .sideNav .tabActive { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 9px; font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; text-align: left; }
 .sideNav .tab:hover { background: #f5f7fb; }
 .sideNav .tabActive { background: #eaf3ff; color: #005daa; }
@@ -1049,6 +1067,9 @@
   .clubBrand { font-size: 23px; }
   .sideSection, .sidebarFooter { display: none; }
   .sideNav { display: flex; overflow-x: auto; gap: 5px; padding: 16px 0 12px; }
+  .navigationItem { flex-shrink: 0; }
+  .navigationControls { margin: 12px 0 0; }
+  .navigationMoveButtons { flex-direction: row; }
   .sideNav .tab, .sideNav .tabActive { padding: 10px 12px; flex-shrink: 0; }
   .adminRail { align-items: center; border-left: 0; border-bottom: 1px solid var(--line); display: flex; gap: 10px; height: auto; padding: 6px 18px; position: relative; width: 100%; }
   .adminToggle { flex-shrink: 0; margin-bottom: 0; }

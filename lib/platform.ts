@@ -6,6 +6,7 @@ import { privilegedSecurityState, type PrivilegedSecurityState } from "@/lib/mfa
 import { sessionHasRecentSecondFactor } from "@/lib/mfa-session";
 import { PROPOSAL_LIMIT } from "@/lib/proposal-limits";
 import { readEveryPage } from "@/lib/read-every-page";
+import { defaultNavigationOrder, isNavigationOrder, type PlatformNavigation } from "@/lib/platform-navigation";
 
 export type PlatformRole =
   | "member"
@@ -26,6 +27,7 @@ export type PlatformAccess =
 export type PlatformSchemaState = "ready" | "migration_missing" | "unavailable";
 
 export type PlatformSnapshot = {
+  navigation: PlatformNavigation;
   access: PlatformAccess;
   accessMessage: string;
   user: {
@@ -421,6 +423,7 @@ function emptySnapshot(
   user: PlatformSnapshot["user"] = null,
 ): PlatformSnapshot {
   return {
+    navigation: { order: [...defaultNavigationOrder], revision: 0, available: false },
     access,
     accessMessage,
     user,
@@ -619,6 +622,7 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
     notificationsResult,
     directoryResult,
     committeeCandidatesResult,
+    navigationResult,
   ] = await Promise.all([
     readQuery<EventRow[]>(
       eventsQuery()
@@ -669,9 +673,17 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
           .order("user_id").range(first, last))
         : Promise.resolve({ data: [], error: null }),
     ),
+    readQuery<{ item_order: unknown; revision: number }>(
+      supabase.from("platform_navigation").select("item_order,revision").eq("id", true).maybeSingle(),
+    ),
   ]);
 
   const warnings: string[] = [];
+  if (navigationResult.data && isNavigationOrder(navigationResult.data.item_order)) {
+    baseSnapshot.navigation = { order: navigationResult.data.item_order, revision: navigationResult.data.revision, available: true };
+  } else {
+    warnings.push("No se pudo consultar el orden compartido del menú; se muestra el orden predeterminado.");
+  }
   const existingResults = [
     [eventsResult, "agenda"],
     [pastEventsResult, "eventos anteriores"],
