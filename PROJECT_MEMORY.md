@@ -758,3 +758,9 @@ Decisiones del usuario: avisar al miembro (plataforma y correo) al aprobar, camb
 - Estado: código local, sin commit. La migración `supabase/migrations/20261018200000_site_photo_slots_all_pages.sql` **no se ha aplicado** en Supabase; la prueba `supabase/tests/site_photo_slots_all_pages_test.sql` (28 comprobaciones) **no se ha ejecutado** y ya figura en `scripts/prepare-db-verification.mjs`. `membership_photo_gallery_rls_test.sql` ahora cuenta solo los espacios de membresía.
 - Pendiente: las ilustraciones `public/club-group.webp`, `club-service.webp` y `club-fellowship.webp` las crea otro agente; hasta entonces esas tres ubicaciones muestran imagen rota. Falta comprobación visual en navegador.
 - Verificación local 2026-10-18: `tsc --noEmit`, `eslint app lib tests` y `npm test` 231/231 satisfactorios.
+
+## Fotos de la web para todas las páginas · publicado 2026-10-18
+
+- Migración `20261018200000_site_photo_slots_all_pages.sql` aplicada en Ubuntu (historial 28; respaldo `/var/backups/club-rotario/before-site-photos-20261018T202118Z.dump`): 15 espacios (Inicio 6, Nosotros banner + 3 de «La vida del club», Agenda, Revista, Solicitar membresía 3). Añadida la política `club_public_assets_writers_read`: sin SELECT, los DELETE de editores sobre `club-public` no afectaban filas y las fotos reemplazadas nunca se borraban.
+- Ilustraciones `public/club-fellowship.webp`, `club-service.webp`, `club-group.webp` (fuentes SVG y `render.mjs` en `scripts/illustrations/`), usadas en Nosotros y como originales de Solicitar membresía. Son provisionales hasta tener fotos reales.
+- Commits `1d2e4aa`, `9e94a66`; SQL 602/602, Node 231/231. Prueba en la candidata con gestor QA: subir y publicar en «Nosotros · Nuestro club» se refleja en /nosotros; restaurar vuelve al original y borra el archivo (0 objetos restantes). Publicado en `/srv/club-rotario/releases/20261018-202823`; 34/34.
