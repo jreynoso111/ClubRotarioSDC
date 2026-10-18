@@ -729,3 +729,8 @@ Decisiones del usuario: avisar al miembro (plataforma y correo) al aprobar, camb
 
 - El usuario solicita guardar toda la versión actual en GitHub y precisa que debe estar en la rama principal `main` de `jreynoso111/ClubRotarioSDC`. `main` incorpora por avance directo el checkpoint `a5f0917` de `claude/club-security-hardening`, con los cambios publicados de revista, navegación compartida, separación de administradores y alta de miembros con cambio obligatorio de contraseña.
 - El checkpoint incluye el ajuste local pendiente de `tsconfig.json` (rutas de tipos generadas por Next en verificaciones anteriores). Los secretos, archivos de entorno privados, datos de miembros y respaldos de la base de datos permanecen fuera de Git. Este guardado no cambia la release publicada en Ubuntu.
+
+## Contraseña temporal sencilla · 2026-10-18
+
+- Petición del usuario: la contraseña temporal de «Crear miembro» debe ser una palabra corta y sencilla en español, no un código. `lib/temporary-password.ts` elige al azar (crypto) una palabra de 8 a 10 letras sin tildes ni ñ (p. ej. «mariposa»); el mínimo pasa de 12 a 8, el de Auth, porque se cambia obligatoriamente en el primer acceso. Al generarla se muestra en claro.
+- Commit `39a8098` en `main`; Node 207/207, lint y TypeScript. Publicado en `/srv/club-rotario/releases/20261018-184216`; `verify-deployment.mjs` 34/34 y el bloque público contiene la lista nueva.
