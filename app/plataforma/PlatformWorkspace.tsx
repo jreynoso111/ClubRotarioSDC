@@ -140,6 +140,14 @@ function EmptyState({ children }: { children: ReactNode }) {
   return <p className={styles.empty}>{children}</p>;
 }
 
+// A tab the snapshot allows; used for the address bar and notification links.
+function allowedTab(id: string | null | undefined, snapshot: PlatformSnapshot): Tab | null {
+  if (!id || !tabs.some(item => item.id === id)) return null;
+  if ((id === "diagnostico" || id === "auditoria") && !snapshot.capabilities.canAudit) return null;
+  if (id === "fotografias" && !snapshot.capabilities.canEdit) return null;
+  return id as Tab;
+}
+
 // Notifications link to a platform tab as /plataforma?tab=<id>.
 function notificationTab(href: string | null) {
   const match = href?.match(/^\/plataforma\?tab=([a-z]+)$/);
@@ -223,10 +231,11 @@ function NotificationBell({ notifications, disabled, onMarkRead, onViewAll, onOp
   </div>;
 }
 
-export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) {
+export function PlatformWorkspace({ snapshot, initialTab }: { snapshot: PlatformSnapshot; initialTab?: string }) {
   const router = useRouter();
-  const [tab, setTab] = useState<Tab>("resumen");
-  const [administrationExpanded, setAdministrationExpanded] = useState(false);
+  // The open tab lives in the address (?tab=), so a refresh or a shared link reopens it.
+  const [tab, setTab] = useState<Tab>(() => allowedTab(initialTab, snapshot) ?? "resumen");
+  const [administrationExpanded, setAdministrationExpanded] = useState(() => administrationTabs.includes(tab));
   const [feedback, setFeedback] = useState("");
   const [savingProposal, setSavingProposal] = useState(false);
   const [proposalFilter, setProposalFilter] = useState("all");
@@ -238,23 +247,34 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
   const user = snapshot.user;
   const isSystemAccount = snapshot.membership?.role === "admin";
 
+  function loadAudit() {
+    const request = ++auditRequest.current;
+    setAuditResult(null);
+    startTransition(async () => {
+      try {
+        const result = await getAuditPageAction(defaultAuditFilters);
+        if (request === auditRequest.current) setAuditResult(result);
+      } catch {
+        if (request === auditRequest.current) setAuditResult({ ok: false, message: "No se pudo consultar la auditoría. Inténtalo de nuevo." });
+      }
+    });
+  }
+
   function selectTab(next: Tab) {
     if (next === tab) return;
     setTab(next);
     setFeedback("");
-    if (next === "auditoria" && snapshot.capabilities.canAudit) {
-      const request = ++auditRequest.current;
-      setAuditResult(null);
-      startTransition(async () => {
-        try {
-          const result = await getAuditPageAction(defaultAuditFilters);
-          if (request === auditRequest.current) setAuditResult(result);
-        } catch {
-          if (request === auditRequest.current) setAuditResult({ ok: false, message: "No se pudo consultar la auditoría. Inténtalo de nuevo." });
-        }
-      });
-    }
+    window.history.replaceState(window.history.state, "", next === "resumen" ? "/plataforma" : `/plataforma?tab=${next}`);
+    if (next === "auditoria" && snapshot.capabilities.canAudit) loadAudit();
   }
+
+  // A refresh on the audit tab loads its first page, as opening the tab does.
+  const auditOpenedOnLoad = useRef(tab === "auditoria" && snapshot.capabilities.canAudit);
+  useEffect(() => {
+    if (!auditOpenedOnLoad.current) return;
+    auditOpenedOnLoad.current = false;
+    loadAudit();
+  }, []);
 
   function run(action: Promise<PlatformActionResult>, onSuccess?: () => void) {
     setSavingProposal(false);
