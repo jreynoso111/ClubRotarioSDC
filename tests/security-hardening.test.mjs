@@ -78,7 +78,7 @@ test("the access check tells privileged sign-ins whether to enroll or verify a s
   const cases = [["member", false, [], "not_required"], ["admin", false, [], "enroll"], ["admin", false, [{ id: "f" }], "verify"], ["club_manager", true, [{ id: "f" }], "verified"]];
   for (const [role, fresh, totp, expected] of cases) {
     const client = {
-      rpc: async name => { assert.equal(name, "has_privileged_session"); return { data: fresh, error: null }; },
+      rpc: async name => { if (name === "account_password_state") return { data: "ready", error: null }; assert.equal(name, "has_privileged_session"); return { data: fresh, error: null }; },
       auth: {
         getUser: async () => ({ data: { user: { id: "actor" } }, error: null }),
         getClaims: async () => ({ data: { claims: fresh ? liveClaims() : { aal: "aal1" } }, error: null }),

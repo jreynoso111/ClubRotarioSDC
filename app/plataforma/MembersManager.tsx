@@ -16,6 +16,7 @@ import {
   setStoryPublisherAction, updateMemberAccessAction, updateMemberProfileAction, type ManagedMember, type MemberAccessHistoryEntry, type PendingMember,
 } from "./members-actions";
 import styles from "./management.module.css";
+import { CreateMemberForm } from "./CreateMemberForm";
 
 type AccessInput = Parameters<typeof updateMemberAccessAction>[0];
 type AccessState = { role: PlatformRole; status: MemberStatus };
@@ -150,6 +151,7 @@ export function MembersManager({ currentUserId, committees, tasks, initialMember
     <div className={styles.heading}><div><h2>{showingAdministration ? "Cuentas de administración" : "Miembros del club"}</h2><p>{showingAdministration ? "Estas cuentas administran el sistema y no forman parte del listado ni del conteo de miembros del club." : "Consulta cada ficha, sus responsabilidades y su acceso a la plataforma. Las personas que crean una cuenta aparecen arriba para aprobarlas o rechazarlas."}</p></div><button type="button" className={styles.quietButton} disabled={pending || loading} onClick={() => { setLoading(true); void loadDirectory(); }}>Actualizar lista</button></div>
     {!showingAdministration ? <div className={styles.summary}>{memberStatuses.map(status => <span key={status}><strong>{members.filter(member => member.status === status).length}</strong>{memberStatusLabels[status]}s</span>)}</div> : null}
     {feedback ? <p className={`${styles.feedback} ${feedback.ok ? "" : styles.error}`} role={feedback.ok ? "status" : "alert"}>{feedback.message}</p> : null}
+    {actorRole === "admin" && !showingAdministration ? <CreateMemberForm onCreated={() => { void loadDirectory(); onMembersChanged?.(); router.refresh(); }} /> : null}
 
     {isManagement && !showingAdministration ? <article className={styles.card}>
       <div className={styles.heading}><div><h3>Pendientes de aprobar</h3><p>Cuentas creadas que todavía no son miembros activos. Aprobar les da acceso como miembro; rechazar elimina la cuenta y conserva un registro del rechazo.</p></div></div>

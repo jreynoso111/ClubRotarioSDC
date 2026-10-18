@@ -21,6 +21,7 @@ export async function requireModuleActor(roles: PlatformRole[]) {
     const supabase = await createClient();
     const { data, error } = await supabase.auth.getUser();
     if (error || !data.user) return { error: moduleFailure("Tu sesión terminó. Vuelve a iniciar sesión.", "unauthenticated") };
+    if (data.user.app_metadata?.require_password_change === true) return { error: moduleFailure("Debes establecer tu contraseña antes de continuar.", "forbidden") };
     const { data: membership, error: membershipError } = await supabase.from("memberships")
       .select("membership_role,membership_status").eq("user_id", data.user.id).maybeSingle();
     if (membershipError) return { error: moduleFailure("No se pudo verificar tu membresía.") };

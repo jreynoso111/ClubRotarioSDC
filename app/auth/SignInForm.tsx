@@ -54,7 +54,8 @@ export function SignInForm({ nextPath, confirmationError = false, notice = "" }:
           : "No pudimos validar el acceso de tu cuenta. Inténtalo de nuevo más tarde.");
         return;
       }
-      const result = await access.json().catch(() => ({})) as { mfa?: string };
+      const result = await access.json().catch(() => ({})) as { mfa?: string; passwordChangeRequired?: boolean };
+      if (result.passwordChangeRequired) { router.replace("/auth/first-password"); router.refresh(); return; }
       // Privileged roles verify (or enroll) a second factor before administration.
       if (result.mfa === "verify" || result.mfa === "enroll") {
         router.replace(`/auth/mfa?next=${encodeURIComponent(nextPath)}`);

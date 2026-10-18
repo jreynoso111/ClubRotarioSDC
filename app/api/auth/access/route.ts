@@ -10,6 +10,10 @@ export async function POST(request: Request) {
     const supabase = await createClient();
     const { data, error } = await supabase.auth.getUser();
     if (error || !data.user) return reply({ state: "signed_out" }, 401);
+    const passwordState = await supabase.rpc("account_password_state");
+    if (passwordState.error) return reply({ state: "unavailable" }, 503);
+    if (passwordState.data === "required") return reply({ state: "password_change_required", passwordChangeRequired: true });
+    if (passwordState.data === "sign_in_again") return reply({ state: "signed_out" }, 401);
     const membership = await supabase.from("memberships").select("membership_status,membership_role").eq("user_id", data.user.id).maybeSingle();
     if (membership.error) return reply({ state: "unavailable" }, 503);
     const state = membership.data?.membership_status;

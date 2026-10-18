@@ -177,6 +177,9 @@ async function requireActor(requiredRoles: PlatformRole[] = []):
   if (userError || !userData.user) {
     return { error: failure("Tu sesión ya no está activa. Vuelve a iniciar sesión.", "unauthenticated") };
   }
+  if (userData.user.app_metadata?.require_password_change === true) {
+    return { error: failure("Debes establecer tu contraseña antes de continuar.", "forbidden") };
+  }
 
   const { data: membership, error: membershipError } = await supabase
     .from("memberships")

@@ -35,6 +35,21 @@ export async function updateSession(request: NextRequest, extraRequestHeaders: R
 
   const { data: claimsData } = await supabase.auth.getClaims();
   const claims = claimsData?.claims;
+  const metadata = claims?.app_metadata as Record<string, unknown> | undefined;
+  const protectedPath = request.nextUrl.pathname.startsWith("/plataforma")
+    || request.nextUrl.pathname === "/auth/mfa" || request.nextUrl.pathname === "/auth/reset-password";
+  if (claims && protectedPath && (metadata?.require_password_change === true || typeof metadata?.admin_created_by === "string")) {
+    const state = await supabase.rpc("account_password_state");
+    if (state.error) return new NextResponse("No se pudo verificar el acceso. Inténtalo de nuevo.", { status: 503 });
+    if (state.data !== "ready") {
+      const target = request.nextUrl.clone();
+      target.pathname = state.data === "sign_in_again" ? "/auth/sign-in" : "/auth/first-password";
+      target.search = state.data === "sign_in_again" ? "?notice=password-updated" : "";
+      const response = NextResponse.redirect(target);
+      supabaseResponse.cookies.getAll().forEach(cookie => response.cookies.set(cookie));
+      return response;
+    }
+  }
 
   if (!claims && request.nextUrl.pathname.startsWith("/plataforma")) {
     const redirectUrl = request.nextUrl.clone();
