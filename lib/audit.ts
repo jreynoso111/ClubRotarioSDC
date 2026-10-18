@@ -6,7 +6,7 @@ export const auditModules = {
   proposals: { label: "Propuestas", tables: ["proposals", "proposal_votes", "proposal_history"] },
   finance: { label: "Finanzas", tables: ["finance_monthly_dues", "finance_entries"] },
   organization: { label: "Organigrama y comités", tables: ["committees", "committee_members", "club_leadership_terms", "club_leadership_positions"] },
-  activities: { label: "Actividades y tareas", tables: ["activities", "tasks"] },
+  activities: { label: "Actividades y tareas", tables: ["activities", "tasks", "task_comments"] },
   messaging: { label: "Mensajes y avisos", tables: ["internal_messages", "internal_message_recipients", "notifications"] },
   settings: { label: "Configuración de la web", tables: ["site_settings"] },
   media: { label: "Archivos y fotografías", tables: ["media_assets", "objects", "site_photo_slots"] },
@@ -65,7 +65,7 @@ export type AuditDetailResult = { ok: boolean; message: string; detail?: AuditDe
 export const auditTableLabels: Record<string, string> = {
   events: "Evento", event_rsvps: "Asistencia", event_attendance: "Asistencia real", stories: "Publicación", site_settings: "Configuración",
   profiles: "Perfil", memberships: "Membresía", access_requests: "Solicitud de acceso", proposals: "Propuesta",
-  committees: "Comité", committee_members: "Integrante de comité", activities: "Actividad", tasks: "Tarea",
+  committees: "Comité", committee_members: "Integrante de comité", activities: "Actividad", tasks: "Tarea", task_comments: "Comentario de tarea",
   internal_messages: "Mensaje", internal_message_recipients: "Entrega de mensaje", notifications: "Aviso",
   media_assets: "Archivo", objects: "Archivo almacenado", users: "Cuenta", sessions: "Sesión", audit_log: "Auditoría",
   membership_applications: "Solicitud de ingreso", proposal_votes: "Participación en votación", proposal_history: "Historial de propuesta",

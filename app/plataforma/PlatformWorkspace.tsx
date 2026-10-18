@@ -448,7 +448,7 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
       {tab === "agenda" && <PlatformEvents snapshot={snapshot} />}
 
       {tab === "actividades" && <ActivityManager activities={snapshot.activities} tasks={snapshot.tasks}
-        members={snapshot.capabilities.canManageMembership ? snapshot.committeeCandidates : snapshot.memberDirectory} currentUserId={user?.id ?? ""} canManage={snapshot.capabilities.canCoordinate} />}
+        members={snapshot.capabilities.canManageMembership ? snapshot.committeeCandidates : snapshot.memberDirectory} currentUserId={user?.id ?? ""} canManage={snapshot.capabilities.canCoordinate} canDelete={snapshot.capabilities.canManageClub} />}
 
       {tab === "finanzas" && <FinanceModule canManage={snapshot.capabilities.canManageFinances} onOpenActivities={() => selectTab("actividades")} />}
 

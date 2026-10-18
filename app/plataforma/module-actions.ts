@@ -2,13 +2,29 @@
 
 import { revalidatePath } from "next/cache";
 import { randomUUID } from "node:crypto";
-import type { PlatformActivity, PlatformDirectoryMember, PlatformTask } from "@/lib/platform";
+import type { PlatformActivity, PlatformDirectoryMember, PlatformRole, PlatformTask } from "@/lib/platform";
 import type { PlatformActionResult } from "./actions";
 import { isAssignableMember, moduleFailure, requireModuleActor, validUuid } from "./module-auth";
 
 type ActivityInput = { activityId: string; title: string; description?: string; status: "planned" | "active" | "completed" | "cancelled"; startsAt?: string; endsAt?: string; location?: string; leadId?: string };
 type TaskInput = { activityId: string; title: string; description?: string; priority: "low" | "normal" | "high" | "urgent"; dueAt?: string; assigneeId?: string };
-export type ActivityWorkspace = { activities: PlatformActivity[]; tasks: PlatformTask[]; members: PlatformDirectoryMember[] };
+export type TaskComment = { id: string; taskId: string; authorName: string; body: string; createdAt: string };
+export type ActivityEventLink = { id: string; activityId: string; status: string; startsAt: string };
+export type ActivityWorkspace = {
+  activities: PlatformActivity[]; tasks: PlatformTask[]; members: PlatformDirectoryMember[];
+  comments: TaskComment[]; events: ActivityEventLink[];
+};
+type ModuleActor = NonNullable<Awaited<ReturnType<typeof requireModuleActor>>["actor"]>;
+const memberRoles: PlatformRole[] = ["member", "coordinator", "editor", "club_manager", "admin"];
+const coordinationRoles: PlatformRole[] = ["coordinator", "club_manager", "admin"];
+
+// Coordination manages every task; the lead of an activity manages that activity's tasks.
+async function canManageActivityTasks(actor: ModuleActor, activityId: string | null) {
+  if (coordinationRoles.includes(actor.role)) return true;
+  if (!activityId) return false;
+  const { data } = await actor.supabase.from("activities").select("lead_id").eq("id", activityId).maybeSingle();
+  return data?.lead_id === actor.userId;
+}
 
 async function readEveryPage<T>(query: (first: number, last: number) => PromiseLike<{ data: T[] | null; error: unknown }>) {
   const rows: T[] = [];
@@ -23,11 +39,11 @@ async function readEveryPage<T>(query: (first: number, last: number) => PromiseL
 }
 
 export async function getActivityWorkspaceAction(): Promise<PlatformActionResult & { workspace?: ActivityWorkspace }> {
-  const { actor, error } = await requireModuleActor(["member", "coordinator", "editor", "club_manager", "admin"]);
+  const { actor, error } = await requireModuleActor(memberRoles);
   if (error || !actor) return error!;
   try {
     const isManagement = actor.role === "club_manager" || actor.role === "admin";
-    const [activities, tasks, profiles, memberships] = await Promise.all([
+    const [activities, tasks, profiles, memberships, comments, events] = await Promise.all([
       readEveryPage((first, last) => actor.supabase.from("activities")
         .select("id,title,description,activity_status,starts_at,ends_at,location,lead_id")
         .order("created_at", { ascending: false }).order("id").range(first, last)),
@@ -38,7 +54,12 @@ export async function getActivityWorkspaceAction(): Promise<PlatformActionResult
         .order("id").range(first, last)),
       isManagement ? readEveryPage((first, last) => actor.supabase.from("memberships").select("user_id")
         .eq("membership_status", "active").order("user_id").range(first, last)) : Promise.resolve(null),
+      readEveryPage((first, last) => actor.supabase.from("task_comments").select("id,task_id,author_id,body,created_at")
+        .order("created_at").order("id").range(first, last)),
+      readEveryPage((first, last) => actor.supabase.from("events").select("id,activity_id,status,starts_at")
+        .not("activity_id", "is", null).order("starts_at").range(first, last)),
     ]);
+    const profileNames = new Map(profiles.map(profile => [profile.id, profile.display_name?.trim() || "Miembro del club"]));
     const activeIds = memberships ? new Set(memberships.map(member => member.user_id)) : null;
     return { ok: true, message: "Actividades y tareas cargadas.", workspace: {
       activities: activities.map(activity => ({ id: activity.id, title: activity.title, description: activity.description,
@@ -46,6 +67,9 @@ export async function getActivityWorkspaceAction(): Promise<PlatformActionResult
       tasks: tasks.map(task => ({ id: task.id, title: task.title, description: task.description, status: task.task_status,
         priority: task.priority, dueAt: task.due_at, activityId: task.activity_id, proposalId: task.proposal_id, assigneeId: task.assignee_id })),
       members: profiles.filter(profile => !activeIds || activeIds.has(profile.id)).map(profile => ({ userId: profile.id, name: profile.display_name?.trim() || "Miembro del club" })).sort((left, right) => left.name.localeCompare(right.name, "es")),
+      comments: comments.map(comment => ({ id: comment.id, taskId: comment.task_id, body: comment.body, createdAt: comment.created_at,
+        authorName: comment.author_id ? profileNames.get(comment.author_id) ?? "Miembro del club" : "Club Rotario" })),
+      events: events.map(event => ({ id: event.id, activityId: event.activity_id, status: event.status, startsAt: event.starts_at })),
     } };
   } catch { return moduleFailure("No se pudo cargar la lista completa de actividades y tareas. Puedes seguir trabajando con los registros visibles o volver a cargar."); }
 }
@@ -104,8 +128,11 @@ export async function updateActivityAction(input: ActivityInput): Promise<Platfo
 }
 
 export async function createTaskAction(input: TaskInput): Promise<PlatformActionResult> {
-  const { actor, error } = await requireModuleActor(["coordinator", "club_manager", "admin"]);
+  const { actor, error } = await requireModuleActor(memberRoles);
   if (error || !actor) return error!;
+  if (!validUuid(input?.activityId) || !await canManageActivityTasks(actor, input.activityId)) {
+    return moduleFailure("Solo coordinación o el responsable de la actividad pueden añadir tareas.", "forbidden");
+  }
   const title = typeof input?.title === "string" ? input.title.trim() : "";
   const description = typeof input?.description === "string" ? input.description.trim() || null : null;
   const dueAt = dateValue(input?.dueAt);
@@ -145,23 +172,79 @@ export async function createProposalTaskAction(input: Omit<TaskInput, "activityI
   return { ok: true, message: "La tarea quedó vinculada a la propuesta.", id: data.id };
 }
 
-export async function updateTaskAction(input: TaskInput & { taskId: string }): Promise<PlatformActionResult> {
-  const { actor, error } = await requireModuleActor(["coordinator", "club_manager", "admin"]);
+export async function updateTaskAction(input: Omit<TaskInput, "activityId"> & { taskId: string }): Promise<PlatformActionResult> {
+  const { actor, error } = await requireModuleActor(memberRoles);
   if (error || !actor) return error!;
   const title = typeof input?.title === "string" ? input.title.trim() : "";
   const description = typeof input?.description === "string" ? input.description.trim() || null : null;
   const dueAt = dateValue(input?.dueAt);
-  if (!validUuid(input?.taskId) || !validUuid(input?.activityId) || title.length < 2 || title.length > 180
+  if (!validUuid(input?.taskId) || title.length < 2 || title.length > 180
     || (description?.length ?? 0) > 4000 || !["low", "normal", "high", "urgent"].includes(input.priority)
     || (input.dueAt && !dueAt)) return moduleFailure("Revisa los datos de la tarea.", "invalid");
-  const { data: current, error: currentError } = await actor.supabase.from("tasks").select("id,assignee_id")
-    .eq("id", input.taskId).eq("activity_id", input.activityId).maybeSingle();
-  if (currentError || !current) return moduleFailure("La tarea ya no está disponible en esta actividad.", "invalid");
+  // Activity and proposal tasks alike; the task keeps its parent.
+  const { data: current, error: currentError } = await actor.supabase.from("tasks").select("id,assignee_id,activity_id")
+    .eq("id", input.taskId).maybeSingle();
+  if (currentError || !current) return moduleFailure("La tarea ya no está disponible.", "invalid");
+  if (!await canManageActivityTasks(actor, current.activity_id)) {
+    return moduleFailure("Solo coordinación o el responsable de la actividad pueden editar esta tarea.", "forbidden");
+  }
   if (input.assigneeId && input.assigneeId !== current.assignee_id && !await isAssignableMember(actor, input.assigneeId)) return moduleFailure("La tarea debe asignarse a una membresía activa.", "invalid");
   const { data, error: updateError } = await actor.supabase.from("tasks").update({
     title, description, priority: input.priority, due_at: dueAt, assignee_id: input.assigneeId || null, updated_by: actor.userId,
-  }).eq("id", input.taskId).eq("activity_id", input.activityId).select("id").maybeSingle();
-  if (updateError || !data) return moduleFailure("No se pudo actualizar la tarea de esta actividad.");
+  }).eq("id", input.taskId).select("id").maybeSingle();
+  if (updateError || !data) return moduleFailure("No se pudo actualizar la tarea.");
   revalidatePath("/plataforma");
   return { ok: true, message: "La tarea quedó actualizada." };
+}
+
+export async function deleteTaskAction(taskId: string): Promise<PlatformActionResult> {
+  const { actor, error } = await requireModuleActor(["club_manager", "admin"]);
+  if (error || !actor) return error!;
+  if (!validUuid(taskId)) return moduleFailure("La tarea indicada no es válida.", "invalid");
+  const { data, error: deleteError } = await actor.supabase.from("tasks").delete().eq("id", taskId).select("id").maybeSingle();
+  if (deleteError || !data) return moduleFailure("No se pudo eliminar la tarea.");
+  revalidatePath("/plataforma");
+  return { ok: true, message: "La tarea fue eliminada." };
+}
+
+export async function deleteActivityAction(activityId: string): Promise<PlatformActionResult> {
+  const { actor, error } = await requireModuleActor(["club_manager", "admin"]);
+  if (error || !actor) return error!;
+  if (!validUuid(activityId)) return moduleFailure("La actividad indicada no es válida.", "invalid");
+  const { data, error: deleteError } = await actor.supabase.from("activities").delete().eq("id", activityId).select("id").maybeSingle();
+  if (deleteError || !data) return moduleFailure("No se pudo eliminar la actividad.");
+  revalidatePath("/plataforma");
+  return { ok: true, message: "La actividad y sus tareas fueron eliminadas. Sus movimientos en Finanzas se conservan con el nombre de la actividad." };
+}
+
+export async function addTaskCommentAction(taskId: string, body: string): Promise<PlatformActionResult> {
+  const { actor, error } = await requireModuleActor(memberRoles);
+  if (error || !actor) return error!;
+  const text = typeof body === "string" ? body.trim() : "";
+  if (!validUuid(taskId) || text.length < 2 || text.length > 2000) return moduleFailure("Escribe un comentario de 2 a 2,000 caracteres.", "invalid");
+  const { error: insertError } = await actor.supabase.from("task_comments").insert({ task_id: taskId, author_id: actor.userId, body: text });
+  if (insertError) return moduleFailure("Solo coordinación, el responsable de la actividad o la persona asignada pueden comentar.", "forbidden");
+  revalidatePath("/plataforma");
+  return { ok: true, message: "El comentario quedó registrado." };
+}
+
+// Prepares a draft in the Agenda so coordination can convene members.
+export async function createEventFromActivityAction(activityId: string): Promise<PlatformActionResult> {
+  const { actor, error } = await requireModuleActor(coordinationRoles);
+  if (error || !actor) return error!;
+  if (!validUuid(activityId)) return moduleFailure("La actividad indicada no es válida.", "invalid");
+  const { data: activity, error: activityError } = await actor.supabase.from("activities")
+    .select("id,title,description,starts_at,ends_at,location").eq("id", activityId).maybeSingle();
+  if (activityError || !activity) return moduleFailure("La actividad ya no está disponible.", "invalid");
+  if (!activity.starts_at) return moduleFailure("Define la fecha de inicio de la actividad antes de crear su evento.", "invalid");
+  const base = activity.title.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 90) || "actividad";
+  const { data, error: insertError } = await actor.supabase.from("events").insert({
+    title: activity.title.slice(0, 160), slug: `${base}-${randomUUID().slice(0, 8)}`, summary: activity.description?.slice(0, 600) ?? null,
+    description: activity.description, kind: "servicio", tone: "sun", starts_at: activity.starts_at, ends_at: activity.ends_at,
+    venue_name: activity.location?.slice(0, 180) ?? null, status: "draft", is_public: false, activity_id: activity.id, created_by: actor.userId,
+  }).select("id").maybeSingle();
+  if (insertError || !data) return moduleFailure("No se pudo crear el evento en la Agenda.");
+  revalidatePath("/plataforma");
+  return { ok: true, message: "Se creó un borrador en la Agenda. Revísalo y publícalo para convocar a los miembros.", id: data.id };
 }

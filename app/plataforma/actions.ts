@@ -929,11 +929,17 @@ export async function createActivityAction(input: {
 export async function updateTaskStatusAction(
   taskId: string,
   status: "todo" | "in_progress" | "blocked" | "done" | "cancelled",
+  reason?: string,
 ): Promise<PlatformActionResult> {
   const { actor, error } = await requireActor();
   if (error) return error;
   if (!isUuid(taskId) || !["todo", "in_progress", "blocked", "done", "cancelled"].includes(status)) {
     return failure("La tarea indicada no es válida.", "invalid");
+  }
+  // A blocked task records why, so coordination can help unblock it.
+  const blockedReason = typeof reason === "string" ? reason.trim() : "";
+  if (status === "blocked" && (blockedReason.length < 5 || blockedReason.length > 1900)) {
+    return failure("Explica en pocas palabras qué bloquea la tarea.", "invalid");
   }
 
   const { data, error: updateError } = await actor!.supabase
@@ -943,9 +949,14 @@ export async function updateTaskStatusAction(
     .select("id")
     .maybeSingle();
   if (updateError || !data) return errorFor(updateError);
+  if (status === "blocked") {
+    const { error: commentError } = await actor!.supabase.from("task_comments")
+      .insert({ task_id: taskId, author_id: actor!.userId, body: `Bloqueada: ${blockedReason}` });
+    if (commentError) return errorFor(commentError);
+  }
 
   revalidatePath("/plataforma");
-  return success("La tarea fue actualizada.");
+  return success(status === "blocked" ? "La tarea quedó bloqueada y el motivo se registró como comentario." : "La tarea fue actualizada.");
 }
 
 export async function createCommitteeAction(input: {

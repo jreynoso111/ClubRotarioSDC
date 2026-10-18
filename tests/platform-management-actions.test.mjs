@@ -23,7 +23,7 @@ const sources = {
   legacy: compile("../app/plataforma/actions.ts"),
 };
 
-function setup({ role = "admin", membershipStatus = "active", targetRole = "member", targetStatus = "active", existingJoinedAt = joinedAt, activityStatus = "active", currentLeadId = null, currentAssigneeId = null, signedIn = true, catalogSize = 0 } = {}) {
+function setup({ role = "admin", membershipStatus = "active", targetRole = "member", targetStatus = "active", existingJoinedAt = joinedAt, activityStatus = "active", currentLeadId = null, currentAssigneeId = null, signedIn = true, catalogSize = 0, taskActivityId = activityId } = {}) {
   const writes = [];
   const invalidations = [];
   const pages = [];
@@ -36,7 +36,7 @@ function setup({ role = "admin", membershipStatus = "active", targetRole = "memb
       const query = {
         select() { return query; },
         eq(column, value) { filters.push([column, value]); return query; },
-        order() { return query; }, limit() { return query; },
+        order() { return query; }, limit() { return query; }, not() { return query; },
         async range(first, last) {
           pages.push({ table, first, last });
           if (table === "activities" || table === "tasks") return { data: Array.from({ length: Math.max(0, Math.min(last + 1, catalogSize) - first) }, (_, index) => table === "activities" ? {
@@ -50,6 +50,7 @@ function setup({ role = "admin", membershipStatus = "active", targetRole = "memb
         },
         update(value) { writing = true; writes.push({ table, value, filters, operation: "update" }); return query; },
         insert(value) { writing = true; writes.push({ table, value, filters, operation: "insert" }); return query; },
+        delete() { writing = true; writes.push({ table, filters, operation: "delete" }); return query; },
         async maybeSingle() {
           if (writing) return { data: { id: table === "tasks" ? taskId : activityId, user_id: memberId }, error: null };
           if (table === "memberships") {
@@ -59,7 +60,7 @@ function setup({ role = "admin", membershipStatus = "active", targetRole = "memb
           }
           if (table === "profiles") return { data: targetStatus === "active" ? { id: memberId } : null, error: null };
           if (table === "activities") return { data: { id: activityId, activity_status: activityStatus, lead_id: currentLeadId }, error: null };
-          if (table === "tasks") return { data: { id: taskId, assignee_id: currentAssigneeId }, error: null };
+          if (table === "tasks") return { data: { id: taskId, assignee_id: currentAssigneeId, activity_id: taskActivityId }, error: null };
           return { data: null, error: null };
         },
       };
@@ -187,12 +188,40 @@ test("closed activities reject new tasks and invalid dates never reach a write",
   assert.deepEqual(invalid.writes, []);
 });
 
-test("task editing stays within its activity and does not reassign its parent", async () => {
+test("task editing never reassigns its parent, and proposal tasks can be edited by coordination", async () => {
   const { modules, writes } = setup();
   assert.equal((await modules.updateTaskAction({ taskId, activityId, title: "Recoger materiales", priority: "urgent", assigneeId: memberId })).ok, true);
   assert.equal(writes[0].value.activity_id, undefined);
+  assert.equal(writes[0].value.proposal_id, undefined);
   assert.ok(writes[0].filters.some(([column, value]) => column === "id" && value === taskId));
-  assert.ok(writes[0].filters.some(([column, value]) => column === "activity_id" && value === activityId));
+  const proposalTask = setup({ role: "coordinator", taskActivityId: null });
+  assert.equal((await proposalTask.modules.updateTaskAction({ taskId, title: "Pedir permisos", priority: "normal" })).ok, true);
+});
+
+test("the lead of an activity manages its tasks; other members cannot", async () => {
+  const lead = setup({ role: "member", currentLeadId: actorId });
+  assert.equal((await lead.modules.createTaskAction({ activityId, title: "Comprar guantes", priority: "normal" })).ok, true);
+  assert.equal((await lead.modules.updateTaskAction({ taskId, title: "Comprar guantes y bolsas", priority: "high" })).ok, true);
+  const other = setup({ role: "member", currentLeadId: memberId });
+  assert.equal((await other.modules.createTaskAction({ activityId, title: "Comprar guantes", priority: "normal" })).code, "forbidden");
+  assert.equal((await other.modules.updateTaskAction({ taskId, title: "Otra cosa", priority: "high" })).code, "forbidden");
+  assert.equal(other.writes.length, 0);
+});
+
+test("only management deletes activities and tasks", async () => {
+  for (const [role, allowed] of [["coordinator", false], ["club_manager", true], ["admin", true]]) {
+    const { modules, writes } = setup({ role });
+    assert.equal((await modules.deleteTaskAction(taskId)).ok, allowed);
+    assert.equal((await modules.deleteActivityAction(activityId)).ok, allowed);
+    assert.equal(writes.filter(write => write.operation === "delete").length, allowed ? 2 : 0);
+  }
+});
+
+test("an activity creates a draft Agenda event linked to it", async () => {
+  const { modules, writes } = setup({ role: "coordinator" });
+  const result = await modules.createEventFromActivityAction(activityId);
+  assert.equal(result.code, "invalid", "an activity without a start date cannot create its event");
+  assert.equal(writes.length, 0);
 });
 
 test("recurring activities can share a title while their identifiers remain unique", async () => {

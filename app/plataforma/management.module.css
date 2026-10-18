@@ -58,3 +58,16 @@
 .formButtons { display: flex; gap: 10px; flex-wrap: wrap; }
 @media (max-width: 900px) { .split, .activityGrid { grid-template-columns: 1fr; } .memberList { max-height: 360px; } }
 @media (max-width: 540px) { .heading { flex-direction: column; } .card { padding: 18px; } .twoColumns, .filters { grid-template-columns: 1fr; } .task { flex-direction: column; } .taskButtons { width: 100%; grid-template-columns: 1fr auto; align-items: center; justify-items: start; } .task select { max-width: none; } }
+
+.viewTabs { display: flex; gap: 6px; margin: 4px 0 2px; }
+.viewTabs button { background: #fff; border: 1px solid #d8e0ea; border-radius: 999px; color: #44546a; cursor: pointer; font-size: 12px; padding: 6px 12px; }
+.viewTabs button[aria-pressed="true"] { background: #005daa; border-color: #005daa; color: #fff; }
+.viewTabs span { font-size: 11px; margin-left: 4px; opacity: .8; }
+.taskOverdue { border-left: 3px solid #b4232c; }
+.overdueBadge { background: #fbe9ea; border-radius: 4px; color: #8c1d24; font-size: 10px; font-weight: 700; margin-left: 8px; padding: 2px 6px; text-transform: uppercase; }
+.dangerButton { background: transparent; border: 1px solid #e3b5b8; border-radius: 6px; color: #8c1d24; cursor: pointer; font-size: 12px; padding: 5px 9px; }
+.taskComments { font-size: 12px; margin: 4px 0 8px 12px; }
+.taskComments summary { color: #005daa; cursor: pointer; }
+.taskComments p { border-left: 2px solid #d8e0ea; margin: 6px 0; padding-left: 8px; white-space: pre-line; }
+.commentForm { display: grid; gap: 6px; margin-top: 6px; }
+.commentForm textarea { min-height: 54px; }
