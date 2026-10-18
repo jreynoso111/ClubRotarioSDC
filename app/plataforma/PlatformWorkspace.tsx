@@ -44,6 +44,7 @@ import { MfaNotice } from "./MfaNotice";
 import { PlatformNavigation } from "./PlatformNavigation";
 import { formatClubDate } from "@/lib/club-date";
 import styles from "./platform.module.css";
+import { PlatformVersionWatcher } from "./PlatformVersionWatcher";
 const PlatformDiagnostics = dynamic(() => import("./PlatformDiagnostics").then(module => module.PlatformDiagnostics), { loading: () => <p role="status">Cargando diagnóstico…</p> });
 
 const proposalFilters: Array<{ id: string; label: string; match: (proposal: PlatformProposal, userId: string) => boolean }> = [
@@ -331,6 +332,7 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
   const adminTabs = isAdministrator ? availableTabs.filter(item => administrationTabs.includes(item.id)) : [];
 
   return <main className={`${styles.shell} ${styles.dashboard} ${isAdministrator ? styles.dashboardWithAdmin : ""}`}>
+    <PlatformVersionWatcher />
     <aside className={styles.sidebar}>
       <Link href="/" className={styles.clubBrand}><Image src="/club-santo-domingo-colonial-logo.png" alt="Rotary Club Santo Domingo Colonial" width={1401} height={310} preload /></Link>
       <div className={styles.sideSection}>ESPACIO DE TRABAJO</div>

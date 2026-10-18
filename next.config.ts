@@ -1,4 +1,10 @@
 import type { NextConfig } from "next";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+
+// One identifier per build (written by scripts/write-deployment-id.mjs before `next build`).
+const deploymentIdFile = join(process.cwd(), ".deployment-id");
+const deploymentId = existsSync(deploymentIdFile) ? readFileSync(deploymentIdFile, "utf8").trim() || undefined : undefined;
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseImagePattern = (() => {
@@ -18,6 +24,8 @@ const supabaseImagePattern = (() => {
 
 const nextConfig: NextConfig = {
   distDir: process.env.NEXT_BUILD_DIR || ".next",
+  deploymentId,
+  env: { CLUB_DEPLOYMENT_ID: deploymentId ?? "" },
   poweredByHeader: false,
   async redirects() {
     return [{

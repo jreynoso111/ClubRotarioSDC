@@ -1103,3 +1103,7 @@
 .proposalReview summary { cursor: pointer; }
 
 .organizationWorkspace { display:grid; gap:24px; min-width:0; }
+
+.versionNotice { align-items: center; background: #17213a; border-radius: 12px; bottom: 16px; box-shadow: 0 8px 24px rgba(23, 33, 58, .25); color: #fff; display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; left: 16px; max-width: 560px; padding: 12px 16px; position: fixed; right: 16px; z-index: 60; margin: 0 auto; }
+.versionNotice span { font-size: 14px; line-height: 1.4; }
+.versionNotice button { background: #f7a81b; border: 0; border-radius: 8px; color: #17213a; cursor: pointer; font: inherit; font-size: 14px; font-weight: 700; padding: 8px 14px; }
