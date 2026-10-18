@@ -693,3 +693,9 @@ Decisiones del usuario: avisar al miembro (plataforma y correo) al aprobar, camb
 - Commit `06912f6` publicado en `/srv/club-rotario/releases/20261018-170234`; verify-deployment 34/34. SQL 513/513, Node 192/192.
 - Probado en el navegador: los 14 aparecen con Editar/Pasar a borrador/Archivar/Eliminar y editar uno publicado lo mantiene publicado. **Pendiente de probar:** flujo de editor sin permiso (enviar a revisión), interruptor «Puede publicar» en Miembros, archivar/eliminar, web pública /revista, sitemap y metadatos. Los textos de los 14 dicen «de muestra/de prueba»: editarlos o archivarlos.
 - Datos QA eliminados; el resumen editado en la prueba se restauró.
+
+### Revista: ancho del listado · 2026-10-18
+
+- A petición del usuario, la tarjeta Publicaciones ocupa todo el ancho disponible: se retiró `cardWide` (dos de las tres columnas) de `MagazineManager.tsx` y `.magazineCard` usa `grid-column: 1 / -1`, válido para las cuadrículas de escritorio, tableta y móvil. Commit `f6d3eb9`.
+- Publicado en Ubuntu en `/srv/club-rotario/releases/20261018-magazine-width`. Lint y compilación con TypeScript satisfactorios; candidata comprobada en 127.0.0.1:3012 antes de promover. Dominio público: portada, revista y acceso HTTP 200; CSS compilado `/_next/static/chunks/2axj-hjfe73la.css` HTTP 200 y regla de ancho completo confirmada. La vista autenticada no se pudo inspeccionar visualmente porque el navegador disponible no tenía sesión.
+- Reversión conservada en `/root/club-release-before-magazine-width.conf` (release anterior `20261018-170234`). La primera verificación con User-Agent de urllib recibió 403 y restauró la versión anterior automáticamente; la segunda, con el User-Agent de curl, verificó el CSS público y publicó correctamente. No se cambiaron datos ni permisos.
