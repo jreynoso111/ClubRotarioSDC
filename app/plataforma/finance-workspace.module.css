@@ -36,3 +36,12 @@
 .assignment,.demo { background:#fff5dc; color:#765313; font-size:12px; line-height:1.7; border-radius:8px; padding:12px 16px; margin:0; }
 .demoLink,.demo button { padding:0; background:transparent; border:0; color:var(--rotary-blue); text-decoration:underline; text-underline-offset:3px; font-size:12px; cursor:pointer; justify-self:start; }
 @media(max-width:760px) { .heading,.toolbar,.formHeading { align-items:start; flex-direction:column; } .filters { flex-wrap:wrap; }.filters label { flex:1 1 160px; }.formGrid,.payment { grid-template-columns:minmax(0,1fr); }.panel,.entryForm { padding:18px; }.pagination { justify-content:center; }.views { flex-wrap:wrap; } }
+
+.voidedRow td { opacity: .55; text-decoration: line-through; }
+.voidedRow td:last-child, .voidedNote { opacity: 1; text-decoration: none; }
+.voidedNote { color: #8c1d24 !important; display: block; font-weight: 700; text-decoration: none; }
+.voidedText { opacity: .6; text-decoration: line-through; }
+.rowActions { display: grid; gap: 4px; min-width: 150px; }
+.rowActions a, .rowActions button, .fileButton { background: none; border: 0; color: #005daa; cursor: pointer; font: inherit; font-size: 12px; padding: 0; text-align: left; text-decoration: underline; }
+.fileButton input { display: none; }
+.voidButton { color: #8c1d24 !important; }

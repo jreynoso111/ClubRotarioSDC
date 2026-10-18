@@ -1,0 +1,26 @@
+.page { background: #f4f6fa; min-height: 100dvh; padding: 32px 16px; }
+.actions { align-items: center; display: flex; justify-content: space-between; margin: 0 auto 16px; max-width: 720px; }
+.actions a { color: #005daa; font-size: 14px; }
+.print { background: #005daa; border: 0; border-radius: 8px; color: #fff; cursor: pointer; font: inherit; font-size: 14px; padding: 9px 16px; }
+.receipt { background: #fff; border: 1px solid #d8e0ea; border-radius: 12px; color: #17213a; margin: 0 auto; max-width: 720px; padding: 32px; position: relative; }
+.voided { background: #fbe9ea; border: 1px solid #e3b5b8; border-radius: 8px; color: #8c1d24; font-weight: 800; letter-spacing: .04em; margin: 0 0 20px; padding: 10px 14px; }
+.header { align-items: center; border-bottom: 2px solid #f7a81b; display: flex; gap: 20px; justify-content: space-between; padding-bottom: 18px; }
+.logo { height: auto; max-width: 240px; width: 48%; }
+.header h1 { font-size: 22px; margin: 0; text-align: right; }
+.number { color: #005daa; font-family: ui-monospace, monospace; font-size: 18px; font-weight: 700; margin: 4px 0 0; text-align: right; }
+.details { display: grid; gap: 14px; margin: 24px 0; }
+.details div { display: grid; gap: 4px; grid-template-columns: 160px 1fr; }
+.details dt { color: #5b6b80; font-size: 13px; text-transform: uppercase; letter-spacing: .05em; }
+.details dd { font-size: 15px; margin: 0; }
+.details small { color: #5b6b80; display: block; font-size: 13px; margin-top: 2px; }
+.amount { align-items: baseline; background: #eef5fc; border-radius: 10px; display: flex; justify-content: space-between; margin: 0; padding: 16px 18px; }
+.amount span { color: #44546a; font-size: 14px; }
+.amount strong { color: #005daa; font-size: 26px; }
+.footer { border-top: 1px solid #d8e0ea; color: #5b6b80; font-size: 12px; margin-top: 24px; padding-top: 12px; }
+.footer p { margin: 4px 0; }
+@media (max-width: 560px) { .details div { grid-template-columns: 1fr; } .receipt { padding: 20px; } }
+@media print {
+  .page { background: #fff; padding: 0; }
+  .actions { display: none; }
+  .receipt { border: 0; border-radius: 0; max-width: none; }
+}

@@ -52,6 +52,20 @@ export type FinanceLedgerEntry = {
   monthlyDueId: string | null;
   paymentMethod: FinancePaymentMethod;
   receiptReference: string | null;
+  // A voided entry stays visible but no longer counts in any total.
+  voidedAt: string | null;
+  voidReason: string | null;
+  receiptNumber: number | null;
+  attachmentPath: string | null;
+};
+
+export type FinanceYearMonth = { monthStart: string; income: string; expense: string; balance: string; cumulative: string };
+
+export type FinanceStatement = {
+  year: number;
+  memberName: string;
+  dues: Array<{ dueMonth: string; amountDue: string; amountPaid: string }>;
+  payments: FinanceLedgerEntry[];
 };
 
 export type FinanceOption = { id: string; name: string; active?: boolean };

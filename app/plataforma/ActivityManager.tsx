@@ -6,8 +6,8 @@ import type { PlatformActivity, PlatformDirectoryMember, PlatformTask } from "@/
 import { updateTaskStatusAction, type PlatformActionResult } from "./actions";
 import {
   addTaskCommentAction, createEventFromActivityAction, createManagedActivityAction, createTaskAction, deleteActivityAction,
-  deleteTaskAction, getActivityWorkspaceAction, updateActivityAction, updateTaskAction,
-  type ActivityEventLink, type ActivityWorkspace, type TaskComment,
+  deleteTaskAction, getActivityFinanceAction, getActivityWorkspaceAction, updateActivityAction, updateTaskAction,
+  type ActivityEventLink, type ActivityFinanceEntry, type ActivityWorkspace, type TaskComment,
 } from "./module-actions";
 import { formatClubDate } from "@/lib/club-date";
 import styles from "./management.module.css";
@@ -28,6 +28,27 @@ function localDate(value: string | null) {
   return `${fields.year}-${fields.month}-${fields.day}T${fields.hour}:${fields.minute}`;
 }
 function formDate(value: FormDataEntryValue | null) { return value ? `${String(value)}-04:00` : ""; }
+function money(value: string | number) { return new Intl.NumberFormat("es-DO", { style: "currency", currency: "DOP" }).format(Number(value)); }
+
+// Loaded on demand: only coordination and the activity lead may read it.
+function ActivityFinance({ activityId }: { activityId: string }) {
+  const [entries, setEntries] = useState<ActivityFinanceEntry[] | null>(null);
+  const [message, setMessage] = useState("");
+  const valid = (entries ?? []).filter(entry => !entry.voided);
+  const income = valid.filter(entry => entry.direction === "income").reduce((total, entry) => total + Number(entry.amount), 0);
+  const expense = valid.filter(entry => entry.direction === "expense").reduce((total, entry) => total + Number(entry.amount), 0);
+  return <details className={styles.taskComments} onToggle={event => {
+    if (!(event.currentTarget as HTMLDetailsElement).open || entries) return;
+    void getActivityFinanceAction(activityId).then(result => { if (result.ok) setEntries(result.entries ?? []); else setMessage(result.message); })
+      .catch(() => setMessage("No se pudieron cargar las finanzas de la actividad."));
+  }}><summary>Finanzas de la actividad</summary>
+    {message ? <p>{message}</p> : entries === null ? <p>Cargando…</p> : <>
+      <p><strong>Ingresos:</strong> {money(income)} · <strong>Gastos:</strong> {money(expense)} · <strong>Balance:</strong> {money(income - expense)}</p>
+      {entries.map(entry => <p key={entry.id} style={entry.voided ? { textDecoration: "line-through", opacity: .6 } : undefined}>{formatClubDate(`${entry.occurredOn}T16:00:00Z`, false)} · {entry.direction === "income" ? "Ingreso" : "Gasto"} {money(entry.amount)} · {entry.description} · {entry.party}{entry.voided ? " · anulado" : ""}</p>)}
+      {entries.length === 0 && <p>Sin movimientos registrados. Gestión los registra desde Finanzas.</p>}
+    </>}
+  </details>;
+}
 
 function TaskFields({ members, task }: { members: PlatformDirectoryMember[]; task?: PlatformTask }) {
   return <>
@@ -214,6 +235,7 @@ export function ActivityManager({ activities: initialActivities, tasks: initialT
               {canDelete && <button type="button" className={styles.dangerButton} disabled={pending} onClick={() => { if (window.confirm(`¿Eliminar «${activity.title}» con sus ${linkedTasks.length} tareas? Sus movimientos en Finanzas se conservan.`)) run(() => deleteActivityAction(activity.id)); }}>Eliminar</button>}</div></div>
           {editingId === activity.id ? activityForm(activity) : <><p className={styles.description}>{activity.description ?? "Añade el objetivo y los detalles de esta actividad."}</p><div className={styles.activityMeta}><span>Inicio: {dateLabel(activity.startsAt)}</span>{activity.endsAt && <span>Cierre: {dateLabel(activity.endsAt)}</span>}<span>{activity.location ?? "Lugar por definir"}</span><span>Responsable: {activity.leadId ? names.get(activity.leadId) ?? "Miembro asignado" : "Sin asignar"}</span>
             {event ? <span>Evento en la Agenda: {eventStates[event.status] ?? event.status}</span> : canManage && !archived && <button type="button" className={styles.quietButton} disabled={pending || !activity.startsAt} title={activity.startsAt ? undefined : "Define la fecha de inicio para crear el evento"} onClick={() => run(() => createEventFromActivityAction(activity.id))}>Crear evento en la Agenda</button>}</div></>}
+          {manageTasks && <ActivityFinance activityId={activity.id} />}
           <div className={styles.taskHeading}><h4>Tareas · {completed}/{counted.length} terminadas{linkedTasks.length > counted.length ? ` · ${linkedTasks.length - counted.length} canceladas` : ""}</h4>{manageTasks && !archived && <button type="button" className={styles.quietButton} aria-expanded={taskFormId === activity.id} onClick={() => setTaskFormId(current => current === activity.id ? null : activity.id)}>+ Añadir tarea</button>}</div>
           {taskFormId === activity.id && !archived && <form className={styles.form} onSubmit={event => saveTask(event, activity.id)}><TaskFields members={members} /><div className={styles.formButtons}><button className={styles.button} disabled={pending}>{savingForm === `task-new-${activity.id}` ? "Guardando…" : "Crear tarea"}</button><button type="button" className={styles.quietButton} onClick={() => setTaskFormId(null)}>Cancelar</button></div></form>}
           <div className={styles.taskList}>{linkedTasks.map(task => taskRow(task))}</div>{linkedTasks.length === 0 && <p className={styles.empty}>{archived ? "Esta actividad no tiene tareas registradas." : "Añade tareas para distribuir el trabajo y darle seguimiento."}</p>}

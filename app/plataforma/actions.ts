@@ -336,6 +336,8 @@ function financeAmount(value: unknown): string | null {
 
 const financeMethods: FinancePaymentMethod[] = ["cash", "bank_transfer", "card", "check", "other"];
 
+const FINANCE_ENTRY_COLUMNS = "id,direction,category,amount,occurred_on,description,member_id,member_name_snapshot,counterparty_name,activity_id,activity_name_snapshot,monthly_due_id,payment_method,receipt_reference,voided_at,void_reason,receipt_number,attachment_path";
+
 export async function getFinanceDashboardAction(
   month: string,
   filters: { memberId?: string; activityId?: string; page?: number } = {},
@@ -355,7 +357,7 @@ export async function getFinanceDashboardAction(
   const canManage = actor!.role === "club_manager" || actor!.role === "admin";
   const supabase = actor!.supabase;
   let entriesQuery = supabase.from("finance_entries")
-    .select("id,direction,category,amount,occurred_on,description,member_id,member_name_snapshot,counterparty_name,activity_id,activity_name_snapshot,monthly_due_id,payment_method,receipt_reference")
+    .select(FINANCE_ENTRY_COLUMNS)
     .gte("occurred_on", monthStart).lt("occurred_on", nextMonthStart)
     .order("occurred_on", { ascending: false }).order("created_at", { ascending: false }).order("id", { ascending: false });
   if (filters.memberId) entriesQuery = entriesQuery.eq("member_id", filters.memberId);
@@ -369,14 +371,14 @@ export async function getFinanceDashboardAction(
           .from("memberships")
           .select("user_id,membership_status,profile:profiles!memberships_user_id_fkey(display_name)")
           .order("user_id", { ascending: true })
-          .limit(200)
+          .limit(1000)
       : Promise.resolve({ data: [], error: null }),
     canManage
       ? supabase
           .from("activities")
           .select("id,title")
           .order("starts_at", { ascending: false, nullsFirst: false })
-          .limit(100)
+          .limit(500)
       : Promise.resolve({ data: [], error: null }),
     supabase.rpc("get_finance_scope_totals", { _month_start: monthStart, _member_id: filters.memberId || null, _activity_id: filters.activityId || null }),
   ]);
@@ -431,6 +433,10 @@ export async function getFinanceDashboardAction(
     monthly_due_id: string | null;
     payment_method: string;
     receipt_reference: string | null;
+    voided_at: string | null;
+    void_reason: string | null;
+    receipt_number: number | null;
+    attachment_path: string | null;
   };
   type MemberRow = {
     user_id: string;
@@ -473,6 +479,10 @@ export async function getFinanceDashboardAction(
     monthlyDueId: entry.monthly_due_id,
     paymentMethod: entry.payment_method as FinancePaymentMethod,
     receiptReference: entry.receipt_reference,
+    voidedAt: entry.voided_at,
+    voidReason: entry.void_reason,
+    receiptNumber: entry.receipt_number,
+    attachmentPath: entry.attachment_path,
   }));
   const members = ((membersResult.data ?? []) as unknown as MemberRow[]).map((member) => ({
     id: member.user_id,

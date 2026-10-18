@@ -2,8 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
-import { financeCategoryLabels, financePaymentMethodLabels, type FinanceDashboard, type FinanceEntryCategory, type FinancePaymentMethod } from "@/lib/finance";
+import Link from "next/link";
+import { financeCategoryLabels, financePaymentMethodLabels, type FinanceDashboard, type FinanceEntryCategory, type FinanceLedgerEntry, type FinancePaymentMethod, type FinanceStatement, type FinanceYearMonth } from "@/lib/finance";
 import { createFinanceEntryAction, createFinanceMonthlyDuesAction, getFinanceDashboardAction, recordFinanceMonthlyPaymentAction } from "./actions";
+import { attachFinanceReceiptAction, exportFinanceCsvAction, getFinanceReceiptUrlAction, getFinanceStatementAction, getFinanceYearSummaryAction, voidFinanceEntryAction } from "./finance-actions";
+import { createClient } from "@/utils/supabase/client";
 import styles from "./platform.module.css";
 import ui from "./finance-workspace.module.css";
 
@@ -17,13 +20,70 @@ function periodDate(month: string) { return month >= localDate().slice(0,7) ? lo
 function money(value: string | number) { return new Intl.NumberFormat("es-DO", { style: "currency", currency: "DOP" }).format(Number(value)); }
 function date(value: string) { return new Intl.DateTimeFormat("es-DO", { day: "2-digit", month: "2-digit", year: "2-digit", timeZone: "UTC" }).format(new Date(`${value}T12:00:00Z`)); }
 function methods() { return Object.entries(financePaymentMethodLabels).map(([value,label]) => <option key={value} value={value}>{label}</option>); }
+const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+
+function download(csv: string, fileName: string) {
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  link.download = fileName;
+  document.body.appendChild(link); link.click(); link.remove();
+  setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+}
+
+function YearSummary({ year }: { year: number }) {
+  const [months, setMonths] = useState<FinanceYearMonth[] | null>(null);
+  const [message, setMessage] = useState("");
+  useEffect(() => {
+    let active = true;
+    void getFinanceYearSummaryAction(year).then(result => { if (!active) return; if (result.ok) { setMonths(result.months ?? []); setMessage(""); } else setMessage(result.message); })
+      .catch(() => { if (active) setMessage("No se pudo cargar el resumen anual."); });
+    return () => { active = false; };
+  }, [year]);
+  if (message) return <p className={styles.feedbackError} role="alert">{message}</p>;
+  if (!months) return <p className={styles.empty} role="status">Calculando el resumen de {year}…</p>;
+  const totals = months.reduce((sum, row) => ({ income: sum.income + Number(row.income), expense: sum.expense + Number(row.expense) }), { income: 0, expense: 0 });
+  return <section className={ui.panel}><div className={ui.formHeading}><h3>Resumen anual · {year}</h3><span>Saldo acumulado al cierre: {money(months.at(-1)?.cumulative ?? 0)}</span></div>
+    <p className={ui.help}>Los movimientos anulados no cuentan. El saldo acumulado incluye todos los años anteriores.</p>
+    <div className={ui.tableScroll}><table><thead><tr><th>Mes</th><th>Ingresos</th><th>Egresos</th><th>Balance del mes</th><th>Saldo acumulado</th></tr></thead><tbody>
+      {months.map(row => <tr key={row.monthStart}><td>{monthNames[Number(row.monthStart.slice(5, 7)) - 1]}</td><td className={ui.income}>{money(row.income)}</td><td className={ui.expense}>{money(row.expense)}</td><td>{money(row.balance)}</td><td><strong>{money(row.cumulative)}</strong></td></tr>)}
+      <tr><td><strong>Total {year}</strong></td><td className={ui.income}><strong>{money(totals.income)}</strong></td><td className={ui.expense}><strong>{money(totals.expense)}</strong></td><td><strong>{money(totals.income - totals.expense)}</strong></td><td /></tr>
+    </tbody></table></div></section>;
+}
+
+function Statement({ year, memberId, canManage, members }: { year: number; memberId: string; canManage: boolean; members: FinanceDashboard["members"] }) {
+  const [target, setTarget] = useState(memberId);
+  const [statement, setStatement] = useState<FinanceStatement | null>(null);
+  const [message, setMessage] = useState("");
+  useEffect(() => {
+    let active = true;
+    if (canManage && !target) return;
+    void getFinanceStatementAction(year, target || undefined).then(result => { if (!active) return; if (result.ok) { setStatement(result.statement ?? null); setMessage(""); } else setMessage(result.message); })
+      .catch(() => { if (active) setMessage("No se pudo cargar el estado de cuenta."); });
+    return () => { active = false; };
+  }, [year, target, canManage]);
+  const owed = (statement?.dues ?? []).reduce((total, due) => total + Number(due.amountDue), 0);
+  const paid = (statement?.dues ?? []).reduce((total, due) => total + Number(due.amountPaid), 0);
+  return <section className={ui.panel}><div className={ui.formHeading}><h3>Estado de cuenta · {year}</h3>{statement ? <span>{statement.memberName}</span> : null}</div>
+    {canManage ? <label>Miembro<select value={target} onChange={e => { setStatement(null); setTarget(e.target.value); }}><option value="">Selecciona un miembro</option>{members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}</select></label> : null}
+    {message ? <p className={styles.feedbackError} role="alert">{message}</p> : !statement ? <p className={styles.empty}>{canManage && !target ? "Elige un miembro para ver su estado de cuenta." : "Cargando…"}</p> : <>
+      <p className={ui.assignment}>Cuotas del año: {money(owed)} · Pagado: {money(paid)} · Pendiente: {money(Math.max(0, owed - paid))}</p>
+      <div className={ui.tableScroll}><table><thead><tr><th>Cuota</th><th>Monto</th><th>Pagado</th><th>Pendiente</th></tr></thead><tbody>
+        {statement.dues.map(due => <tr key={due.dueMonth}><td>{monthNames[Number(due.dueMonth.slice(5, 7)) - 1]}</td><td>{money(due.amountDue)}</td><td className={ui.income}>{money(due.amountPaid)}</td><td>{money(Math.max(0, Number(due.amountDue) - Number(due.amountPaid)))}</td></tr>)}
+      </tbody></table></div>
+      {!statement.dues.length ? <p className={styles.empty}>No hay cuotas asignadas en {year}.</p> : null}
+      <h4>Pagos y aportes</h4>
+      {statement.payments.map(payment => <p key={payment.id} className={payment.voidedAt ? ui.voidedText : undefined}>{date(payment.occurredOn)} · {payment.description} · {money(payment.amount)}{payment.voidedAt ? ` · anulado: ${payment.voidReason}` : payment.receiptNumber ? <> · <Link href={`/plataforma/recibo/${payment.id}`} target="_blank">Recibo N.º {payment.receiptNumber}</Link></> : null}</p>)}
+      {!statement.payments.length ? <p className={styles.empty}>Sin pagos registrados en {year}.</p> : null}
+    </>}
+  </section>;
+}
 
 export function FinanceModule({ canManage, onOpenActivities }: { canManage: boolean; onOpenActivities: () => void }) {
   const [month, setMonth] = useState(() => localDate().slice(0,7));
   const [memberId, setMemberId] = useState("");
   const [activityId, setActivityId] = useState("");
   const [page, setPage] = useState(0);
-  const [view, setView] = useState<"ledger" | "dues">("ledger");
+  const [view, setView] = useState<"ledger" | "dues" | "year" | "statement">("ledger");
   const [dashboard, setDashboard] = useState<FinanceDashboard | null>(null);
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState(false);
@@ -90,6 +150,36 @@ export function FinanceModule({ canManage, onOpenActivities }: { canManage: bool
     void save(recordFinanceMonthlyPaymentAction({ dueId, amount:String(data.get("amount")), occurredOn:String(data.get("occurredOn")), paymentMethod:String(data.get("paymentMethod")) as FinancePaymentMethod, receiptReference:String(data.get("receiptReference") || "") || undefined }),
       () => { form.reset(); form.closest("details")?.removeAttribute("open"); });
   }
+  function voidEntry(entry: FinanceLedgerEntry) {
+    const reason = window.prompt(`Anular «${entry.description}» por ${money(entry.amount)}. Explica el motivo; quedará registrado:`);
+    if (reason === null) return;
+    void save(voidFinanceEntryAction(entry.id, reason));
+  }
+  async function attachReceipt(entry: FinanceLedgerEntry, file: File | undefined) {
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024 || !["application/pdf", "image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      setFeedback("El comprobante debe ser PDF, JPG, PNG o WebP de hasta 5 MB."); setError(true); return;
+    }
+    setPending(true); setFeedback("");
+    const extension = file.type === "application/pdf" ? "pdf" : file.type.split("/")[1];
+    const path = `${entry.id}/${crypto.randomUUID()}.${extension}`;
+    const { error: uploadError } = await createClient().storage.from("club-finance-receipts").upload(path, file, { contentType: file.type, upsert: false });
+    setPending(false);
+    if (uploadError) { setFeedback("No se pudo subir el comprobante. Inténtalo de nuevo."); setError(true); return; }
+    void save(attachFinanceReceiptAction(entry.id, path));
+  }
+  async function openReceipt(entry: FinanceLedgerEntry) {
+    const result = await getFinanceReceiptUrlAction(entry.id);
+    if (result.ok && result.url) window.open(result.url, "_blank", "noopener"); else { setFeedback(result.message); setError(true); }
+  }
+  async function exportCsv(period: { month?: string; year?: number }) {
+    setPending(true);
+    try {
+      const result = await exportFinanceCsvAction(period);
+      if (result.ok && result.csv && result.fileName) download(result.csv, result.fileName); else { setFeedback(result.message); setError(true); }
+    } catch { setFeedback("No se pudo preparar la exportación."); setError(true); }
+    finally { setPending(false); }
+  }
   function metricMoney(value: string | number) { return loading ? "…" : money(value); }
   const filtered = Boolean(memberId || activityId);
   const income=filtered ? dashboard?.scope.income : dashboard?.summary.incomeTotal;
@@ -102,7 +192,10 @@ export function FinanceModule({ canManage, onOpenActivities }: { canManage: bool
       <label>Período<input type="month" required value={month} disabled={pending || loading} onChange={e => { if(e.target.value) changeFilter("month",e.target.value); }} /></label></header>
     {month === "2000-01" ? <p className={ui.demo}>Período de prueba · Los miembros, importes y actividad que dicen «Prueba» son ficticios. <button onClick={() => changeFilter("month",localDate().slice(0,7))}>Volver al mes actual</button></p> : canManage && process.env.NODE_ENV !== "production" ? <button className={ui.demoLink} onClick={() => changeFilter("month","2000-01")}>Ver ejemplo con miembros de prueba ↗</button> : null}
     {feedback ? <p className={error ? styles.feedbackError : styles.feedbackSuccess} role={error ? "alert" : "status"}>{feedback}</p> : null}
-    <div className={ui.toolbar}><div className={ui.views}><button aria-pressed={view==="ledger"} onClick={() => setView("ledger")}>Movimientos</button><button aria-pressed={view==="dues"} onClick={() => { setView("dues"); if(activityId) changeFilter("activity", ""); }}>Cuotas por miembro</button></div>
+    <div className={ui.toolbar}><div className={ui.views}><button aria-pressed={view==="ledger"} onClick={() => setView("ledger")}>Movimientos</button><button aria-pressed={view==="dues"} onClick={() => { setView("dues"); if(activityId) changeFilter("activity", ""); }}>{canManage ? "Cuotas por miembro" : "Mi cuota"}</button>
+      {canManage ? <button aria-pressed={view==="year"} onClick={() => setView("year")}>Resumen anual</button> : null}
+      <button aria-pressed={view==="statement"} onClick={() => setView("statement")}>Estado de cuenta</button></div>
+      {canManage ? <div className={ui.views}><button disabled={pending} onClick={() => void exportCsv({ month })}>Exportar mes (CSV)</button><button disabled={pending} onClick={() => void exportCsv({ year: Number(month.slice(0, 4)) })}>Exportar año (CSV)</button></div> : null}
       {canManage ? <button className={styles.button} onClick={() => { setView("ledger"); if(!entryOpen) setEntryDate(periodDate(month)); setEntryOpen(value => !value); }} aria-expanded={entryOpen}>+ Registrar ingreso o egreso</button> : null}</div>
     {canManage ? <div className={ui.filters}><label>Miembro<select value={memberId} disabled={pending || loading} onChange={e => changeFilter("member",e.target.value)}><option value="">Todos los miembros</option>{dashboard?.members.map(m => <option value={m.id} key={m.id}>{m.name}{m.active === false ? " (sin membresía activa)" : ""}</option>)}</select></label>
       {view==="ledger" ? <label>Actividad<select value={activityId} disabled={pending || loading} onChange={e => changeFilter("activity",e.target.value)}><option value="">Todas las actividades</option>{dashboard?.activities.map(a => <option value={a.id} key={a.id}>{a.name}</option>)}</select></label> : null}
@@ -130,9 +223,17 @@ export function FinanceModule({ canManage, onOpenActivities }: { canManage: bool
         {dashboard.activities.length===0 ? <p>No hay actividades registradas. <button type="button" className={ui.demoLink} onClick={onOpenActivities}>Crear una actividad ↗</button></p> : null}
         <button className={styles.button} disabled={pending || loading}>{pending ? "Guardando…" : "Guardar movimiento"}</button>
       </form> : null}
-      {loading ? null : view==="ledger" ? <section className={ui.panel} aria-busy={loading}><div className={ui.formHeading}><h3>Libro de movimientos</h3><span>{dashboard.scope.count} registros · período {month}</span></div>
+      {view==="year" ? <YearSummary year={Number(month.slice(0, 4))} />
+      : view==="statement" ? <Statement year={Number(month.slice(0, 4))} memberId={memberId} canManage={canManage} members={dashboard.members} />
+      : loading ? null : view==="ledger" ? <section className={ui.panel} aria-busy={loading}><div className={ui.formHeading}><h3>Libro de movimientos</h3><span>{dashboard.scope.count} registros · período {month}</span></div>
         <p className={ui.help}>{canManage ? "Los totales incluyen todo el período y los filtros seleccionados. Los pagos de cuotas se registran desde «Cuotas por miembro»." : "Aquí aparecen los aportes que el club registró a tu nombre en este período."}</p>
-        {dashboard.entries.length ? <div className={ui.tableScroll}><table><thead><tr><th>Fecha</th><th>Concepto</th><th>Miembro / persona</th><th>Actividad</th><th>Ingreso</th><th>Egreso</th><th>Medio / referencia</th></tr></thead><tbody>{dashboard.entries.map(entry=><tr key={entry.id}><td>{date(entry.occurredOn)}</td><td><strong>{entry.description}</strong><small>{financeCategoryLabels[entry.category]}</small></td><td>{entry.memberName ?? entry.counterpartyName ?? "Club"}{entry.memberName && entry.counterpartyName ? <small>{entry.counterpartyName}</small> : null}</td><td>{entry.activityName ?? "—"}</td><td className={ui.income}>{entry.direction==="income" ? money(entry.amount) : "—"}</td><td className={ui.expense}>{entry.direction==="expense" ? money(entry.amount) : "—"}</td><td>{financePaymentMethodLabels[entry.paymentMethod]}<small>{entry.receiptReference ?? "Sin referencia"}</small></td></tr>)}</tbody></table></div> : <p className={styles.empty}>{canManage ? "No hay movimientos para este período y estos filtros. Registra el primer ingreso o egreso con el botón superior." : "No hay aportes registrados a tu nombre en este período."}</p>}
+        {dashboard.entries.length ? <div className={ui.tableScroll}><table><thead><tr><th>Fecha</th><th>Concepto</th><th>Miembro / persona</th><th>Actividad</th><th>Ingreso</th><th>Egreso</th><th>Medio / referencia</th><th>Recibo y comprobante</th></tr></thead><tbody>{dashboard.entries.map(entry=><tr key={entry.id} className={entry.voidedAt ? ui.voidedRow : undefined}><td>{date(entry.occurredOn)}</td><td><strong>{entry.description}</strong><small>{financeCategoryLabels[entry.category]}</small>{entry.voidedAt ? <small className={ui.voidedNote}>Anulado: {entry.voidReason}</small> : null}</td><td>{entry.memberName ?? entry.counterpartyName ?? "Club"}{entry.memberName && entry.counterpartyName ? <small>{entry.counterpartyName}</small> : null}</td><td>{entry.activityName ?? "—"}</td><td className={ui.income}>{entry.direction==="income" ? money(entry.amount) : "—"}</td><td className={ui.expense}>{entry.direction==="expense" ? money(entry.amount) : "—"}</td><td>{financePaymentMethodLabels[entry.paymentMethod]}<small>{entry.receiptReference ?? "Sin referencia"}</small></td>
+          <td className={ui.rowActions}>
+            {entry.direction==="income" && entry.receiptNumber ? <Link href={`/plataforma/recibo/${entry.id}`} target="_blank">Recibo N.º {entry.receiptNumber}</Link> : null}
+            {entry.attachmentPath ? <button type="button" onClick={() => void openReceipt(entry)}>Ver comprobante</button> : null}
+            {canManage && !entry.voidedAt ? <label className={ui.fileButton}>{entry.attachmentPath ? "Reemplazar comprobante" : "Adjuntar comprobante"}<input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" disabled={pending} onChange={e => { void attachReceipt(entry, e.target.files?.[0]); e.target.value = ""; }} /></label> : null}
+            {canManage && !entry.voidedAt ? <button type="button" className={ui.voidButton} disabled={pending} onClick={() => voidEntry(entry)}>Anular</button> : null}
+          </td></tr>)}</tbody></table></div> : <p className={styles.empty}>{canManage ? "No hay movimientos para este período y estos filtros. Registra el primer ingreso o egreso con el botón superior." : "No hay aportes registrados a tu nombre en este período."}</p>}
         {dashboard.scope.count>50 ? <div className={ui.pagination}><button className={styles.buttonQuiet} disabled={loading || page===0} onClick={()=>{setLoading(true);setPage(p=>p-1);}}>Anterior</button><span>Página {page+1} de {Math.ceil(dashboard.scope.count/50)}</span><button className={styles.buttonQuiet} disabled={loading || (page+1)*50>=dashboard.scope.count} onClick={()=>{setLoading(true);setPage(p=>p+1);}}>Siguiente</button></div> : null}
       </section> : <>
         <section className={ui.panel}><h3>Cuotas individuales · {month}</h3><p className={ui.help}>{canManage ? "Cada fila corresponde a un miembro. Asignar la cuota crea una obligación; el ingreso se registra cuando recibes un pago." : "Tu cuota del período y lo que el club ha registrado como pagado."}</p>
@@ -144,7 +245,7 @@ export function FinanceModule({ canManage, onOpenActivities }: { canManage: bool
           {availableMembers.map(member=><label key={member.id}><input type="checkbox" checked={selectedMembers.includes(member.id)} onChange={e=>setSelectedMembers(ids=>e.target.checked ? [...ids,member.id] : ids.filter(id=>id!==member.id))} />{member.name}</label>)}{!availableMembers.length ? <p>Todos los miembros disponibles ya tienen cuota para este mes.</p> : null}</fieldset>
           <p className={ui.assignment}>Se asignarán {selectedMembers.length} cuotas individuales de {money(duesAmount || 0)}. Total de obligaciones: {money(selectedMembers.length*Number(duesAmount || 0))}.</p><button className={styles.button} disabled={pending || loading || !selectedMembers.length}>{pending ? "Asignando…" : "Asignar cuotas a los seleccionados"}</button></form> : null}
       </>}
-      <p className={ui.help}>Los registros conservan su historial. Para corregir un importe, registra un movimiento compensatorio y explica la referencia del registro original.</p>
+      {canManage ? <p className={ui.help}>Los registros conservan su historial. Para corregir un error, usa «Anular» con su motivo: el movimiento queda visible y tachado, deja de contar en los totales y el miembro recibe un aviso. Después registra el movimiento correcto.</p> : null}
     </> : null}
   </section>;
 }

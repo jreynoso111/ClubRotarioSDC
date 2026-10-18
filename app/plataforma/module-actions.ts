@@ -197,6 +197,20 @@ export async function updateTaskAction(input: Omit<TaskInput, "activityId"> & { 
   return { ok: true, message: "La tarea quedó actualizada." };
 }
 
+export type ActivityFinanceEntry = { id: string; occurredOn: string; direction: "income" | "expense"; amount: string; description: string; party: string; voided: boolean };
+
+// Coordination and the activity lead follow the money of their activity.
+export async function getActivityFinanceAction(activityId: string): Promise<PlatformActionResult & { entries?: ActivityFinanceEntry[] }> {
+  const { actor, error } = await requireModuleActor(memberRoles);
+  if (error || !actor) return error!;
+  if (!validUuid(activityId)) return moduleFailure("La actividad indicada no es válida.", "invalid");
+  const { data, error: queryError } = await actor.supabase.rpc("get_activity_finance", { _activity_id: activityId });
+  if (queryError) return moduleFailure("Solo coordinación o el responsable de la actividad pueden ver sus finanzas.", "forbidden");
+  const entries = ((data ?? []) as Array<{ entry_id: string; occurred_on: string; direction: "income" | "expense"; amount: number; description: string; party: string; voided: boolean }>)
+    .map(row => ({ id: row.entry_id, occurredOn: row.occurred_on, direction: row.direction, amount: String(row.amount), description: row.description, party: row.party, voided: row.voided }));
+  return { ok: true, message: "Finanzas de la actividad cargadas.", entries };
+}
+
 export async function deleteTaskAction(taskId: string): Promise<PlatformActionResult> {
   const { actor, error } = await requireModuleActor(["club_manager", "admin"]);
   if (error || !actor) return error!;
