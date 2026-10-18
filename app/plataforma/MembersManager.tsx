@@ -44,9 +44,9 @@ function confirmationText(member: ManagedMember, next: AccessState) {
   return messages.join("\n\n");
 }
 
-export function MembersManager({ currentUserId, committees, tasks, initialMemberId = "", leadershipPositions = [], leadershipYear = "", onAssignPosition, onOpenApplications }: {
+export function MembersManager({ currentUserId, committees, tasks, initialMemberId = "", leadershipPositions = [], leadershipYear = "", onAssignPosition, onOpenApplications, onMembersChanged }: {
   currentUserId: string; committees: PlatformCommittee[]; tasks: PlatformTask[]; initialMemberId?: string; leadershipPositions?: LeadershipPosition[];
-  leadershipYear?: string; onAssignPosition?: (userId: string) => void; onOpenApplications?: () => void;
+  leadershipYear?: string; onAssignPosition?: (userId: string) => void; onOpenApplications?: () => void; onMembersChanged?: () => void;
 }) {
   const router = useRouter();
   const [members, setMembers] = useState<ManagedMember[]>([]);
@@ -105,6 +105,7 @@ export function MembersManager({ currentUserId, committees, tasks, initialMember
         setFeedback(result);
         if (result.ok || result.code === "conflict") {
           await loadDirectory();
+          onMembersChanged?.();
           router.refresh();
         }
       } catch {

@@ -52,9 +52,10 @@ export function OrganizationManager({ currentUserId, committees, tasks, canManag
   const requests = useRef({ id: 0, mounted: true });
   const dialog = useRef<HTMLDialogElement>(null);
 
-  const load = useCallback(async (termId?: string) => {
+  // A silent reload refreshes pickers after a member change without unmounting the open view.
+  const load = useCallback(async (termId?: string, silent = false) => {
     const request = ++requests.current.id;
-    setLoading(true);
+    if (!silent) setLoading(true);
     try {
       const result = await getOrganizationAction(termId);
       if (!requests.current.mounted || request !== requests.current.id) return;
@@ -154,7 +155,7 @@ export function OrganizationManager({ currentUserId, committees, tasks, canManag
       {term?.startYear === currentRotaryYear() && <div className={styles.committees}><div className={styles.heading}><div><h3>Comités del club</h3><p>Composición actual de los equipos de trabajo.</p></div><button type="button" className={styles.quietButton} onClick={() => setView("comites")}>Ver comités →</button></div><div className={styles.committeeGrid}>{committees.filter(committee => committee.isActive).map(committee => <article key={committee.id}><h4>{committee.name}</h4><p>{committee.members.filter(member => member.role === "chair").map(member => member.name).join(", ") || "Presidencia del comité por asignar"}</p><small>{committee.members.length} integrantes</small></article>)}</div>{committees.every(committee => !committee.isActive) && <p className={styles.empty}>Todavía no hay comités activos. Puedes definirlos en la vista Comités.</p>}</div>}
     </>}
     {!loading && view === "miembros" && (canManageMembers ? <MembersManager key={selectedMemberId} currentUserId={currentUserId} committees={committees} tasks={tasks}
-      initialMemberId={selectedMemberId} leadershipPositions={positions} leadershipYear={yearLabel} onOpenApplications={onOpenApplications}
+      initialMemberId={selectedMemberId} leadershipPositions={positions} leadershipYear={yearLabel} onOpenApplications={onOpenApplications} onMembersChanged={() => void load(term?.id, true)}
       onAssignPosition={canEdit ? id => edit(activePositions.find(position => !position.memberId), id) : undefined} />
       : <div className={styles.directory}><label>Buscar miembro<input type="search" value={memberQuery} onChange={event => setMemberQuery(event.target.value)} placeholder="Nombre del miembro" /></label><div className={styles.directoryLayout}><div className={styles.directoryList}>{organization?.members.filter(member => member.name.toLocaleLowerCase("es").includes(memberQuery.toLocaleLowerCase("es"))).map(member => <button type="button" key={member.userId} aria-pressed={selectedMemberId === member.userId} onClick={() => setSelectedMemberId(member.userId)}><span className={styles.avatar}>{initials(member.name)}</span><span><strong>{member.name}</strong><small>{positions.filter(position => position.memberId === member.userId && position.active).map(position => position.title).join(" · ") || "Miembro del club"}</small></span></button>)}</div><article className={styles.profile}><h3>{selectedProfile?.name ?? positions.find(position => position.memberId === selectedMemberId)?.memberName ?? "Selecciona un miembro"}</h3>{selectedProfile?.bio && <p>{selectedProfile.bio}</p>}{memberPositions.length > 0 && <><h4>Cargos rotarios · {yearLabel}</h4><ul>{memberPositions.map(position => <li key={position.id}><strong>{position.title}</strong>{position.responsibilities && <p>{position.responsibilities}</p>}</li>)}</ul></>}{selectedProfile && memberPositions.length === 0 && <p>Este miembro no tiene cargos asignados en el período seleccionado.</p>}</article></div></div>)}
     {view === "comites" && <section className={platformStyles.moduleGrid}><CommitteeManager committees={committees} candidates={organization?.members ?? []} canManage={canManageCommittees} /></section>}
