@@ -82,15 +82,15 @@ select throws_ok($$update public.memberships set membership_status = 'suspended'
   '42501', null, 'club management cannot suspend an administrator');
 select throws_ok($$update public.profiles set display_name = 'Renombrado' where id = 'a1111111-1111-4111-8111-111111111111'$$,
   '42501', null, 'club management cannot rewrite an administrator profile');
-select lives_ok($$update public.memberships set membership_role = 'coordinator' where user_id = 'a5555555-5555-4555-8555-555555555555'$$,
-  'club management can still assign ordinary roles');
+select lives_ok($$select * from public.update_member_access('a5555555-5555-4555-8555-555555555555', 'coordinator', 'active', null, 'Asignación de coordinación de prueba', (select updated_at from public.memberships where user_id = 'a5555555-5555-4555-8555-555555555555'))$$,
+  'club management can still assign ordinary roles through the access function');
 select lives_ok($$update public.profiles set display_name = 'Miembro renombrado' where id = 'a5555555-5555-4555-8555-555555555555'$$,
   'club management can still edit ordinary member profiles');
 
 -- Administrators keep full control except over their own access.
 select pg_temp.act_as('a1111111-1111-4111-8111-111111111111');
-select lives_ok($$update public.memberships set membership_role = 'club_manager' where user_id = 'a5555555-5555-4555-8555-555555555555'$$,
-  'an administrator can still assign club management');
+select lives_ok($$select * from public.update_member_access('a5555555-5555-4555-8555-555555555555', 'club_manager', 'active', null, 'Asignación de gestión del club de prueba', (select updated_at from public.memberships where user_id = 'a5555555-5555-4555-8555-555555555555'))$$,
+  'an administrator can still assign club management through the access function');
 select throws_ok($$update public.memberships set membership_role = 'member' where user_id = auth.uid()$$,
   '42501', null, 'an administrator cannot change their own access');
 

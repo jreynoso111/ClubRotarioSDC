@@ -465,7 +465,7 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
 
       {tab === "organizacion" && <OrganizationManager currentUserId={user?.id ?? ""} committees={snapshot.committees} tasks={snapshot.tasks}
         canManageMembers={snapshot.capabilities.canManageMembership} canManageCommittees={snapshot.capabilities.canManageCommittees}
-        canManageOrganization={isAdministrator} />}
+        canManageOrganization={isAdministrator} onOpenApplications={() => selectTab("solicitudes")} />}
 
       {tab === "revista" && <section className={styles.moduleGrid}>
         <article className={`${styles.card} ${styles.cardWide} ${styles.storyArchiveCard}`}>

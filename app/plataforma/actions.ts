@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { updateMemberAccessAction } from "./members-actions";
 
 import { isMissingSchemaError, type ProposalVoteChoice } from "@/lib/platform";
 import { isSupabaseConfigured } from "@/utils/supabase/config";
@@ -135,6 +134,26 @@ function errorFor(error: { code?: string | null; message?: string | null } | nul
   }
 
   return failure("No se pudo guardar el cambio. Revisa los datos e inténtalo de nuevo.");
+}
+
+// Committees are run by club management. Each write still passes requireActor,
+// so a privileged role without a recent second factor is refused.
+const committeeManagementRoles: PlatformRole[] = ["club_manager", "admin"];
+const committeeRoleValues: CommitteeRole[] = ["member", "chair", "secretary", "treasurer"];
+
+// Unique violations come from the database. Name/slug and the one-chair rule
+// are told apart by the constraint name or the duplicated key in the message.
+function committeeErrorFor(error: { code?: string | null; message?: string | null; details?: string | null } | null | undefined) {
+  if (error?.code === "23505") {
+    const detail = `${error.message ?? ""} ${error.details ?? ""}`.toLowerCase();
+    if (/\(slug\)|\(name\)|lower\(name\)|committees_\w*(slug|name)/.test(detail)) {
+      return failure("Ya existe un comité con ese nombre.", "conflict");
+    }
+    if (/chair|presid|\(committee_id\)=/.test(detail)) {
+      return failure("Este comité ya tiene presidencia. Cambia primero a la persona actual.", "conflict");
+    }
+  }
+  return errorFor(error);
 }
 
 async function requireActor(requiredRoles: PlatformRole[] = []):
@@ -988,7 +1007,7 @@ export async function createCommitteeAction(input: {
   description?: string;
   members?: Array<{ userId: string; committeeRole: CommitteeRole }>;
 }): Promise<PlatformActionResult> {
-  const { actor, error } = await requireActor(["admin"]);
+  const { actor, error } = await requireActor(committeeManagementRoles);
   if (error) return error;
 
   const name = cleanText(input?.name, 140);
@@ -1003,13 +1022,16 @@ export async function createCommitteeAction(input: {
   }
   const members: Array<{ userId: string; committeeRole: CommitteeRole }> = [];
   for (const member of membersInput) {
-    if (!isUuid(member?.userId) || !["member", "chair", "secretary", "treasurer"].includes(member.committeeRole)) {
+    if (!isUuid(member?.userId) || !committeeRoleValues.includes(member.committeeRole)) {
       return failure("Revisa los integrantes y sus responsabilidades.", "invalid");
     }
     members.push({ userId: member.userId, committeeRole: member.committeeRole });
   }
   if (new Set(members.map((member) => member.userId)).size !== members.length) {
     return failure("Cada integrante solo puede aparecer una vez en el comité.", "invalid");
+  }
+  if (members.filter((member) => member.committeeRole === "chair").length > 1) {
+    return failure("Este comité ya tiene presidencia. Cambia primero a la persona actual.", "conflict");
   }
 
   if (members.length > 0) {
@@ -1031,7 +1053,7 @@ export async function createCommitteeAction(input: {
     _member_ids: members.map((member) => member.userId),
     _member_roles: members.map((member) => member.committeeRole),
   });
-  if (insertError || !committeeId) return errorFor(insertError);
+  if (insertError || !committeeId) return committeeErrorFor(insertError);
 
   revalidatePath("/plataforma");
   return success(members.length > 0 ? "El comité y sus integrantes iniciales quedaron guardados." : "El comité quedó creado.", committeeId);
@@ -1042,12 +1064,12 @@ export async function assignCommitteeMemberAction(input: {
   userId: string;
   committeeRole: "member" | "chair" | "secretary" | "treasurer";
 }): Promise<PlatformActionResult> {
-  const { actor, error } = await requireActor(["admin"]);
+  const { actor, error } = await requireActor(committeeManagementRoles);
   if (error) return error;
   if (!isUuid(input?.committeeId) || !isUuid(input?.userId)) {
     return failure("El comité o el integrante indicado no es válido.", "invalid");
   }
-  if (!["member", "chair", "secretary", "treasurer"].includes(input.committeeRole)) {
+  if (!committeeRoleValues.includes(input.committeeRole)) {
     return failure("El cargo dentro del comité no es válido.", "invalid");
   }
 
@@ -1071,6 +1093,7 @@ export async function assignCommitteeMemberAction(input: {
     return failure("Solo puedes asignar integrantes con membresía activa.", "invalid");
   }
 
+  // The partial unique index allows one chair; a second one raises 23505 here.
   const { error: insertError } = await actor!.supabase.from("committee_members").upsert(
     {
       committee_id: input.committeeId,
@@ -1079,7 +1102,7 @@ export async function assignCommitteeMemberAction(input: {
     },
     { onConflict: "committee_id,user_id" },
   );
-  if (insertError) return errorFor(insertError);
+  if (insertError) return committeeErrorFor(insertError);
 
   revalidatePath("/plataforma");
   return success("La estructura del comité fue actualizada.");
@@ -1090,7 +1113,7 @@ export async function updateCommitteeAction(input: {
   name: string;
   description?: string;
 }): Promise<PlatformActionResult> {
-  const { actor, error } = await requireActor(["admin"]);
+  const { actor, error } = await requireActor(committeeManagementRoles);
   if (error) return error;
   if (!isUuid(input?.committeeId)) return failure("El comité indicado no es válido.", "invalid");
 
@@ -1098,6 +1121,7 @@ export async function updateCommitteeAction(input: {
   const description = optionalText(input?.description, 2000);
   if (!name || name.length < 2) return failure("Escribe un nombre válido para el comité.", "invalid");
 
+  // Editing is limited to active committees; finished ones are reopened first.
   const { data, error: updateError } = await actor!.supabase
     .from("committees")
     .update({ name, description, updated_by: actor!.userId })
@@ -1105,7 +1129,7 @@ export async function updateCommitteeAction(input: {
     .eq("is_active", true)
     .select("id")
     .maybeSingle();
-  if (updateError) return errorFor(updateError);
+  if (updateError) return committeeErrorFor(updateError);
   if (!data) return failure("El comité ya no está disponible. Actualiza la organización.", "invalid");
 
   revalidatePath("/plataforma");
@@ -1113,7 +1137,7 @@ export async function updateCommitteeAction(input: {
 }
 
 export async function completeCommitteeAction(committeeId: string): Promise<PlatformActionResult> {
-  const { actor, error } = await requireActor(["admin"]);
+  const { actor, error } = await requireActor(committeeManagementRoles);
   if (error) return error;
   if (!isUuid(committeeId)) return failure("El comité indicado no es válido.", "invalid");
 
@@ -1131,11 +1155,31 @@ export async function completeCommitteeAction(committeeId: string): Promise<Plat
   return success("El comité quedó terminado y su historial se conservó.");
 }
 
+export async function reopenCommitteeAction(committeeId: string): Promise<PlatformActionResult> {
+  const { actor, error } = await requireActor(committeeManagementRoles);
+  if (error) return error;
+  if (!isUuid(committeeId)) return failure("El comité indicado no es válido.", "invalid");
+
+  // Finished committees are found by their finished state, not the active filter used for edits.
+  const { data, error: updateError } = await actor!.supabase
+    .from("committees")
+    .update({ is_active: true, updated_by: actor!.userId })
+    .eq("id", committeeId)
+    .eq("is_active", false)
+    .select("id")
+    .maybeSingle();
+  if (updateError) return committeeErrorFor(updateError);
+  if (!data) return failure("El comité ya está activo o no está disponible.", "invalid");
+
+  revalidatePath("/plataforma");
+  return success("El comité volvió a estar activo con su lista anterior.");
+}
+
 export async function removeCommitteeMemberAction(input: {
   committeeId: string;
   userId: string;
 }): Promise<PlatformActionResult> {
-  const { actor, error } = await requireActor(["admin"]);
+  const { actor, error } = await requireActor(committeeManagementRoles);
   if (error) return error;
   if (!isUuid(input?.committeeId) || !isUuid(input?.userId)) {
     return failure("El comité o el integrante indicado no es válido.", "invalid");
@@ -1391,14 +1435,6 @@ export async function updateMembershipPhotoSlotAction(input: {
   revalidatePath("/plataforma");
   revalidatePath("/solicitar-membresia");
   return success(message);
-}
-
-export async function updateMembershipAction(input: {
-  userId: string;
-  status: MembershipStatus;
-  role: PlatformRole;
-}): Promise<PlatformActionResult> {
-  return updateMemberAccessAction(input);
 }
 
 export type MembershipApplicationsActionResult = {

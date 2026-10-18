@@ -3,12 +3,13 @@
 import { useCallback, useEffect, useRef, useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import type { PlatformCommittee, PlatformTask } from "@/lib/platform";
-import { buildLeadershipTree, currentRotaryYear, leadershipDescendants, leadershipYearLabel, organizationAccessLevels, type LeadershipNode, type LeadershipPosition, type OrganizationData } from "@/lib/organization";
+import { buildLeadershipTree, currentRotaryYear, isCountedAsAssigned, leadershipDescendants, leadershipYearLabel, organizationAccessLevels, type LeadershipNode, type LeadershipPosition, type OrganizationData } from "@/lib/organization";
 import type { PlatformRole } from "@/lib/platform";
 import type { PlatformActionResult } from "./actions";
 import { createLeadershipTermAction, getOrganizationAction, saveLeadershipPositionAction, setLeadershipTermLockAction } from "./organization-actions";
 import { MembersManager } from "./MembersManager";
 import { CommitteeManager } from "./CommitteeManager";
+import { MemberPicker } from "./MemberPicker";
 import platformStyles from "./platform.module.css";
 import styles from "./organization.module.css";
 
@@ -25,7 +26,7 @@ function LeadershipBranch({ node, canEdit, onEdit, onOpenMember, root = false }:
     <article className={`${styles.positionCard} ${root ? styles.rootCard : ""}`}>
       <h3>{node.title}</h3>
       <span className={styles.accessBadge}>Acceso del cargo: {organizationAccessLevels.find(level => level.id === node.accessRole)?.label ?? "Miembro"}</span>
-      {node.memberId ? <button type="button" className={styles.person} onClick={() => onOpenMember(node.memberId!)}><span className={styles.avatar}>{initials(node.memberName ?? "Miembro")}</span><span><strong>{node.memberName ?? "Perfil del miembro"}</strong><small>Ver perfil →</small></span></button>
+      {node.memberId ? <button type="button" className={styles.person} onClick={() => onOpenMember(node.memberId!)}><span className={styles.avatar}>{initials(node.memberName ?? "Miembro")}</span><span><strong>{node.memberName ?? "Perfil del miembro"}</strong>{node.holderStatus === "suspended" && <em className={styles.suspendedBadge}>Suspendido</em>}<small>Ver perfil →</small></span></button>
         : <p className={styles.vacancy}><span />Cargo por asignar</p>}
       {node.responsibilities && <p className={styles.responsibilities}>{node.responsibilities}</p>}
       {canEdit && <button type="button" className={styles.editPosition} onClick={() => onEdit(node)} aria-label={`Editar ${node.title}`}>{node.memberId ? "Editar cargo" : "Asignar miembro"} ↗</button>}
@@ -34,8 +35,8 @@ function LeadershipBranch({ node, canEdit, onEdit, onOpenMember, root = false }:
   </li>;
 }
 
-export function OrganizationManager({ currentUserId, committees, tasks, canManageMembers, canManageCommittees, canManageOrganization }: {
-  currentUserId: string; committees: PlatformCommittee[]; tasks: PlatformTask[]; canManageMembers: boolean; canManageCommittees: boolean; canManageOrganization: boolean;
+export function OrganizationManager({ currentUserId, committees, tasks, canManageMembers, canManageCommittees, canManageOrganization, onOpenApplications }: {
+  currentUserId: string; committees: PlatformCommittee[]; tasks: PlatformTask[]; canManageMembers: boolean; canManageCommittees: boolean; canManageOrganization: boolean; onOpenApplications?: () => void;
 }) {
   const router = useRouter();
   const [view, setView] = useState<"organigrama" | "miembros" | "comites">("organigrama");
@@ -88,6 +89,11 @@ export function OrganizationManager({ currentUserId, committees, tasks, canManag
   const selectedProfile = organization?.members.find(member => member.userId === selectedMemberId);
   const memberPositions = positions.filter(position => position.memberId === selectedMemberId && position.active);
   const excludedParents = editor?.id ? leadershipDescendants(positions, editor.id) : new Set<string>();
+  // A holder who is no longer an active member stays selectable only as a historical assignment.
+  const knownMembers = organization?.members ?? [];
+  const holderOptions = editor?.memberId && !knownMembers.some(member => member.userId === editor.memberId)
+    ? [{ userId: editor.memberId, name: `${positions.find(position => position.id === editor.id)?.memberName ?? "Miembro del período"} · Asignación histórica` }, ...knownMembers]
+    : knownMembers;
 
   function run(action: () => Promise<PlatformActionResult>, after?: (result: PlatformActionResult) => void) {
     startTransition(async () => {
@@ -110,6 +116,8 @@ export function OrganizationManager({ currentUserId, committees, tasks, canManag
   function savePosition(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!editor || !term) return;
+    const current = editor.id ? positions.find(position => position.id === editor.id) : undefined;
+    if (current?.active && !editor.active && !window.confirm(`¿Retirar «${current.title}» del organigrama? Dejará de mostrarse y su asignación no contará en el período. El registro se conserva y podrás recuperarlo después.`)) return;
     const values = { ...editor, termId: term.id, memberId: editor.memberId || null, parentId: editor.parentId || null };
     run(() => saveLeadershipPositionAction(values), () => { setEditor(null); setAssignmentMember(null); });
   }
@@ -132,18 +140,21 @@ export function OrganizationManager({ currentUserId, committees, tasks, canManag
         {canManageOrganization && <div className={styles.actions}>
           {canEdit && <button type="button" className={styles.button} onClick={() => edit()}>Agregar cargo +</button>}
           <button type="button" className={styles.quietButton} disabled={pending} onClick={() => { setFeedback(null); setEditor(null); setNewTerm({ year: term ? term.startYear + 1 : currentRotaryYear(), label: "", template: term?.id ?? "" }); }}>{term ? "Nuevo período" : "Definir directiva"}</button>
-          {term && <button type="button" className={styles.textButton} disabled={pending} onClick={() => run(() => setLeadershipTermLockAction({ termId: term.id, locked: !term.locked, updatedAt: term.updatedAt }))}>{term.locked ? "Reabrir edición" : "Cerrar edición"}</button>}
+          {term && <button type="button" className={styles.textButton} disabled={pending} onClick={() => {
+            if (!term.locked && !window.confirm(`¿Cerrar la edición del período ${yearLabel}? La directiva quedará conservada y no podrá cambiarse hasta reabrirla.`)) return;
+            run(() => setLeadershipTermLockAction({ termId: term.id, locked: !term.locked, updatedAt: term.updatedAt }));
+          }}>{term.locked ? "Reabrir edición" : "Cerrar edición"}</button>}
         </div>}
       </div>
       <p className={styles.explanation}>Administración define cada cargo y su nivel de acceso. Asignar un cargo conserva los permisos del miembro hasta que administración elija aplicarlos a su perfil.</p>
       {term?.locked && <p className={styles.closedNotice}>Este período tiene la edición cerrada para conservar su directiva.</p>}
-      {term && activePositions.length > 0 ? <div className={styles.chart} aria-label={`Organigrama del club ${yearLabel}`}><div className={styles.chartLegend}><span>{activePositions.filter(position => position.memberId).length} cargos asignados</span><span>{activePositions.filter(position => !position.memberId).length} por asignar</span></div><ul className={styles.treeRoots}>{tree.map(node => <LeadershipBranch key={node.id} node={node} root canEdit={canEdit && !pending} onEdit={edit} onOpenMember={openMember} />)}</ul></div>
+      {term && activePositions.length > 0 ? <div className={styles.chart} aria-label={`Organigrama del club ${yearLabel}`}><div className={styles.chartLegend}><span>{activePositions.filter(isCountedAsAssigned).length} cargos asignados</span><span>{activePositions.filter(position => !isCountedAsAssigned(position)).length} por asignar</span></div><ul className={styles.treeRoots}>{tree.map(node => <LeadershipBranch key={node.id} node={node} root canEdit={canEdit && !pending} onEdit={edit} onOpenMember={openMember} />)}</ul></div>
         : <div className={styles.emptyCard}><h3>{term ? "El organigrama está por definir." : "El club todavía no ha definido su directiva."}</h3><p>{canManageOrganization ? "Define el año rotario, asigna los miembros y adapta los cargos a la estructura del club." : "Cuando administración defina los cargos, podrás consultar aquí la directiva y los perfiles de sus integrantes."}</p></div>}
       {positions.some(position => !position.active) && <details className={styles.retired}><summary>Cargos retirados de este organigrama ({positions.filter(position => !position.active).length})</summary>{positions.filter(position => !position.active).map(position => <div key={position.id}><strong>{position.title}</strong><span>{position.memberName ?? "Sin asignación"}</span>{canEdit && <button type="button" className={styles.textButton} onClick={() => edit(position)}>Editar y recuperar</button>}</div>)}</details>}
       {term?.startYear === currentRotaryYear() && <div className={styles.committees}><div className={styles.heading}><div><h3>Comités del club</h3><p>Composición actual de los equipos de trabajo.</p></div><button type="button" className={styles.quietButton} onClick={() => setView("comites")}>Ver comités →</button></div><div className={styles.committeeGrid}>{committees.filter(committee => committee.isActive).map(committee => <article key={committee.id}><h4>{committee.name}</h4><p>{committee.members.filter(member => member.role === "chair").map(member => member.name).join(", ") || "Presidencia del comité por asignar"}</p><small>{committee.members.length} integrantes</small></article>)}</div>{committees.every(committee => !committee.isActive) && <p className={styles.empty}>Todavía no hay comités activos. Puedes definirlos en la vista Comités.</p>}</div>}
     </>}
     {!loading && view === "miembros" && (canManageMembers ? <MembersManager key={selectedMemberId} currentUserId={currentUserId} committees={committees} tasks={tasks}
-      initialMemberId={selectedMemberId} leadershipPositions={positions} leadershipYear={yearLabel}
+      initialMemberId={selectedMemberId} leadershipPositions={positions} leadershipYear={yearLabel} onOpenApplications={onOpenApplications}
       onAssignPosition={canEdit ? id => edit(activePositions.find(position => !position.memberId), id) : undefined} />
       : <div className={styles.directory}><label>Buscar miembro<input type="search" value={memberQuery} onChange={event => setMemberQuery(event.target.value)} placeholder="Nombre del miembro" /></label><div className={styles.directoryLayout}><div className={styles.directoryList}>{organization?.members.filter(member => member.name.toLocaleLowerCase("es").includes(memberQuery.toLocaleLowerCase("es"))).map(member => <button type="button" key={member.userId} aria-pressed={selectedMemberId === member.userId} onClick={() => setSelectedMemberId(member.userId)}><span className={styles.avatar}>{initials(member.name)}</span><span><strong>{member.name}</strong><small>{positions.filter(position => position.memberId === member.userId && position.active).map(position => position.title).join(" · ") || "Miembro del club"}</small></span></button>)}</div><article className={styles.profile}><h3>{selectedProfile?.name ?? positions.find(position => position.memberId === selectedMemberId)?.memberName ?? "Selecciona un miembro"}</h3>{selectedProfile?.bio && <p>{selectedProfile.bio}</p>}{memberPositions.length > 0 && <><h4>Cargos rotarios · {yearLabel}</h4><ul>{memberPositions.map(position => <li key={position.id}><strong>{position.title}</strong>{position.responsibilities && <p>{position.responsibilities}</p>}</li>)}</ul></>}{selectedProfile && memberPositions.length === 0 && <p>Este miembro no tiene cargos asignados en el período seleccionado.</p>}</article></div></div>)}
     {view === "comites" && <section className={platformStyles.moduleGrid}><CommitteeManager committees={committees} candidates={organization?.members ?? []} canManage={canManageCommittees} /></section>}
@@ -154,7 +165,9 @@ export function OrganizationManager({ currentUserId, committees, tasks, canManag
       {editor && <form className={styles.form} onSubmit={savePosition}>
         {assignmentMember && <label>Cargo que deseas asignar<select value={editor.id ?? "new"} onChange={event => setEditor(draftFrom(positions.find(position => position.id === event.target.value), assignmentMember))}><option value="new">Crear un cargo nuevo</option>{activePositions.map(position => <option key={position.id} value={position.id}>{position.title}{position.memberName ? ` · ${position.memberName}` : " · Vacante"}</option>)}</select></label>}
         <label>Nombre del cargo<input value={editor.title} required minLength={2} maxLength={100} onChange={event => setEditor({ ...editor, title: event.target.value })} placeholder="Ej. Contabilidad, Dirección de proyectos" /></label>
-        <label>Miembro asignado<select value={editor.memberId} onChange={event => setEditor({ ...editor, memberId: event.target.value, applyAccess: false })}><option value="">Cargo por asignar</option>{editor.memberId && !organization?.members.some(member => member.userId === editor.memberId) && <option value={editor.memberId}>{positions.find(position => position.id === editor.id)?.memberName ?? "Miembro del período"} · Asignación histórica</option>}{organization?.members.map(member => <option key={member.userId} value={member.userId}>{member.name}</option>)}</select></label>
+        <MemberPicker label="Miembro asignado" candidates={holderOptions} value={editor.memberId} optional emptyLabel="Cargo por asignar"
+          onChange={memberId => setEditor({ ...editor, memberId, applyAccess: false })}
+          hint="Solo las personas con membresía activa pueden recibir un cargo nuevo." />
         <label>Depende de<select value={editor.parentId} onChange={event => setEditor({ ...editor, parentId: event.target.value })}><option value="">Sin cargo superior</option>{activePositions.filter(position => !excludedParents.has(position.id)).map(position => <option key={position.id} value={position.id}>{position.title}</option>)}</select></label>
         <label>Nivel de acceso del cargo<select value={editor.accessRole} onChange={event => setEditor({ ...editor, accessRole: event.target.value as PlatformRole })}>{organizationAccessLevels.map(level => <option key={level.id} value={level.id}>{level.label}</option>)}</select></label>
         <p className={styles.muted}>{organizationAccessLevels.find(level => level.id === editor.accessRole)?.description}</p>

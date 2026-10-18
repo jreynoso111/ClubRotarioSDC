@@ -40,7 +40,7 @@ grant select, update on leadership_fixture to authenticated;
 select ok(not has_table_privilege('anon', 'public.club_leadership_positions', 'SELECT'), 'anonymous users cannot read the internal org chart');
 select ok(not has_table_privilege('authenticated', 'public.club_leadership_positions', 'DELETE'), 'positions are retired rather than deleted by clients');
 select ok(not has_function_privilege('anon', 'public.save_club_leadership_position(uuid,uuid,text,text,uuid,uuid,integer,boolean,text,boolean,timestamptz)', 'EXECUTE'), 'anonymous users cannot call assignment RPC');
-select ok(not (select prosecdef from pg_proc where oid = to_regprocedure('public.save_club_leadership_position(uuid,uuid,text,text,uuid,uuid,integer,boolean,text,boolean,timestamptz)')), 'assignment RPC respects the invoking user and row policies');
+select ok((select prosecdef from pg_proc where oid = to_regprocedure('public.save_club_leadership_position(uuid,uuid,text,text,uuid,uuid,integer,boolean,text,boolean,timestamptz)')), 'assignment RPC runs as a definer and checks administrator access itself');
 
 set local role authenticated;
 select set_config('request.jwt.claim.role', 'authenticated', true);

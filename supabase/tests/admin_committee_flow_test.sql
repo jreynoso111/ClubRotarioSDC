@@ -55,9 +55,9 @@ select throws_ok($$select public.create_committee_with_members('Suspendidos',
 
 select set_config('request.jwt.claim.sub', (select manager_id::text from committee_flow_fixture), true);
 select set_config('request.jwt.claims', (coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb || jsonb_build_object('session_id', auth.uid()))::text, true);
-select throws_ok($$select public.create_committee_with_members('No autorizado',
+select lives_ok($$select public.create_committee_with_members('Comité de gestión',
   'committee-manager-' || manager_id::text, null, '{}'::uuid[], '{}'::text[]) from committee_flow_fixture$$,
-  '42501', null, 'club managers cannot create committees');
+  'club managers can create committees like administrators');
 select set_config('request.jwt.claim.sub', (select member_id::text from committee_flow_fixture), true);
 select set_config('request.jwt.claims', (coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb || jsonb_build_object('session_id', auth.uid()))::text, true);
 select throws_ok($$select public.create_committee_with_members('No autorizado',

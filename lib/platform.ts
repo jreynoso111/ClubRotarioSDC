@@ -5,6 +5,7 @@ import { createClient } from "@/utils/supabase/server";
 import { privilegedSecurityState, type PrivilegedSecurityState } from "@/lib/mfa-policy";
 import { sessionHasRecentSecondFactor } from "@/lib/mfa-session";
 import { PROPOSAL_LIMIT } from "@/lib/proposal-limits";
+import { readEveryPage } from "@/lib/read-every-page";
 
 export type PlatformRole =
   | "member"
@@ -36,7 +37,6 @@ export type PlatformSnapshot = {
     role: PlatformRole;
     status: "pending" | "active" | "suspended";
     joinedAt: string | null;
-    notes: string | null;
   } | null;
   capabilities: {
     canCoordinate: boolean;
@@ -65,7 +65,6 @@ export type PlatformSnapshot = {
   messages: PlatformMessage[];
   memberDirectory: PlatformDirectoryMember[];
   committeeCandidates: PlatformDirectoryMember[];
-  pendingMembers: PlatformPendingMember[];
   messagingSchema: {
     state: PlatformSchemaState;
     message: string | null;
@@ -227,14 +226,6 @@ export type PlatformDirectoryMember = {
   name: string;
 };
 
-export type PlatformPendingMember = {
-  userId: string;
-  name: string;
-  role: PlatformRole;
-  status: "pending" | "active" | "suspended";
-  createdAt: string;
-};
-
 type PlatformError = {
   code?: string | null;
   message?: string | null;
@@ -245,7 +236,6 @@ type MembershipRow = {
   membership_role: string;
   membership_status: "pending" | "active" | "suspended";
   joined_at: string | null;
-  notes: string | null;
 };
 
 type ProfileRow = {
@@ -387,13 +377,6 @@ type MessageRecipientRow = {
   created_at: string;
 };
 
-type PendingMembershipRow = {
-  user_id: string;
-  membership_role: string;
-  membership_status: "pending" | "active" | "suspended";
-  created_at: string;
-};
-
 function asRole(value: string | null | undefined): PlatformRole {
   if (
     value === "coordinator" ||
@@ -477,7 +460,6 @@ function emptySnapshot(
     messages: [],
     memberDirectory: [],
     committeeCandidates: [],
-    pendingMembers: [],
     messagingSchema: {
       state: "unavailable",
       message: null,
@@ -530,7 +512,7 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
     readQuery<MembershipRow>(
       supabase
         .from("memberships")
-        .select("membership_role,membership_status,joined_at,notes")
+        .select("membership_role,membership_status,joined_at")
         .eq("user_id", user.id)
         .maybeSingle(),
     ),
@@ -578,7 +560,7 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
     canEdit: isActive && ["editor", "club_manager", "admin"].includes(effectiveRole),
     canManageClub: isActive && ["club_manager", "admin"].includes(effectiveRole),
     canManageFinances: isActive && ["club_manager", "admin"].includes(effectiveRole),
-    canManageCommittees: isActive && effectiveRole === "admin",
+    canManageCommittees: isActive && (effectiveRole === "admin" || effectiveRole === "club_manager"),
     canManageMembership: isActive && ["club_manager", "admin"].includes(effectiveRole),
     canBroadcast: isActive && ["coordinator", "club_manager", "admin"].includes(effectiveRole),
     canAudit: isActive && effectiveRole === "admin",
@@ -597,7 +579,6 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
     role,
     status: membership.membership_status,
     joinedAt: membership.joined_at,
-    notes: membership.notes,
   };
   baseSnapshot.capabilities = capabilities;
   baseSnapshot.security = { state: securityState };
@@ -664,10 +645,11 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
         .limit(300),
     ),
     readQuery<CommitteeRow[]>(
-      committeesQuery().order("name", { ascending: true }).limit(60),
+      readEveryPage((first, last) => committeesQuery().order("name", { ascending: true }).order("id").range(first, last)),
     ),
     readQuery<CommitteeMemberRow[]>(
-      supabase.from("committee_members").select("committee_id,user_id,committee_role").limit(200),
+      readEveryPage((first, last) => supabase.from("committee_members").select("committee_id,user_id,committee_role")
+        .order("committee_id").order("user_id").range(first, last)),
     ),
     readQuery<StoryRow[]>(
       supabase
@@ -684,11 +666,13 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
         .limit(20),
     ),
     readQuery<ProfileRow[]>(
-      supabase.from("profiles").select("id,display_name").order("display_name", { ascending: true }).limit(200),
+      readEveryPage((first, last) => supabase.from("profiles").select("id,display_name")
+        .order("display_name", { ascending: true }).order("id").range(first, last)),
     ),
     readQuery<ActiveMembershipRow[]>(
       capabilities.canManageMembership
-        ? supabase.from("memberships").select("user_id").eq("membership_status", "active").order("user_id").limit(200)
+        ? readEveryPage((first, last) => supabase.from("memberships").select("user_id").eq("membership_status", "active")
+          .order("user_id").range(first, last))
         : Promise.resolve({ data: [], error: null }),
     ),
   ]);
@@ -946,43 +930,6 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
     })),
   ].sort((left, right) => right.createdAt.localeCompare(left.createdAt));
 
-  let pendingMembers: PlatformPendingMember[] = [];
-  if (capabilities.canManageMembership) {
-    const pendingResult = await readQuery<PendingMembershipRow[]>(
-      supabase
-        .from("memberships")
-        .select("user_id,membership_role,membership_status,created_at")
-        .eq("membership_status", "pending")
-        .order("created_at", { ascending: true })
-        .limit(50),
-    );
-    if (pendingResult.error) {
-      if (!isMissingSchemaError(pendingResult.error)) {
-        warnings.push(`solicitudes: ${describeError(pendingResult.error)}`);
-      }
-    } else {
-      const pendingRows = (pendingResult.data ?? []) as PendingMembershipRow[];
-      const pendingIds = pendingRows.map((row) => row.user_id);
-      let pendingProfiles: ProfileRow[] = [];
-      if (pendingIds.length > 0) {
-        const pendingProfilesResult = await readQuery<ProfileRow[]>(
-          supabase.from("profiles").select("id,display_name").in("id", pendingIds),
-        );
-        pendingProfiles = (pendingProfilesResult.data ?? []) as ProfileRow[];
-      }
-      const pendingNames = new Map(
-        pendingProfiles.map((profileRow) => [profileRow.id, profileRow.display_name?.trim() || "Nueva solicitud"]),
-      );
-      pendingMembers = pendingRows.map((row) => ({
-        userId: row.user_id,
-        name: pendingNames.get(row.user_id) ?? "Nueva solicitud",
-        role: asRole(row.membership_role),
-        status: row.membership_status,
-        createdAt: row.created_at,
-      }));
-    }
-  }
-
   // A missing notification table is the signal for the whole additive migration,
   // even if another query returned an empty result while the API cache refreshed.
   if (messagingQueryResults.some((result) => result.error && isMissingSchemaError(result.error))) {
@@ -1074,7 +1021,6 @@ export async function getPlatformSnapshot(): Promise<PlatformSnapshot> {
     messages,
     memberDirectory: directory,
     committeeCandidates,
-    pendingMembers,
     messagingSchema: {
       state: messagingState,
       message: messagingMessage,

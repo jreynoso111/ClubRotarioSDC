@@ -14,6 +14,8 @@ export type LeadershipPosition = {
   parentId: string | null;
   memberId: string | null;
   memberName: string | null;
+  // Known only to club management (memberships are not readable by other members); null when unknown or unassigned.
+  holderStatus: "active" | "pending" | "suspended" | null;
   sortOrder: number;
   active: boolean;
   accessRole: PlatformRole;
@@ -32,6 +34,11 @@ export function currentRotaryYear(date = new Date()) {
 }
 
 export function leadershipYearLabel(year: number) { return `${year}–${year + 1}`; }
+
+// A suspended holder keeps the record but no longer counts as holding the position.
+export function isCountedAsAssigned(position: Pick<LeadershipPosition, "memberId" | "holderStatus">) {
+  return Boolean(position.memberId) && position.holderStatus !== "suspended";
+}
 
 export function buildLeadershipTree(positions: LeadershipPosition[]): LeadershipNode[] {
   const active = positions.filter(position => position.active).sort((a, b) => a.sortOrder - b.sortOrder || a.title.localeCompare(b.title, "es"));

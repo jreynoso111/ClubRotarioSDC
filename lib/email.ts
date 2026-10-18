@@ -80,3 +80,59 @@ export function applicationInvitationEmail(fullName: string, signUpUrl: string):
     ]),
   };
 }
+
+type MemberNotice = { name: string; subject: string; paragraphs: string[]; link?: { url: string; label: string } };
+
+// Membership notices share one layout: greeting, short paragraphs, an optional link and the club signature.
+function memberNoticeEmail({ name, subject, paragraphs, link }: MemberNotice): ClubEmailContent {
+  const greeting = `Hola ${name}:`;
+  const closing = "Con gratitud,\nClub Rotario Santo Domingo Colonial";
+  return {
+    subject,
+    text: [greeting, ...paragraphs, ...(link ? [`${link.label}: ${link.url}`] : []), closing].join("\n\n"),
+    html: page([
+      escapeHtml(greeting),
+      ...paragraphs.map(paragraph => escapeHtml(paragraph)),
+      ...(link ? [`<a href="${escapeHtml(link.url)}">${escapeHtml(link.label)}</a>`] : []),
+      escapeHtml(closing).replace(/\n/g, "<br>"),
+    ]),
+  };
+}
+
+export function memberApprovedEmail(name: string, platformUrl: string): ClubEmailContent {
+  return memberNoticeEmail({
+    name,
+    subject: "Tu membresía fue aprobada",
+    paragraphs: ["La gestión del club aprobó tu membresía. Ya puedes entrar a la plataforma de miembros con la cuenta que creaste."],
+    link: { url: platformUrl, label: "Entrar a la plataforma" },
+  });
+}
+
+export function memberReactivatedEmail(name: string, platformUrl: string): ClubEmailContent {
+  return memberNoticeEmail({
+    name,
+    subject: "Tu acceso a la plataforma fue reactivado",
+    paragraphs: ["La gestión del club reactivó tu membresía. Tu acceso a la plataforma de miembros vuelve a estar disponible."],
+    link: { url: platformUrl, label: "Entrar a la plataforma" },
+  });
+}
+
+export function memberSuspendedEmail(name: string, reason: string): ClubEmailContent {
+  return memberNoticeEmail({
+    name,
+    subject: "Tu acceso a la plataforma fue suspendido",
+    paragraphs: [
+      "La gestión del club suspendió temporalmente tu acceso a la plataforma de miembros.",
+      `Motivo: ${reason}`,
+      "Si tienes preguntas, comunícate con la gestión del club.",
+    ],
+  });
+}
+
+export function memberRoleChangedEmail(name: string, roleLabel: string): ClubEmailContent {
+  return memberNoticeEmail({
+    name,
+    subject: "Actualizamos tu rol en la plataforma",
+    paragraphs: [`La gestión del club cambió tu rol en la plataforma a ${roleLabel}.`, "Tus permisos se aplican la próxima vez que entres a la plataforma."],
+  });
+}

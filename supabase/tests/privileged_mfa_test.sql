@@ -10,7 +10,7 @@ end; $$;
 create trigger club_fixture_session after insert on auth.users
 for each row execute function pg_temp.club_fixture_session();
 
-select plan(19);
+select plan(21);
 
 -- Fixtures: one user per role. All memberships are active.
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data)
@@ -56,7 +56,8 @@ select pg_temp.act_as('f1111111-1111-4111-8111-111111111111', 'password');
 select ok(not private.has_any_role(array['admin']), 'admin with password only is not treated as admin');
 select ok(private.is_active_member(), 'admin with password only still keeps ordinary member access');
 select is((select count(*)::integer from public.memberships), 1, 'admin with password only reads only its own membership');
-update public.memberships set membership_role = 'admin' where user_id = 'f4444444-4444-4444-8444-444444444444';
+select throws_ok($$select public.update_member_access('f4444444-4444-4444-8444-444444444444', 'admin', 'active', null, 'Intento sin segundo factor', null)$$,
+  '42501', null, 'a password-only administrator cannot grant administration');
 
 select pg_temp.act_as('f1111111-1111-4111-8111-111111111111', 'aal2_password_only');
 select ok(not private.has_any_role(array['admin']), 'an aal2 claim without a second-factor method is rejected');
@@ -81,7 +82,8 @@ select throws_ok(
   null,
   'club manager with password only cannot record finances'
 );
-update public.memberships set membership_status = 'suspended' where user_id = 'f4444444-4444-4444-8444-444444444444';
+select throws_ok($$select public.update_member_access('f4444444-4444-4444-8444-444444444444', 'member', 'suspended', null, 'Intento sin segundo factor', null)$$,
+  '42501', null, 'a password-only club manager cannot suspend a member');
 
 select pg_temp.act_as('f2222222-2222-4222-8222-222222222222', 'fresh_totp');
 select lives_ok(

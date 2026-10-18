@@ -650,7 +650,7 @@
 .committee li small { color: var(--ink-soft); font-family: var(--font-geist-mono); font-size: 9px; text-transform: uppercase; }
 .committeeRosterEditor, .committeeEditor { border-top: 1px dashed var(--line); display: grid; gap: 12px; padding: 13px 0 0; }
 .committeeRosterEditor summary { color: var(--rotary-blue); cursor: pointer; font-size: 9px; font-weight: 800; letter-spacing: .07em; list-style-position: inside; text-transform: uppercase; }
-.committeeRosterEditor form { align-items: end; display: grid; gap: 10px; grid-template-columns: minmax(0, 1fr) minmax(0, .8fr) auto; }
+.committeeRosterEditor form { align-items: start; display: grid; gap: 10px; grid-template-columns: minmax(0, 1fr) minmax(0, .8fr) auto; }
 .committeeRosterEditor label, .committeeEditor label { color: var(--ink); display: grid; font-size: 9px; font-weight: 800; gap: 6px; letter-spacing: .07em; text-transform: uppercase; }
 .committeeRosterEditor select, .committeeEditor input, .committeeEditor textarea { background: var(--white); border: 1px solid var(--line); color: var(--ink); font: inherit; font-size: 12px; font-weight: 400; letter-spacing: 0; min-height: 40px; padding: 9px 10px; text-transform: none; width: 100%; }
 .committeeEditor textarea { min-height: 74px; resize: vertical; }
@@ -661,7 +661,9 @@
 .committeeInitialMembers > div:first-child { display: grid; gap: 5px; }
 .committeeInitialMembers > div:first-child strong { font-family: Georgia, "Times New Roman", serif; font-size: 17px; font-weight: 400; }
 .committeeInitialMembers > div:first-child span { color: var(--ink-soft); font-size: 10px; line-height: 1.45; }
-.committeeInitialRow { align-items: end; display: grid; gap: 8px; grid-template-columns: minmax(0, 1fr) minmax(0, .8fr) auto; }
+.committeeInitialRow { align-items: start; display: grid; gap: 8px; grid-template-columns: minmax(0, 1fr) minmax(0, .8fr) auto; }
+.roleField { display: grid; gap: 6px; min-width: 0; }
+.committeeHint { color: #7c5714; font-size: 10px; line-height: 1.5; }
 .committeeInitialRow label { min-width: 0; }
 .committeeInitialRow select { background: var(--white); border: 1px solid var(--line); color: var(--ink); font: inherit; font-size: 12px; font-weight: 400; letter-spacing: 0; min-height: 40px; padding: 9px 10px; text-transform: none; width: 100%; }
 .committeeRosterEditor select:focus, .committeeEditor input:focus, .committeeEditor textarea:focus, .committeeInitialRow select:focus { border-color: var(--rotary-blue); outline: 2px solid rgba(23,69,143,.14); }

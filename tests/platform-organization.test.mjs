@@ -24,24 +24,38 @@ const updatedAt = "2026-09-30T12:00:00.123456Z";
 const input = { termId, title: "Contabilidad", responsibilities: "Registros del club", parentId: null,
   memberId, sortOrder: 10, active: true, accessRole: "member", applyAccess: false };
 
-function setup({ role = "admin", status = "active", signedIn = true, rpcError = null, size = 3 } = {}) {
+// Mirrors the table shapes the action reads. Memberships are returned for every
+// status, as management can read them; `suspended` lists member ids to mark suspended.
+function rowsBetween(total, first, last, make) {
+  return Array.from({ length: Math.max(0, Math.min(last + 1, total) - first) }, (_, index) => make(first + index));
+}
+
+function setup({ role = "admin", status = "active", signedIn = true, rpcError = null, size = 3, suspended = [],
+  holders = ["member-0"], positionCount = 1, termCount = 1, failOn = null } = {}) {
   const calls = [];
   const pages = [];
   const invalidations = [];
+  const rows = (table, first, last) => {
+    if (table === "club_leadership_terms") return rowsBetween(termCount, first, last, index => ({
+      id: index === 0 ? termId : `term-${index}`, start_year: organization.currentRotaryYear() - index, label: "", is_locked: false, updated_at: updatedAt }));
+    if (table === "club_leadership_positions") return rowsBetween(positionCount, first, last, index => ({
+      id: index === 0 ? positionId : `position-${index}`, term_id: termId, title: index === 0 ? "Presidencia" : `Cargo ${index}`, responsibilities: "",
+      parent_id: null, member_id: holders[index] ?? null, member_name_snapshot: "Nombre histórico", sort_order: index, is_active: true, access_role: "member", updated_at: updatedAt }));
+    if (table === "profiles") return rowsBetween(size, first, last, index => ({ id: `member-${index}`, display_name: `Miembro ${index}`, bio: null }));
+    return rowsBetween(size, first, last, index => ({ user_id: `member-${index}`, membership_role: "member",
+      membership_status: suspended.includes(`member-${index}`) ? "suspended" : "active" }));
+  };
   const client = {
     auth: { getClaims: async () => ({ data: { claims: { aal: "aal2", amr: [{ method: "totp", timestamp: Math.floor(Date.now() / 1000) }] } }, error: null }), mfa: { listFactors: async () => ({ data: { all: [], totp: [{ id: "factor" }] }, error: null }) }, getUser: async () => ({ data: { user: signedIn ? { id: actorId, user_metadata: { role: "admin" } } : null }, error: null }) },
     from(table) {
       const query = {
-        select() { return query; }, eq() { return query; }, order() { return query; }, limit() { return query; },
+        select() { return query; }, eq() { return query; }, order() { return query; },
         maybeSingle: async () => ({ data: { membership_role: role, membership_status: status }, error: null }),
         async range(first, last) {
           pages.push({ table, first, last });
-          const data = Array.from({ length: Math.max(0, Math.min(last + 1, size) - first) }, (_, index) => table === "profiles" ?
-            { id: `member-${first + index}`, display_name: `Miembro ${first + index}`, bio: null } :
-            { user_id: `member-${first + index}`, membership_role: "member" });
-          return { data, error: null };
+          if (failOn === table) return { data: null, error: { code: "XX000", message: "read failed" } };
+          return { data: rows(table, first, last), error: null };
         },
-        then(resolve, reject) { return Promise.resolve({ data: table === "club_leadership_terms" ? [{ id: termId, start_year: organization.currentRotaryYear(), label: "", is_locked: false, updated_at: updatedAt }] : [{ id: positionId, term_id: termId, title: "Presidencia", responsibilities: "", parent_id: null, member_id: "member-0", member_name_snapshot: "Nombre histórico", sort_order: 0, is_active: true, access_role: "member", updated_at: updatedAt }], error: null }).then(resolve, reject); },
       };
       return query;
     },
@@ -53,6 +67,8 @@ function setup({ role = "admin", status = "active", signedIn = true, rpcError = 
   dependencies["./module-auth"] = compile("../app/plataforma/module-auth.ts", dependencies);
   return { actions: compile("../app/plataforma/organization-actions.ts", dependencies), calls, pages, invalidations };
 }
+
+const pagesFor = (fixture, table) => fixture.pages.filter(page => page.table === table).map(page => page.first);
 
 test("Rotary year changes at midnight in Santo Domingo on July 1", () => {
   assert.equal(organization.currentRotaryYear(new Date("2026-07-01T03:59:59Z")), 2025);
@@ -69,6 +85,13 @@ test("hierarchy sorts siblings, hides retired positions and handles incomplete o
   assert.equal(source[0].id, "secretary");
   assert.deepEqual(organization.buildLeadershipTree([position("a", "b"), position("b", "a")]).map(row => row.id), ["a", "b"]);
   assert.deepEqual([...organization.leadershipDescendants([position("a", "b"), position("b", "a"), position("c", "b")], "a")], ["a", "b", "c"]);
+});
+
+test("suspended holders stay visible but do not count as assigned positions", () => {
+  assert.equal(organization.isCountedAsAssigned({ memberId: memberId, holderStatus: "active" }), true);
+  assert.equal(organization.isCountedAsAssigned({ memberId: memberId, holderStatus: null }), true);
+  assert.equal(organization.isCountedAsAssigned({ memberId: memberId, holderStatus: "suspended" }), false);
+  assert.equal(organization.isCountedAsAssigned({ memberId: null, holderStatus: null }), false);
 });
 
 test("only active administrators can configure cargos, despite admin metadata", async () => {
@@ -113,22 +136,53 @@ test("backend permission and optimistic conflict failures retain useful messages
   }
 });
 
-test("members can read the organigrama, while suspended accounts cannot", async () => {
+test("members can read the organigrama without management-only status, while suspended accounts cannot", async () => {
   const fixture = setup({ role: "member" });
   const result = await fixture.actions.getOrganizationAction();
   assert.equal(result.ok, true);
   assert.equal(result.organization.positions[0].memberName, "Miembro 0");
+  assert.equal(result.organization.positions[0].holderStatus, null);
   assert.equal(result.organization.members[0].accessRole, undefined);
-  assert.ok(fixture.pages.every(page => page.table === "profiles"));
+  assert.ok(fixture.pages.every(page => page.table !== "memberships"));
   assert.equal((await setup({ status: "suspended" }).actions.getOrganizationAction()).ok, false);
 });
 
-test("administrator assignment lists paginate profiles and active memberships", async () => {
-  const fixture = setup({ size: 405 });
+test("administrator assignment lists page through every profile, membership, term and position", async () => {
+  const fixture = setup({ size: 405, termCount: 205, positionCount: 230 });
   const result = await fixture.actions.getOrganizationAction();
   assert.equal(result.ok, true);
   assert.equal(result.organization.members.length, 405);
   assert.equal(result.organization.members[404].accessRole, "member");
-  assert.deepEqual(fixture.pages.filter(page => page.table === "profiles").map(page => page.first), [0, 200, 400]);
-  assert.deepEqual(fixture.pages.filter(page => page.table === "memberships").map(page => page.first), [0, 200, 400]);
+  assert.equal(result.organization.terms.length, 205);
+  assert.equal(result.organization.positions.length, 230);
+  assert.deepEqual(pagesFor(fixture, "profiles"), [0, 200, 400]);
+  assert.deepEqual(pagesFor(fixture, "memberships"), [0, 200, 400]);
+  assert.deepEqual(pagesFor(fixture, "club_leadership_terms"), [0, 200]);
+  assert.deepEqual(pagesFor(fixture, "club_leadership_positions"), [0, 200]);
+});
+
+test("club managers and admins see only active members, with the holder status of each position", async () => {
+  for (const role of ["club_manager", "admin"]) {
+    const fixture = setup({ role, size: 3, suspended: ["member-1"], holders: ["member-0", "member-1"], positionCount: 2 });
+    const result = await fixture.actions.getOrganizationAction();
+    assert.equal(result.ok, true, role);
+    assert.deepEqual(result.organization.members.map(member => member.userId), ["member-0", "member-2"], role);
+    assert.equal(result.organization.members[0].accessRole, "member");
+
+    const [president, suspendedHolder] = result.organization.positions;
+    assert.equal(president.holderStatus, "active");
+    assert.equal(suspendedHolder.holderStatus, "suspended");
+    assert.equal(suspendedHolder.memberName, "Nombre histórico");
+    assert.equal(organization.isCountedAsAssigned(president), true);
+    assert.equal(organization.isCountedAsAssigned(suspendedHolder), false);
+  }
+});
+
+test("a failed page stops the read instead of returning a partial organigrama", async () => {
+  for (const failOn of ["club_leadership_terms", "club_leadership_positions", "profiles", "memberships"]) {
+    const fixture = setup({ failOn, size: 3 });
+    const result = await fixture.actions.getOrganizationAction();
+    assert.equal(result.ok, false, failOn);
+    assert.equal(result.organization, undefined, failOn);
+  }
 });

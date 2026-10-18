@@ -1,0 +1,9 @@
+.picker { display: grid; gap: 6px; min-width: 0; }
+.label { color: inherit; display: block; font-size: 9px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
+.picker input, .picker select { background: #fff; border: 1px solid #cfd8e6; border-radius: 0; color: inherit; font: inherit; font-size: 12px; font-weight: 400; letter-spacing: 0; min-width: 0; padding: 9px 10px; text-transform: none; width: 100%; }
+.picker input { min-height: 38px; }
+.picker select { padding: 6px; }
+.picker select option { padding: 5px 6px; }
+.picker input:focus, .picker select:focus { border-color: #17458f; outline: 2px solid rgba(23, 69, 143, .14); }
+.count, .hint { color: #65738a; font-size: 10px; line-height: 1.5; }
+.hint { color: #7c5714; }

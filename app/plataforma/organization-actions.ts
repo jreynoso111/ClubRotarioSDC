@@ -22,43 +22,63 @@ function organizationError(error: { code?: string; message?: string } | null) {
   return moduleFailure("No se pudo guardar el organigrama. Conservamos los datos para que puedas volver a intentarlo.");
 }
 
+type MembershipStatus = "pending" | "active" | "suspended";
+const organizationPageSize = 200;
+
+// Reads every page so a long list is never cut off silently. Returns null when a page fails.
+async function readAllRows<T>(read: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>) {
+  const rows: T[] = [];
+  for (let page = 0; ; page++) {
+    const from = page * organizationPageSize;
+    const { data, error } = await read(from, from + organizationPageSize - 1);
+    if (error) return null;
+    rows.push(...(data ?? []));
+    if (!data || data.length < organizationPageSize) return rows;
+  }
+}
+
 export async function getOrganizationAction(termId?: string): Promise<PlatformActionResult & { organization?: OrganizationData }> {
   const { actor, error } = await requireModuleActor(["member", "coordinator", "editor", "club_manager", "admin"]);
   if (error || !actor) return error!;
   if (termId !== undefined && !validUuid(termId)) return moduleFailure("El período indicado no es válido.", "invalid");
   try {
-    const { data: termRows, error: termError } = await actor.supabase.from("club_leadership_terms")
-      .select("id,start_year,label,is_locked,updated_at").order("start_year", { ascending: false }).limit(231);
-    if (termError) return moduleFailure("No se pudo cargar el organigrama del club. Vuelve a intentar.");
-    const terms = (termRows ?? []).map(row => ({ id: row.id, startYear: row.start_year, label: row.label, locked: row.is_locked, updatedAt: row.updated_at }));
+    const termRows = await readAllRows<{ id: string; start_year: number; label: string; is_locked: boolean; updated_at: string }>((from, to) =>
+      actor.supabase.from("club_leadership_terms").select("id,start_year,label,is_locked,updated_at")
+        .order("start_year", { ascending: false }).order("id").range(from, to));
+    if (!termRows) return moduleFailure("No se pudo cargar el organigrama del club. Vuelve a intentar.");
+    const terms = termRows.map(row => ({ id: row.id, startYear: row.start_year, label: row.label, locked: row.is_locked, updatedAt: row.updated_at }));
     const selected = termId ? terms.find(term => term.id === termId) : terms.find(term => term.startYear === currentRotaryYear()) ?? terms[0];
     if (termId && !selected) return moduleFailure("Ese período ya no está disponible.", "invalid");
-    const members: OrganizationMember[] = [];
-    for (let page = 0; ; page++) {
-      const { data, error: profilesError } = await actor.supabase.from("profiles").select("id,display_name,bio").order("id").range(page * 200, page * 200 + 199);
-      if (profilesError) return moduleFailure("No se pudieron cargar los perfiles del club.");
-      members.push(...(data ?? []).map(row => ({ userId: row.id, name: row.display_name || "Miembro sin nombre", bio: row.bio ?? null })));
-      if (!data || data.length < 200) break;
+
+    // Management may read every membership; other members see only active profiles (RLS).
+    const management = actor.role === "admin" || actor.role === "club_manager";
+    const profileRows = await readAllRows<{ id: string; display_name: string | null; bio: string | null }>((from, to) =>
+      actor.supabase.from("profiles").select("id,display_name,bio").order("id").range(from, to));
+    if (!profileRows) return moduleFailure("No se pudieron cargar los perfiles del club.");
+    let members: OrganizationMember[] = profileRows.map(row => ({ userId: row.id, name: row.display_name || "Miembro sin nombre", bio: row.bio ?? null }));
+    const statusById = new Map<string, MembershipStatus>();
+    if (management) {
+      const membershipRows = await readAllRows<{ user_id: string; membership_role: PlatformRole; membership_status: MembershipStatus }>((from, to) =>
+        actor.supabase.from("memberships").select("user_id,membership_role,membership_status").order("user_id").range(from, to));
+      if (!membershipRows) return moduleFailure("No se pudo comprobar la lista de miembros activos.");
+      membershipRows.forEach(row => statusById.set(row.user_id, row.membership_status));
+      // Only active members can hold a position, so inactive profiles are not returned to management.
+      const activeRoles = new Map(membershipRows.filter(row => row.membership_status === "active").map(row => [row.user_id, row.membership_role]));
+      members = members.filter(member => activeRoles.has(member.userId)).map(member => ({ ...member, accessRole: activeRoles.get(member.userId) }));
     }
-    if (actor.role === "admin") {
-      const activeIds = new Map<string, PlatformRole>();
-      for (let page = 0; ; page++) {
-        const { data, error: membersError } = await actor.supabase.from("memberships").select("user_id,membership_role").eq("membership_status", "active").order("user_id").range(page * 200, page * 200 + 199);
-        if (membersError) return moduleFailure("No se pudo comprobar la lista de miembros activos.");
-        (data ?? []).forEach(row => activeIds.set(row.user_id, row.membership_role as PlatformRole));
-        if (!data || data.length < 200) break;
-      }
-      members.splice(0, members.length, ...members.filter(member => activeIds.has(member.userId)).map(member => ({ ...member, accessRole: activeIds.get(member.userId) })));
-    }
+
     let positions: LeadershipPosition[] = [];
     if (selected) {
-      const { data, error: positionError } = await actor.supabase.from("club_leadership_positions")
-        .select("id,term_id,title,responsibilities,parent_id,member_id,member_name_snapshot,sort_order,is_active,access_role,updated_at")
-        .eq("term_id", selected.id).order("sort_order").order("id").limit(60);
-      if (positionError) return moduleFailure("No se pudieron cargar los cargos de este período.");
+      const positionRows = await readAllRows<{ id: string; term_id: string; title: string; responsibilities: string; parent_id: string | null; member_id: string | null;
+        member_name_snapshot: string | null; sort_order: number; is_active: boolean; access_role: PlatformRole; updated_at: string }>((from, to) =>
+        actor.supabase.from("club_leadership_positions")
+          .select("id,term_id,title,responsibilities,parent_id,member_id,member_name_snapshot,sort_order,is_active,access_role,updated_at")
+          .eq("term_id", selected.id).order("sort_order").order("id").range(from, to));
+      if (!positionRows) return moduleFailure("No se pudieron cargar los cargos de este período.");
       const names = new Map(members.map(member => [member.userId, member.name]));
-      positions = (data ?? []).map(row => ({ id: row.id, termId: row.term_id, title: row.title, responsibilities: row.responsibilities, parentId: row.parent_id,
-        memberId: row.member_id, memberName: names.get(row.member_id) ?? row.member_name_snapshot, sortOrder: row.sort_order, active: row.is_active, accessRole: row.access_role as PlatformRole, updatedAt: row.updated_at }));
+      positions = positionRows.map(row => ({ id: row.id, termId: row.term_id, title: row.title, responsibilities: row.responsibilities, parentId: row.parent_id,
+        memberId: row.member_id, memberName: names.get(row.member_id ?? "") ?? row.member_name_snapshot, holderStatus: management && row.member_id ? statusById.get(row.member_id) ?? null : null,
+        sortOrder: row.sort_order, active: row.is_active, accessRole: row.access_role, updatedAt: row.updated_at }));
     }
     return { ok: true, message: "Organigrama cargado.", organization: { terms, positions, members, termId: selected?.id ?? null } };
   } catch { return moduleFailure("No se pudo conectar con el organigrama. Vuelve a intentar."); }

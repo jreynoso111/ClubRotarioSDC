@@ -29,71 +29,71 @@ select ok(
 select ok(
   (
     select with_check ilike '%admin%'
+      and with_check ilike '%club_manager%'
       and with_check not ilike '%coordinator%'
-      and with_check not ilike '%club_manager%'
     from pg_policies
     where schemaname = 'public' and tablename = 'committees'
       and policyname = 'committees_management_insert'
   ),
-  'only admins can create committees'
+  'only club managers and admins can create committees'
 );
 
 select ok(
   (
     select qual ilike '%admin%'
+      and qual ilike '%club_manager%'
       and qual not ilike '%coordinator%'
-      and qual not ilike '%club_manager%'
       and with_check ilike '%admin%'
+      and with_check ilike '%club_manager%'
       and with_check not ilike '%coordinator%'
-      and with_check not ilike '%club_manager%'
     from pg_policies
     where schemaname = 'public' and tablename = 'committees'
       and policyname = 'committees_management_update'
   ),
-  'only admins can edit or finish committees'
+  'only club managers and admins can edit, finish or reopen committees'
 );
 
 select ok(
   (
     select with_check ilike '%admin%'
+      and with_check ilike '%club_manager%'
       and with_check ilike '%is_active%'
       and with_check not ilike '%coordinator%'
-      and with_check not ilike '%club_manager%'
     from pg_policies
     where schemaname = 'public' and tablename = 'committee_members'
       and policyname = 'committee_members_management_insert'
   ),
-  'only admins can add committee members'
+  'only club managers and admins can add committee members'
 );
 
 select ok(
   (
     select qual ilike '%admin%'
+      and qual ilike '%club_manager%'
       and qual ilike '%is_active%'
       and qual not ilike '%coordinator%'
-      and qual not ilike '%club_manager%'
       and with_check ilike '%admin%'
+      and with_check ilike '%club_manager%'
       and with_check ilike '%is_active%'
       and with_check not ilike '%coordinator%'
-      and with_check not ilike '%club_manager%'
     from pg_policies
     where schemaname = 'public' and tablename = 'committee_members'
       and policyname = 'committee_members_management_update'
   ),
-  'only admins can change committee member roles'
+  'only club managers and admins can change committee member roles'
 );
 
 select ok(
   (
     select qual ilike '%admin%'
+      and qual ilike '%club_manager%'
       and qual ilike '%is_active%'
       and qual not ilike '%coordinator%'
-      and qual not ilike '%club_manager%'
     from pg_policies
     where schemaname = 'public' and tablename = 'committee_members'
       and policyname = 'committee_members_management_delete'
   ),
-  'only admins can remove committee members'
+  'only club managers and admins can remove committee members'
 );
 
 select ok(
