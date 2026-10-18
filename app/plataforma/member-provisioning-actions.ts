@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/utils/supabase/admin";
+import { memberCredentialsEmail, sendClubEmail } from "@/lib/email";
 import { temporaryPasswordDigest } from "@/lib/initial-password";
+import { getPublicSiteOrigin } from "@/utils/site-url";
 import { TEMPORARY_PASSWORD_MIN_LENGTH } from "@/lib/temporary-password";
 import { moduleFailure, requireModuleActor } from "./module-auth";
 import type { PlatformActionResult } from "./actions";
@@ -39,7 +41,10 @@ export async function createMemberAccountAction(input: { name: string; email: st
       _notes: null, _reason: "Cuenta de miembro creada por administración.", _expected_updated_at: membership.data.updated_at });
     if (activation.error) throw new Error("activation_failed");
     revalidatePath("/plataforma");
-    return { ok: true, message: "Miembro creado. Entrará con el correo y la contraseña temporal que le entregues; deberá cambiarla antes de acceder al sistema." };
+    const sent = await sendClubEmail({ to: email, ...memberCredentialsEmail(name, email, password, `${getPublicSiteOrigin()}/auth/sign-in`) });
+    return { ok: true, message: sent
+      ? `Miembro creado. Le enviamos sus datos de acceso a ${email}; deberá cambiar la contraseña temporal al entrar por primera vez.`
+      : "Miembro creado, pero no se pudo enviar el correo con sus datos de acceso. Entrégale el correo y la contraseña temporal directamente; deberá cambiarla al entrar." };
   } catch {
     // Only the identity created by this request is eligible for compensation.
     if (createdId) {

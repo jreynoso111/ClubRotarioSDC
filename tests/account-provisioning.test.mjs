@@ -27,8 +27,9 @@ test("temporary passwords use random salted digests and can be compared without 
   await assert.rejects(() => cryptography.isTemporaryPassword(chosen, "bad", "bad"));
 });
 
-function provisioning({ authorized = true, duplicate = false, failSetup = false, failActivation = false } = {}) {
+function provisioning({ authorized = true, duplicate = false, failSetup = false, failActivation = false, emailSent = true } = {}) {
   const calls = [];
+  const emails = [];
   const admin = { auth: { admin: {
     createUser: async input => { calls.push(["create", input]); return duplicate ? { error: { code: "email_exists" }, data: {} } : { data: { user: { id: "new-member" } } }; },
     deleteUser: async id => { calls.push(["delete", id]); return {}; },
@@ -41,11 +42,14 @@ function provisioning({ authorized = true, duplicate = false, failSetup = false,
     "next/cache": { revalidatePath: () => {} },
     "@/utils/supabase/admin": { createAdminClient: () => { calls.push(["admin-client"]); return admin; } },
     "@/lib/initial-password": cryptography, "@/lib/temporary-password": { TEMPORARY_PASSWORD_MIN_LENGTH: 8 },
+    "@/utils/site-url": { getPublicSiteOrigin: () => "https://club.example" },
+    "@/lib/email": { memberCredentialsEmail: (name, email, password, url) => ({ subject: "acceso", text: [name, email, password, url].join("|"), html: "" }),
+      sendClubEmail: async message => { emails.push(message); return emailSent; } },
     "./module-auth": { moduleFailure: message => ({ ok: false, message }), requireModuleActor: async roles => {
       assert.deepEqual(roles, ["admin"]); return authorized ? { actor } : { error: { ok: false, message: "forbidden" } };
     } },
   });
-  return { calls, action: action.createMemberAccountAction };
+  return { calls, emails, action: action.createMemberAccountAction };
 }
 const input = { name: "Nuevo Miembro", email: " NUEVO@example.invalid ", temporaryPassword: temporary, role: "admin" };
 
@@ -130,4 +134,20 @@ test("Auth failures and already-completed setups never clear the first-password 
   const stale = completion({ state: "sign_in_again" });
   assert.equal((await stale.action(chosen, chosen)).ok, false);
   assert.deepEqual(stale.calls, []);
+});
+
+test("the new member receives their access details once, and only after a complete sign-up", async () => {
+  const fixture = provisioning();
+  const result = await fixture.action(input);
+  assert.equal(fixture.emails.length, 1);
+  assert.equal(fixture.emails[0].to, "nuevo@example.invalid");
+  assert.equal(fixture.emails[0].text, `Nuevo Miembro|nuevo@example.invalid|${temporary}|https://club.example/auth/sign-in`);
+  assert.match(result.message, /Le enviamos sus datos de acceso/);
+  const unsent = provisioning({ emailSent: false });
+  assert.match((await unsent.action(input)).message, /no se pudo enviar el correo/);
+  for (const options of [{ duplicate: true }, { failSetup: true }, { failActivation: true }, { authorized: false }]) {
+    const failed = provisioning(options);
+    await failed.action(input);
+    assert.equal(failed.emails.length, 0);
+  }
 });

@@ -136,3 +136,27 @@ export function memberRoleChangedEmail(name: string, roleLabel: string): ClubEma
     paragraphs: [`La gestión del club cambió tu rol en la plataforma a ${roleLabel}.`, "Tus permisos se aplican la próxima vez que entres a la plataforma."],
   });
 }
+
+// Sent once when an administrator creates the account. The password is temporary:
+// the first sign-in forces the member to choose their own before entering.
+export function memberCredentialsEmail(name: string, email: string, temporaryPassword: string, signInUrl: string): ClubEmailContent {
+  const greeting = `Hola ${name}:`;
+  const welcome = "Bienvenido al Club Rotario Santo Domingo Colonial. La administración del club creó tu cuenta en la plataforma de miembros.";
+  const credentials = ["Tus datos de acceso son:", `Correo: ${email}`, `Contraseña temporal: ${temporaryPassword}`];
+  const change = "Al entrar por primera vez, el sistema te pedirá elegir una contraseña propia. La contraseña temporal deja de servir en cuanto la cambies.";
+  const care = "No compartas este correo. Si no esperabas este mensaje, avisa a la administración del club.";
+  const closing = "Con gratitud,\nClub Rotario Santo Domingo Colonial";
+  return {
+    subject: "Tu acceso a la plataforma del Club Rotario",
+    text: [greeting, welcome, credentials.join("\n"), `Entra aquí: ${signInUrl}`, change, care, closing].join("\n\n"),
+    html: page([
+      escapeHtml(greeting),
+      escapeHtml(welcome),
+      `${escapeHtml(credentials[0])}<br>Correo: <strong>${escapeHtml(email)}</strong><br>Contraseña temporal: <strong>${escapeHtml(temporaryPassword)}</strong>`,
+      `<a href="${escapeHtml(signInUrl)}">Entrar a la plataforma</a>`,
+      escapeHtml(change),
+      escapeHtml(care),
+      escapeHtml(closing).replace(/\n/g, "<br>"),
+    ]),
+  };
+}

@@ -40,7 +40,7 @@ export function CreateMemberForm({ onCreated }: { onCreated: () => void }) {
         <button type="button" className={styles.quietButton} onClick={() => { setPassword(generateTemporaryPassword()); setShowPassword(true); }}>Generar contraseña</button>
         <button type="button" className={styles.quietButton} aria-pressed={showPassword} onClick={() => setShowPassword(value => !value)}>{showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}</button>
       </div>
-      <p className={styles.muted}>Se crea como miembro aprobado. Entrega la contraseña temporal directamente a la persona; después del alta no se volverá a mostrar.</p>
+      <p className={styles.muted}>Se crea como miembro aprobado y le enviamos por correo sus datos de acceso. Si el correo no llega, entrégale la contraseña temporal directamente; después del alta no se volverá a mostrar.</p>
       <button className={styles.button} disabled={pending}>{pending ? "Creando cuenta…" : "Crear cuenta de miembro"}</button>
     </form> : null}
     {notice ? <p className={`${styles.feedback} ${notice.ok ? "" : styles.error}`} role={notice.ok ? "status" : "alert"}>{notice.message}</p> : null}
