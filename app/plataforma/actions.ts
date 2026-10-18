@@ -1627,7 +1627,7 @@ export async function getMembershipApplicationDetailAction(applicationId: string
       fromStatus: entry.from_status,
       toStatus: entry.to_status,
       reason: entry.reason,
-      actor: names.get(entry.actor_id ?? "") ?? "Miembro del club",
+      actor: entry.actor_id ? names.get(entry.actor_id) ?? "Miembro del club" : "Formulario público",
       createdAt: entry.created_at,
     })),
   };

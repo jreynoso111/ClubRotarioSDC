@@ -482,7 +482,7 @@ test("only management reads notes and history, which arrive in creation order wi
   assert.equal(detail.ok, true);
   assert.deepEqual(detail.notes, [{ id: "note-1", body: "Llamé a la persona.", createdAt: "2026-10-01T10:00:00Z", author: "Ana Rivera" }]);
   assert.deepEqual(detail.history, [
-    { id: "h-1", fromStatus: null, toStatus: "new", reason: null, actor: "Miembro del club", createdAt: "2026-09-30T12:00:00Z" },
+    { id: "h-1", fromStatus: null, toStatus: "new", reason: null, actor: "Formulario público", createdAt: "2026-09-30T12:00:00Z" },
     { id: "h-2", fromStatus: "new", toStatus: "declined", reason: "Sin cupo este año.", actor: "Ana Rivera", createdAt: "2026-10-02T09:00:00Z" },
   ]);
   const ordered = manager.calls.queries.filter(query => query.operation === "order");
