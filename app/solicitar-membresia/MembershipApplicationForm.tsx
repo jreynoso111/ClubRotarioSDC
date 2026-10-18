@@ -48,11 +48,11 @@ export function MembershipApplicationForm() {
 
       <div className={styles.privacyNotice} id="privacy-note">
         <strong>Transparencia sobre tus datos</strong>
-        <p>Tu nombre, contacto, ocupación y respuestas estarán disponibles para los miembros activos del club y su presidencia para conocerte y dar seguimiento a tu solicitud. No incluyas información que prefieras mantener privada.</p>
+        <p>Tu nombre y tu ocupación serán visibles para los miembros activos del club. Tu contacto y tus respuestas solo los verá la gestión del club para dar seguimiento a tu solicitud. No incluyas información que prefieras mantener privada.</p>
       </div>
       <label className={styles.consent}>
         <input name="consent" type="checkbox" value="yes" required aria-describedby="privacy-note" />
-        <span>Autorizo que estos datos se compartan con los miembros activos del Club Rotario Santo Domingo Colonial y su presidencia para evaluar mi interés.</span>
+        <span>Autorizo que el Club Rotario Santo Domingo Colonial use estos datos para evaluar mi solicitud: mi nombre y ocupación, visibles para sus miembros activos; mi contacto y mis respuestas, solo para su gestión.</span>
       </label>
 
       <input type="hidden" name="cf-turnstile-response" value={captchaToken} />

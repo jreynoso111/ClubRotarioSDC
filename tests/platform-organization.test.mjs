@@ -48,7 +48,7 @@ function setup({ role = "admin", status = "active", signedIn = true, rpcError = 
     async rpc(name, args) { if (name === "has_privileged_session") return { data: true, error: null }; calls.push({ name, args }); return { data: name === "create_club_leadership_term" ? termId : positionId, error: rpcError }; },
   };
   const dependencies = { "server-only": {}, "next/cache": { revalidatePath: path => invalidations.push(path) },
-    "@/utils/supabase/config": { isSupabaseConfigured: () => true }, ...mfaDependencies, "@/utils/supabase/server": { createClient: async () => client },
+    "@/utils/supabase/config": { isSupabaseConfigured: () => true }, "@/lib/email": {}, "@/lib/membership-applications": {}, "@/utils/site-url": {}, ...mfaDependencies, "@/utils/supabase/server": { createClient: async () => client },
     "@/lib/organization": organization };
   dependencies["./module-auth"] = compile("../app/plataforma/module-auth.ts", dependencies);
   return { actions: compile("../app/plataforma/organization-actions.ts", dependencies), calls, pages, invalidations };

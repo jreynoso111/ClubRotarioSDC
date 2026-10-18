@@ -53,7 +53,7 @@ function moduleAuth({ role, fresh }) {
     from: () => ({ select() { return this; }, eq() { return this; }, maybeSingle: async () => ({ data: { membership_role: role, membership_status: "active" }, error: null }) }),
   };
   return load("../app/plataforma/module-auth.ts", {
-    "server-only": {}, "@/utils/supabase/config": { isSupabaseConfigured: () => true },
+    "server-only": {}, "@/utils/supabase/config": { isSupabaseConfigured: () => true }, "@/lib/email": {}, "@/lib/membership-applications": {}, "@/utils/site-url": {},
     ...mfaDependencies, "@/utils/supabase/server": { createClient: async () => client },
   });
 }

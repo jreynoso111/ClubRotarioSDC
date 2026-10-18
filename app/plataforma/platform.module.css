@@ -595,6 +595,32 @@
 .applicationReview { align-items: end; border-top: 1px dashed var(--line); display: flex; flex-wrap: wrap; gap: 12px; justify-content: flex-end; margin-top: 18px; padding-top: 14px; }
 .applicationReview label { color: var(--ink-soft); display: grid; font-size: 9px; font-weight: 700; gap: 5px; letter-spacing: .08em; text-transform: uppercase; }
 .applicationReview select { background: var(--paper); border: 1px solid var(--line); color: var(--ink); font: inherit; font-size: 11px; min-height: 36px; min-width: 145px; padding: 0 9px; }
+.applicationReview textarea { background: var(--paper); border: 1px solid var(--line); color: var(--ink); font: inherit; font-size: 12px; min-height: 64px; padding: 9px; resize: vertical; width: 100%; }
+.applicationReasonField { flex: 1 1 260px; min-width: 0; }
+.applicationFilters { align-items: end; display: flex; flex-wrap: wrap; gap: 12px 18px; margin: 0 0 16px; }
+.applicationFilters > label, .applicationSearch > label { color: var(--ink-soft); display: grid; font-size: 9px; font-weight: 700; gap: 5px; letter-spacing: .08em; text-transform: uppercase; }
+.applicationFilters select, .applicationSearch input { background: var(--paper); border: 1px solid var(--line); color: var(--ink); font: inherit; font-size: 12px; min-height: 36px; min-width: 170px; padding: 0 9px; }
+.applicationSearch { align-items: end; display: flex; flex-wrap: wrap; gap: 8px; }
+.applicationPagination { align-items: center; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; margin-top: 12px; padding-top: 14px; }
+.applicationPagination span { color: var(--ink-soft); font-family: var(--font-geist-mono); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; }
+.applicationBadges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.applicationBadge { background: rgba(0, 93, 170, .08); color: var(--rotary-blue); font-family: var(--font-geist-mono); font-size: 8px; letter-spacing: .08em; padding: 6px 8px; text-transform: uppercase; }
+.applicationNotesPanel { border-top: 1px dashed var(--line); margin-top: 16px; padding-top: 12px; }
+.applicationNotesPanel > summary { color: var(--rotary-blue); cursor: pointer; font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.applicationNotesBody { display: grid; gap: 12px; margin-top: 14px; }
+.applicationSubheading { color: var(--ink-soft); font-family: var(--font-geist-mono); font-size: 9px; font-weight: 500; letter-spacing: .12em; margin: 6px 0 0; text-transform: uppercase; }
+.applicationNote { border-left: 2px solid var(--line); display: grid; gap: 4px; padding: 2px 0 2px 12px; }
+.applicationNote p { font-size: 12px; line-height: 1.55; margin: 0; }
+.applicationNote time { color: var(--ink-soft); }
+.applicationNoteBody { overflow-wrap: anywhere; white-space: pre-wrap; }
+.applicationNoteForm { display: grid; gap: 10px; }
+.applicationNoteForm > label { color: var(--ink-soft); display: grid; font-size: 9px; font-weight: 700; gap: 5px; letter-spacing: .08em; text-transform: uppercase; }
+.applicationNoteForm textarea { background: var(--paper); border: 1px solid var(--line); color: var(--ink); font: inherit; font-size: 12px; min-height: 72px; padding: 9px; resize: vertical; width: 100%; }
+.applicationNoteForm > button { justify-self: start; }
+.applicationHistory { display: grid; gap: 9px; list-style: none; margin: 0; padding: 0; }
+.applicationHistory li { display: grid; gap: 2px; font-size: 12px; }
+.applicationHistory li > span { color: var(--ink-soft); font-size: 11px; }
+.applicationHistory li > .applicationHistoryReason { color: var(--ink); font-size: 12px; }
 .storyAdminRow { border-top: 1px solid var(--line); padding: 17px 0 16px; }
 .storyAdminMeta { align-items: center; color: var(--ink-soft); display: flex; flex-wrap: wrap; font-family: var(--font-geist-mono); font-size: 8px; gap: 8px 13px; letter-spacing: .08em; text-transform: uppercase; }
 .storyAdminMeta > span + span::before, .storyAdminMeta time::before { color: var(--line); content: "·"; margin-right: 10px; }
@@ -896,6 +922,9 @@
   .applicationDetails .applicationMotivation { grid-column: auto; }
   .applicationReview { align-items: stretch; flex-direction: column; }
   .applicationReview .smallButton { justify-content: center; }
+  .applicationFilters, .applicationSearch { align-items: stretch; flex-direction: column; }
+  .applicationFilters select, .applicationSearch input, .applicationSearch .smallButtonQuiet { min-width: 0; width: 100%; }
+  .applicationPagination { justify-content: center; text-align: center; }
   .storyAdminActions { align-items: flex-start; }
   .storyDialogActions { flex-wrap: wrap-reverse; }
   .storyDialogActions button { flex: 1; }

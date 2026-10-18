@@ -12,7 +12,20 @@ import { sessionHasRecentSecondFactor } from "@/lib/mfa-session";
 import { auditCursorFilter, auditPageCursor, defaultAuditSort, normalizeAuditQuery } from "@/lib/audit";
 import type { AuditCursor, AuditDetail, AuditDetailResult, AuditEntry, AuditFilters, AuditPageResult, AuditSort } from "@/lib/audit";
 import { isStoryAssetPath, MAX_EDITORIAL_CONTENT_LENGTH, parseEditorialContent } from "@/lib/editorial-content";
-import type { MembershipApplication, MembershipApplicationStatus } from "@/lib/membership-applications";
+import { applicationInvitationEmail, sendClubEmail } from "@/lib/email";
+import {
+  membershipApplicationNoteMaxLength,
+  membershipApplicationPageSize,
+  membershipApplicationReasonRange,
+  membershipApplicationSearchMaxLength,
+  membershipApplicationStatuses,
+  membershipDecisionReasonError,
+  type MembershipApplicationHistoryEntry,
+  type MembershipApplicationListItem,
+  type MembershipApplicationNote,
+  type MembershipApplicationStatus,
+} from "@/lib/membership-applications";
+import { getPublicSiteOrigin } from "@/utils/site-url";
 import type {
   FinanceCategory,
   FinanceDashboard,
@@ -30,6 +43,7 @@ type ActionCode =
   | "forbidden"
   | "invalid"
   | "migration_missing"
+  | "conflict"
   | "backend_error";
 
 export type PlatformActionResult = {
@@ -1390,45 +1404,249 @@ export async function updateMembershipAction(input: {
 export type MembershipApplicationsActionResult = {
   ok: boolean;
   message: string;
-  applications: MembershipApplication[];
+  applications: MembershipApplicationListItem[];
+  total: number;
+  page: number;
+  canManage: boolean;
   code?: ActionCode;
 };
 
-export async function getMembershipApplicationsAction(): Promise<MembershipApplicationsActionResult> {
-  const { actor, error } = await requireActor();
-  if (error) return { ok: false, message: error.message, applications: [], code: error.code };
+type MembershipApplicationRow = {
+  id: string;
+  full_name: string;
+  occupation: string | null;
+  status: MembershipApplicationStatus;
+  submitted_at: string;
+  updated_at: string;
+  email: string | null;
+  phone: string | null;
+  motivation: string | null;
+  referral_source: string | null;
+  decision_reason: string | null;
+  invited_at: string | null;
+  account_created: boolean;
+  total_count: number | string;
+};
 
-  const { data, error: queryError } = await actor!.supabase
-    .from("membership_applications")
-    .select("id,full_name,email,phone,occupation,motivation,referral_source,status,submitted_at,updated_at")
-    .order("submitted_at", { ascending: false })
-    .order("id", { ascending: false })
-    .limit(100);
-  if (queryError) return { ok: false, message: errorFor(queryError).message, applications: [] };
-
-  return { ok: true, message: "", applications: (data ?? []) as MembershipApplication[] };
+function listFailure(message: string, code: ActionCode = "invalid"): MembershipApplicationsActionResult {
+  return { ok: false, message, applications: [], total: 0, page: 1, canManage: false, code };
 }
 
-export async function updateMembershipApplicationStatusAction(
+function toMembershipApplicationListItem(row: MembershipApplicationRow): MembershipApplicationListItem {
+  return {
+    id: row.id,
+    fullName: row.full_name,
+    occupation: row.occupation,
+    status: row.status,
+    submittedAt: row.submitted_at,
+    updatedAt: row.updated_at,
+    email: row.email,
+    phone: row.phone,
+    motivation: row.motivation,
+    referralSource: row.referral_source,
+    decisionReason: row.decision_reason,
+    invitedAt: row.invited_at,
+    accountCreated: row.account_created,
+  };
+}
+
+// The database returns contact details, motivation and decision reason only to club managers.
+export async function getMembershipApplicationsAction(input: {
+  status?: MembershipApplicationStatus | "all";
+  search?: string;
+  page?: number;
+} = {}): Promise<MembershipApplicationsActionResult> {
+  const { actor, error } = await requireActor();
+  if (error) return listFailure(error.message, error.code);
+
+  const status = input.status ?? "all";
+  if (status !== "all" && !membershipApplicationStatuses.includes(status)) {
+    return listFailure("Elige un estado de solicitud válido.");
+  }
+  const search = typeof input.search === "string" ? input.search.trim() : "";
+  if (search.length > membershipApplicationSearchMaxLength) {
+    return listFailure(`La búsqueda admite hasta ${membershipApplicationSearchMaxLength} caracteres.`);
+  }
+  const requestedPage = Math.trunc(Number(input.page ?? 1));
+  const page = Number.isFinite(requestedPage) ? Math.min(500, Math.max(1, requestedPage)) : 1;
+  const canManage = actor!.role === "club_manager" || actor!.role === "admin";
+
+  const loadPage = (pageNumber: number) => actor!.supabase.rpc("list_membership_applications", {
+    _status: status === "all" ? null : status,
+    _search: search || null,
+    _limit: membershipApplicationPageSize,
+    _offset: (pageNumber - 1) * membershipApplicationPageSize,
+  });
+  let result = await loadPage(page);
+  let currentPage = page;
+  // A page emptied by a status change falls back to the first page, which also reports the real total.
+  if (!result.error && (result.data ?? []).length === 0 && page > 1) {
+    result = await loadPage(1);
+    currentPage = 1;
+  }
+  if (result.error) {
+    return { ...errorFor(result.error), applications: [], total: 0, page: currentPage, canManage, ok: false };
+  }
+
+  const rows = (result.data ?? []) as MembershipApplicationRow[];
+  return {
+    ok: true,
+    message: "",
+    applications: rows.map(toMembershipApplicationListItem),
+    total: rows.length > 0 ? Number(rows[0].total_count) : 0,
+    page: currentPage,
+    canManage,
+  };
+}
+
+// The database compares updated_at to the microsecond, so the value is sent exactly as it was read.
+function isTimestamp(value: unknown): value is string {
+  return typeof value === "string" && value.length <= 40 &&
+    /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(\.\d{1,6})?(Z|[+-]\d{2}(:?\d{2})?)$/.test(value);
+}
+
+function reviewFailure(error: { code?: string | null; message?: string | null }): PlatformActionResult {
+  const { min, max } = membershipApplicationReasonRange;
+  if (error.code === "P0409") return failure("Otra persona actualizó esta solicitud. Recarga para ver los cambios.", "conflict");
+  if (error.code === "23505") return failure("Ya hay otra solicitud abierta con ese correo.", "conflict");
+  if (error.code === "22023") {
+    return error.message?.includes("decline_reason_required")
+      ? failure(`Escribe el motivo del cierre (${min} a ${max} caracteres).`, "invalid")
+      : failure("La solicitud indicada o su estado no son válidos.", "invalid");
+  }
+  if (error.code === "P0002") return failure("La solicitud ya no existe. Recarga la lista.", "invalid");
+  if (error.code === "42501") return failure("Tu rol no permite revisar esta solicitud.", "forbidden");
+  return errorFor(error);
+}
+
+// Profile names label notes and history; active members can read the directory.
+async function memberNames(supabase: Actor["supabase"], userIds: Array<string | null>) {
+  const ids = [...new Set(userIds.filter((id): id is string => Boolean(id)))];
+  const names = new Map<string, string>();
+  if (ids.length === 0) return names;
+  const { data } = await supabase.from("profiles").select("id,display_name").in("id", ids);
+  for (const profile of (data ?? []) as Array<{ id: string; display_name: string | null }>) {
+    names.set(profile.id, profile.display_name?.trim() || "Miembro del club");
+  }
+  return names;
+}
+
+export async function reviewMembershipApplicationAction(
   applicationId: string,
   status: MembershipApplicationStatus,
+  reason: string | null,
+  expectedUpdatedAt: string,
 ): Promise<PlatformActionResult> {
   const { actor, error } = await requireActor(["club_manager", "admin"]);
   if (error) return error;
-  if (!isUuid(applicationId) || !["new", "contacted", "invited", "declined"].includes(status)) {
+  if (!isUuid(applicationId) || !membershipApplicationStatuses.includes(status)) {
     return failure("La solicitud indicada o su estado no son válidos.", "invalid");
   }
+  const text = typeof reason === "string" ? reason.trim() : "";
+  const reasonError = membershipDecisionReasonError(status, text);
+  if (reasonError) return failure(reasonError, "invalid");
+  if (!isTimestamp(expectedUpdatedAt)) return failure("Recarga la solicitud antes de guardar los cambios.", "invalid");
 
-  const { data, error: updateError } = await actor!.supabase
-    .from("membership_applications")
-    .update({ status, reviewed_by: actor!.userId })
-    .eq("id", applicationId)
-    .select("id")
-    .maybeSingle();
-  if (updateError || !data) return errorFor(updateError);
+  // Only an invitation needs the state before the change: it decides whether the email is sent.
+  let previous: { status: string; email: string; full_name: string } | null = null;
+  if (status === "invited") {
+    const { data: current, error: readError } = await actor!.supabase
+      .from("membership_applications")
+      .select("status,email,full_name")
+      .eq("id", applicationId)
+      .maybeSingle();
+    if (readError) return errorFor(readError);
+    if (!current) return failure("La solicitud ya no existe. Recarga la lista.", "invalid");
+    previous = current as { status: string; email: string; full_name: string };
+  }
+
+  const { error: reviewError } = await actor!.supabase.rpc("review_membership_application", {
+    _application_id: applicationId,
+    _status: status,
+    _reason: text || null,
+    _expected_updated_at: expectedUpdatedAt,
+  });
+  if (reviewError) return reviewFailure(reviewError);
 
   revalidatePath("/plataforma");
-  return success("El seguimiento de la solicitud fue actualizado.");
+  const saved = "El seguimiento de la solicitud fue actualizado.";
+  if (!previous || previous.status === "invited") return success(saved, applicationId);
+
+  const signUpUrl = `${getPublicSiteOrigin()}/auth/sign-up`;
+  const sent = await sendClubEmail({ to: previous.email, ...applicationInvitationEmail(previous.full_name, signUpUrl) });
+  return success(`${saved} ${sent ? "Se envió la invitación por correo." : "No se pudo enviar el correo; comunícate con la persona."}`, applicationId);
+}
+
+export type MembershipApplicationDetailResult = PlatformActionResult & {
+  notes?: MembershipApplicationNote[];
+  history?: MembershipApplicationHistoryEntry[];
+};
+
+export async function getMembershipApplicationDetailAction(applicationId: string): Promise<MembershipApplicationDetailResult> {
+  const { actor, error } = await requireActor(["club_manager", "admin"]);
+  if (error) return error;
+  if (!isUuid(applicationId)) return failure("La solicitud indicada no es válida.", "invalid");
+
+  const [notesQuery, historyQuery] = await Promise.all([
+    actor!.supabase
+      .from("membership_application_notes")
+      .select("id,body,author_id,created_at")
+      .eq("application_id", applicationId)
+      .order("created_at", { ascending: true })
+      .limit(300),
+    actor!.supabase
+      .from("membership_application_history")
+      .select("id,from_status,to_status,reason,actor_id,created_at")
+      .eq("application_id", applicationId)
+      .order("created_at", { ascending: true })
+      .limit(300),
+  ]);
+  if (notesQuery.error || historyQuery.error) return errorFor(notesQuery.error ?? historyQuery.error);
+
+  const notes = (notesQuery.data ?? []) as Array<{ id: string; body: string; author_id: string | null; created_at: string }>;
+  const history = (historyQuery.data ?? []) as Array<{
+    id: string;
+    from_status: MembershipApplicationStatus | null;
+    to_status: MembershipApplicationStatus;
+    reason: string | null;
+    actor_id: string | null;
+    created_at: string;
+  }>;
+  const names = await memberNames(actor!.supabase, [...notes.map(note => note.author_id), ...history.map(entry => entry.actor_id)]);
+  return {
+    ok: true,
+    message: "",
+    notes: notes.map(note => ({
+      id: note.id,
+      body: note.body,
+      createdAt: note.created_at,
+      author: names.get(note.author_id ?? "") ?? "Miembro del club",
+    })),
+    history: history.map(entry => ({
+      id: entry.id,
+      fromStatus: entry.from_status,
+      toStatus: entry.to_status,
+      reason: entry.reason,
+      actor: names.get(entry.actor_id ?? "") ?? "Miembro del club",
+      createdAt: entry.created_at,
+    })),
+  };
+}
+
+export async function addMembershipApplicationNoteAction(applicationId: string, body: string): Promise<PlatformActionResult> {
+  const { actor, error } = await requireActor(["club_manager", "admin"]);
+  if (error) return error;
+  const text = typeof body === "string" ? body.trim() : "";
+  if (!isUuid(applicationId) || text.length < 1 || text.length > membershipApplicationNoteMaxLength) {
+    return failure(`La nota debe tener entre 1 y ${membershipApplicationNoteMaxLength} caracteres.`, "invalid");
+  }
+
+  const { error: insertError } = await actor!.supabase
+    .from("membership_application_notes")
+    .insert({ application_id: applicationId, body: text });
+  if (insertError) return errorFor(insertError);
+
+  return success("Nota guardada.");
 }
 
 export async function sendInternalMessageAction(input: {

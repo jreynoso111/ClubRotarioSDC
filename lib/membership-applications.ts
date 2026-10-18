@@ -2,17 +2,42 @@ export const membershipApplicationStatuses = ["new", "contacted", "invited", "de
 
 export type MembershipApplicationStatus = (typeof membershipApplicationStatuses)[number];
 
-export type MembershipApplication = {
+export const membershipApplicationPageSize = 20;
+export const membershipApplicationSearchMaxLength = 120;
+export const membershipApplicationNoteMaxLength = 2000;
+export const membershipApplicationReasonRange = { min: 5, max: 500 } as const;
+
+// Contact details, motivation and the decision reason are null unless the viewer manages applications.
+export type MembershipApplicationListItem = {
   id: string;
-  full_name: string;
-  email: string;
-  phone: string;
+  fullName: string;
   occupation: string | null;
-  motivation: string;
-  referral_source: string | null;
   status: MembershipApplicationStatus;
-  submitted_at: string;
-  updated_at: string;
+  submittedAt: string;
+  updatedAt: string;
+  email: string | null;
+  phone: string | null;
+  motivation: string | null;
+  referralSource: string | null;
+  decisionReason: string | null;
+  invitedAt: string | null;
+  accountCreated: boolean;
+};
+
+export type MembershipApplicationNote = {
+  id: string;
+  body: string;
+  createdAt: string;
+  author: string;
+};
+
+export type MembershipApplicationHistoryEntry = {
+  id: string;
+  fromStatus: MembershipApplicationStatus | null;
+  toStatus: MembershipApplicationStatus;
+  reason: string | null;
+  actor: string;
+  createdAt: string;
 };
 
 export type MembershipApplicationInput = {
@@ -72,7 +97,7 @@ export function parseMembershipApplication(input: MembershipApplicationInput): M
     return { ok: false, message: "Revisa los campos opcionales; no deben superar 120 caracteres." };
   }
   if (input.consent !== true && input.consent !== "yes") {
-    return { ok: false, message: "Necesitamos tu autorización para compartir estos datos con los miembros activos." };
+    return { ok: false, message: "Necesitamos tu autorización para usar estos datos al evaluar tu solicitud." };
   }
 
   return {
@@ -94,3 +119,15 @@ export const membershipApplicationStatusLabels: Record<MembershipApplicationStat
   invited: "Invitada",
   declined: "Cerrada",
 };
+
+// Returns the message for a reason that does not fit the status, or null when it is acceptable.
+// Closing an application needs a reason; any other status accepts an optional comment.
+export function membershipDecisionReasonError(status: MembershipApplicationStatus, reason: string) {
+  const { min, max } = membershipApplicationReasonRange;
+  const text = reason.trim();
+  if (status === "declined" && (text.length < min || text.length > max)) {
+    return `Escribe el motivo del cierre (${min} a ${max} caracteres).`;
+  }
+  if (text.length > max) return `El comentario admite hasta ${max} caracteres.`;
+  return null;
+}

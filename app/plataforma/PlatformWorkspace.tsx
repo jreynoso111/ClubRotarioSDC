@@ -13,17 +13,19 @@ import { defaultAuditFilters, type AuditPageResult } from "@/lib/audit";
 import { editorialLayouts, parseEditorialContent } from "@/lib/editorial-content";
 
 import {
+  addMembershipApplicationNoteAction,
   createProposalAction,
   castProposalVoteAction,
   getAuditPageAction,
+  getMembershipApplicationDetailAction,
   getMembershipApplicationsAction,
   markMessageReadAction,
   markNotificationReadAction,
+  reviewMembershipApplicationAction,
   sendInternalMessageAction,
   setStoryPublicationAction,
   setProposalVotingAction,
   submitProposalAction,
-  updateMembershipApplicationStatusAction,
   updateTaskStatusAction,
   type PlatformActionResult,
 } from "./actions";
@@ -455,9 +457,10 @@ export function PlatformWorkspace({ snapshot }: { snapshot: PlatformSnapshot }) 
       {tab === "fotografias" && snapshot.capabilities.canEdit && <MembershipPhotoManager onOpenMagazine={() => selectTab("revista")} />}
 
       {tab === "solicitudes" && <MembershipApplicationsModule
-        canReview={snapshot.capabilities.canManageMembership}
         loadApplications={getMembershipApplicationsAction}
-        updateStatus={updateMembershipApplicationStatusAction}
+        reviewApplication={reviewMembershipApplicationAction}
+        loadDetail={getMembershipApplicationDetailAction}
+        addNote={addMembershipApplicationNoteAction}
       />}
 
       {tab === "organizacion" && <OrganizationManager currentUserId={user?.id ?? ""} committees={snapshot.committees} tasks={snapshot.tasks}

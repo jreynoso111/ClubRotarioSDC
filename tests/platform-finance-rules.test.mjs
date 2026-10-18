@@ -44,7 +44,7 @@ function setup({ role = "club_manager", entries = [] } = {}) {
   const dependencies = {
     "server-only": {}, "next/cache": { revalidatePath() {} },
     "@/utils/supabase/public-url": { toPublicSupabaseUrl: url => url },
-    "@/utils/supabase/config": { isSupabaseConfigured: () => true },
+    "@/utils/supabase/config": { isSupabaseConfigured: () => true }, "@/lib/email": {}, "@/lib/membership-applications": {}, "@/utils/site-url": {},
     ...mfaDependencies, "@/utils/supabase/server": { createClient: async () => client },
     "@/lib/finance": finance,
   };

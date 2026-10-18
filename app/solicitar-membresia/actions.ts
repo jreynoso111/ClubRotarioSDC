@@ -3,7 +3,9 @@
 import { createHash } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
+import { after } from "next/server";
 
+import { applicationReceivedEmail, sendClubEmail } from "@/lib/email";
 import { parseMembershipApplication } from "@/lib/membership-applications";
 import { isMissingSchemaError } from "@/lib/platform";
 import { isSupabaseConfigured } from "@/utils/supabase/config";
@@ -15,6 +17,9 @@ export type MembershipApplicationFormState = {
   ok: boolean;
   message: string;
 };
+
+// A new request and a duplicate share this answer, so the form does not reveal who has already applied.
+const receivedMessage = "Recibimos tu solicitud. La gestión del club la revisará y te escribirá a tu correo.";
 
 export async function submitMembershipApplicationAction(
   _previousState: MembershipApplicationFormState,
@@ -40,12 +45,13 @@ export async function submitMembershipApplicationAction(
   }
 
   const remoteIp = (await headers()).get("cf-connecting-ip");
+  // The CAPTCHA runs before the rate limits, so a failed token never uses up the quota.
+  if (!(await verifyTurnstileToken(formData.get("cf-turnstile-response"), remoteIp))) {
+    return { ok: false, message: "No pudimos confirmar la verificación de seguridad. Complétala e inténtalo de nuevo." };
+  }
   const networkKey = createHash("sha256").update(remoteIp || "unknown").digest("hex");
   if (!allowRequest("membership-applications", "global", 40, 3600000) || !allowRequest("membership-applications", networkKey, 3, 3600000)) {
     return { ok: false, message: "Recibimos muchas solicitudes en poco tiempo. Inténtalo de nuevo más tarde." };
-  }
-  if (!(await verifyTurnstileToken(formData.get("cf-turnstile-response"), remoteIp))) {
-    return { ok: false, message: "No pudimos confirmar la verificación de seguridad. Complétala e inténtalo de nuevo." };
   }
 
   try {
@@ -64,10 +70,7 @@ export async function submitMembershipApplicationAction(
     if (error?.code === "PT429") {
       return { ok: false, message: "Recibimos muchas solicitudes en poco tiempo. Inténtalo de nuevo más tarde." };
     }
-    if (error?.code === "23505") {
-      return { ok: false, message: "Ya hay una solicitud en curso con ese correo. El club se comunicará contigo." };
-    }
-    if (error) {
+    if (error && error.code !== "23505") {
       return {
         ok: false,
         message: isMissingSchemaError(error)
@@ -76,11 +79,14 @@ export async function submitMembershipApplicationAction(
       };
     }
 
-    revalidatePath("/plataforma");
-    return {
-      ok: true,
-      message: "Recibimos tu solicitud. Los miembros activos del club podrán conocerte y la presidencia dará seguimiento.",
-    };
+    // A duplicate open request (23505) gets the same answer as a new one, but no second email.
+    // The email goes out after the response, so both answers take the same time.
+    if (!error) {
+      revalidatePath("/plataforma");
+      const { email, fullName } = parsed.value;
+      after(async () => { await sendClubEmail({ to: email, ...applicationReceivedEmail(fullName) }); });
+    }
+    return { ok: true, message: receivedMessage };
   } catch {
     return { ok: false, message: "No pudimos conectar. Comprueba tu conexión e inténtalo nuevamente." };
   }

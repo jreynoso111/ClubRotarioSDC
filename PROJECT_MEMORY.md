@@ -1,6 +1,6 @@
 # Memoria del Club Rotario Santo Domingo Colonial
 
-Última actualización: 2026-10-16. Documento permanente del repositorio para retomar el trabajo y conservar decisiones aceptadas. Verificar los estados que puedan haber cambiado antes de actuar.
+Última actualización: 2026-10-18. Documento permanente del repositorio para retomar el trabajo y conservar decisiones aceptadas. Verificar los estados que puedan haber cambiado antes de actuar.
 
 ## Contexto y decisiones vigentes
 
@@ -112,6 +112,7 @@
 | Interfaz y acciones de gestión | `app/plataforma/PlatformWorkspace.tsx`, `app/plataforma/CommitteeManager.tsx`, `app/plataforma/FinanceModule.tsx`, `app/plataforma/actions.ts` |
 | Modelo financiero | `lib/finance.ts`, `supabase/migrations/20260930160850_club_finance_management.sql`, `supabase/tests/club_finance_management_rls_test.sql` |
 | Gestión de eventos y asistencia | `app/plataforma/PlatformEvents.tsx` |
+| Solicitudes de ingreso y correo | `lib/email.ts`, `lib/membership-applications.ts`, `app/plataforma/MembershipApplicationsModule.tsx` |
 | Modelo e interfaz de auditoría | `lib/audit.ts`, `lib/audit-table.ts`, `app/plataforma/PlatformAudit.tsx` |
 | Esquema y verificaciones de auditoría | `supabase/migrations/`, `supabase/tests/detailed_admin_audit_test.sql`, `tests/` |
 
@@ -663,3 +664,12 @@ Decisiones del usuario («1si … 8si, también generar recibos digitales»): an
 - **Publicado en Ubuntu (2026-10-18 ~05:55 UTC):** `release.conf` apunta a `/srv/club-rotario/releases/20261018-054756` (commit 4a38038); local 200, /plataforma 307, público 200 y `verify-deployment.mjs` 34/34. Antes de cambiarlo se guardó el `release.conf` anterior (release 20261018-044029) en `/root/release.conf.previous` para revertir; si falla la verificación, se restaura automáticamente.
 - Datos QA eliminados: movimientos, cuotas, el archivo del comprobante (por la API de Storage), la actividad QA, los avisos y las cuentas. Ningún aviso llegó al Administrador real.
 - Pendiente menor: `/plataforma?tab=<id>` abierto como URL directa muestra «Resumen»; los avisos funcionan porque «Abrir» cambia de pestaña dentro de la aplicación.
+
+## Solicitudes de ingreso: gestión, notas e invitación · 2026-10-18
+
+- **Estado:** código local en Windows, sin commit, sin publicar y sin migración aplicada por este cambio. Depende del contrato de base que escribe otra sesión: RPC `list_membership_applications` y `review_membership_application`, y tablas `membership_application_notes` y `membership_application_history`. No se tocó `supabase/`. Antes de publicar hay que revisar y respaldar esa migración en la base de Ubuntu, y publicar con el procedimiento de Ubuntu de esta memoria.
+- **Decisiones:** los datos de contacto, la motivación y el motivo del último cambio solo los ve la gestión (`club_manager` y `admin` con MFA reciente). Cualquier miembro activo ve nombre, ocupación, estado y fecha. Cerrar una solicitud exige motivo de 5 a 500 caracteres. Las notas internas y el historial son solo de gestión y se cargan al abrir el panel. Pasar a **Invitada** envía un correo con Resend (`lib/email.ts`) con el enlace a `/auth/sign-up`; el estado previo se lee en el servidor antes del cambio, así que la invitación sale una sola vez.
+- **Concurrencia:** cada guardado envía el `updated_at` que se mostró. Si otra persona cambió la solicitud antes, se muestra el conflicto y la lista se recarga. La marca de tiempo se envía sin redondear porque la base compara microsegundos.
+- **Formulario público:** Turnstile se verifica antes de los límites en memoria, así que un token fallido no consume cuota. Un duplicado abierto (23505) responde igual que un envío nuevo y no envía correo; un envío nuevo envía el acuse de recibo.
+- **Pendientes:** (1) el consentimiento de `app/solicitar-membresia/MembershipApplicationForm.tsx` todavía dice que contacto y solicitud se comparten con todos los miembros activos; la redacción debe decidirla el usuario. (2) Un duplicado responde más rápido que un envío nuevo porque este espera al correo; evaluar `after()`. (3) Confirmar que la búsqueda de la RPC no compara correo ni teléfono para quien no puede gestionar.
+- **Verificación local (Windows, sin servidor ni navegador):** `tsc --noEmit`, `eslint app lib tests` y `npm test` con 146/146 pruebas, incluidas las nuevas de solicitudes y correo. No se probó contra Supabase ni en la interfaz autenticada.

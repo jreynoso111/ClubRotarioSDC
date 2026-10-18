@@ -7,7 +7,8 @@ const target = localDatabaseTarget();
 const output = process.argv[2] || 'C:/ProgramData/ClubRotarioSDC/security-db-verification.json';
 const suites = ['admin_committee_management_test.sql', 'admin_committee_flow_test.sql',
   'proposal_voting_rls_test.sql', 'club_finance_management_rls_test.sql',
-  'club_membership_applications_rls_test.sql', 'membership_photo_gallery_rls_test.sql',
+  'club_membership_applications_rls_test.sql', 'membership_application_rules_test.sql',
+  'membership_photo_gallery_rls_test.sql',
   'finance_selected_dues_test.sql', 'club_leadership_org_chart_test.sql',
   'club_backend_rls_test.sql', 'privileged_mfa_test.sql',
   'membership_application_intake_throttle_test.sql'];

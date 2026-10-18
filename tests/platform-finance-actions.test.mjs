@@ -51,7 +51,7 @@ function setup({ role = "admin", status = "active", signedIn = true, rpcError = 
     "@/lib/audit": { auditCursorFilter() {}, auditPageCursor() {}, defaultAuditSort: {}, normalizeAuditQuery() {} },
     "@/lib/editorial-content": { isStoryAssetPath() { return true; }, parseEditorialContent() { return null; } },
     "@/utils/supabase/public-url": { toPublicSupabaseUrl },
-    "@/utils/supabase/config": { isSupabaseConfigured: () => true },
+    "@/utils/supabase/config": { isSupabaseConfigured: () => true }, "@/lib/email": {}, "@/lib/membership-applications": {}, "@/utils/site-url": {},
     ...mfaDependencies, "@/utils/supabase/server": { createClient: async () => client },
   };
   const actions = {};

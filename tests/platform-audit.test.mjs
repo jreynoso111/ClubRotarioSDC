@@ -42,7 +42,7 @@ function setup({ role = "admin", status = "active", signedIn = true, rows = [] }
     "@/lib/platform": { isMissingSchemaError: () => false },
     "@/lib/editorial-content": editorialContent,
     "@/utils/supabase/public-url": { toPublicSupabaseUrl },
-    "@/utils/supabase/config": { isSupabaseConfigured: () => true },
+    "@/utils/supabase/config": { isSupabaseConfigured: () => true }, "@/lib/email": {}, "@/lib/membership-applications": {}, "@/utils/site-url": {},
     ...mfaDependencies, "@/utils/supabase/server": { createClient: async () => client },
   };
   const actions = {};

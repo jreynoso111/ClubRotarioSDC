@@ -63,7 +63,7 @@ function setup({ role = "member", membershipStatus = "active", proposalStatus = 
     "server-only": {},
     "next/cache": { revalidatePath: (path) => invalidations.push(path) },
     "@/utils/supabase/public-url": { toPublicSupabaseUrl },
-    "@/utils/supabase/config": { isSupabaseConfigured: () => true },
+    "@/utils/supabase/config": { isSupabaseConfigured: () => true }, "@/lib/email": {}, "@/lib/membership-applications": {}, "@/utils/site-url": {},
     ...mfaDependencies, "@/utils/supabase/server": { createClient: async () => client },
     "@/lib/platform": { isMissingSchemaError: () => false },
     "@/lib/audit": {},

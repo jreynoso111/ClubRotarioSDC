@@ -11,7 +11,7 @@ create trigger club_fixture_session after insert on auth.users
 for each row execute function pg_temp.club_fixture_session();
 
 select set_config('request.jwt.claims', jsonb_build_object('aal', 'aal2', 'amr', jsonb_build_array(jsonb_build_object('method', 'totp', 'timestamp', extract(epoch from now())::bigint)))::text, true); -- privileged fixtures act with a recent second factor (privileged_mfa_test.sql covers its absence)
-select plan(17);
+select plan(18);
 
 select ok(
   to_regclass('public.membership_applications') is not null,
@@ -31,22 +31,20 @@ select ok(
 );
 select ok(
   has_table_privilege('authenticated', 'public.membership_applications', 'SELECT')
-    and has_column_privilege('authenticated', 'public.membership_applications', 'status', 'UPDATE')
+    and not has_any_column_privilege('authenticated', 'public.membership_applications', 'UPDATE')
     and not has_table_privilege('authenticated', 'public.membership_applications', 'DELETE'),
-  'members can read rows and management roles have only scoped update columns'
+  'signed-in users can read rows but hold no UPDATE privilege on the table or any column, and no DELETE'
 );
-select is(
-  (select count(*)::integer from pg_policies
-   where schemaname = 'public'
-     and tablename = 'membership_applications'
-     and policyname in (
-       'membership_applications_read_active_members',
-       'membership_applications_review_management'
-     ))
-   + (select count(*)::integer from pg_policies
-      where schemaname = 'public' and tablename = 'membership_applications' and cmd = 'INSERT'),
-  2,
-  'active-member read and management review have policies; no direct INSERT policy remains'
+select ok(
+  exists (select 1 from pg_policies
+    where schemaname = 'public' and tablename = 'membership_applications'
+      and policyname = 'membership_applications_read_management' and cmd = 'SELECT')
+  and not exists (select 1 from pg_policies
+    where schemaname = 'public' and tablename = 'membership_applications'
+      and policyname in ('membership_applications_read_active_members', 'membership_applications_review_management'))
+  and not exists (select 1 from pg_policies
+    where schemaname = 'public' and tablename = 'membership_applications' and cmd = 'INSERT'),
+  'only management has a read policy, the member read and review policies are gone, and no direct INSERT policy remains'
 );
 select ok(
   exists (select 1 from pg_indexes where schemaname = 'public' and indexname = 'membership_applications_one_open_request_per_email'),
@@ -123,27 +121,21 @@ select set_config('request.jwt.claim.sub', (select member_id::text from applicat
 select set_config('request.jwt.claims', (coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb || jsonb_build_object('session_id', auth.uid()))::text, true);
 select is(
   (select count(*)::integer from public.membership_applications),
-  1,
-  'an active member can see the submitted application'
-);
-with updated as (
-  update public.membership_applications
-  set status = 'contacted', reviewed_by = auth.uid()
-  where id = (select application_id from application_fixture)
-  returning id
-)
-select is(
-  count(*)::integer,
   0,
-  'a regular member can see an application but cannot change its review status'
-) from updated;
+  'an active member selecting the table directly sees no rows; applications are read through the list function'
+);
+select throws_ok($$select public.review_membership_application((select application_id from application_fixture), 'contacted', null, now())$$,
+  '42501', null, 'a regular member cannot change review status through the review function');
 select set_config('request.jwt.claim.sub', (select manager_id::text from application_fixture), true);
 select set_config('request.jwt.claims', (coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb || jsonb_build_object('session_id', auth.uid()))::text, true);
-select lives_ok($$
+select throws_ok($$
   update public.membership_applications
   set status = 'contacted', reviewed_by = auth.uid()
   where id = (select application_id from application_fixture)
-$$, 'an active club manager can update the review status');
+$$, '42501', null, 'a club manager cannot update applications directly, even with a recent second factor');
+select lives_ok($$select public.review_membership_application((select application_id from application_fixture), 'contacted', null,
+  (select updated_at from public.membership_applications where id = (select application_id from application_fixture)))$$,
+  'an active club manager can update the review status through the review function');
 select is(
   (select reviewed_by from public.membership_applications where id = (select application_id from application_fixture)),
   (select manager_id from application_fixture),

@@ -15,6 +15,7 @@ const suites = requested.length ? requested : [
   "proposal_voting_rls_test.sql",
   "club_finance_management_rls_test.sql",
   "club_membership_applications_rls_test.sql",
+  "membership_application_rules_test.sql",
   "membership_photo_gallery_rls_test.sql",
 ];
 
