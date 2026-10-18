@@ -185,7 +185,7 @@ export default async function NosotrosPage() {
         <section className={styles.life} id="vida-del-club" aria-labelledby="life-title">
           <div className={styles.sectionHeading}>
             <div><SectionLabel>La vida del club</SectionLabel><h2 id="life-title">Compañerismo, servicio y <span>personas de acción.</span></h2></div>
-            <p>Momentos reales de los socios: encuentros, proyectos y la foto de grupo que nos reúne.</p>
+            <p>Encuentros, proyectos de servicio y la foto de grupo que nos reúne.</p>
           </div>
           <div className={styles.lifeGrid}>
             {lifeSlots.map((slot) => {

@@ -94,7 +94,7 @@ const descriptions: Record<Tab, string> = {
   solicitudes: "Da seguimiento a las personas que solicitan ingresar desde la web.",
   organizacion: "Define la directiva rotaria, asigna cargos a los perfiles y organiza los comités del club.",
   revista: "Prepara, edita y publica artículos con sus fotografías y diseño.",
-  fotografias: "Identifica la ubicación de cada imagen y edita las fotos de la página de ingreso.",
+  fotografias: "Cambia las fotos de todas las páginas del sitio; las de la Revista se editan en cada publicación.",
   mensajes: "Consulta tus avisos y conversaciones con los miembros del club.",
   auditoria: "Revisa quién cambió cada registro y compara sus valores anteriores y actuales.",
   diagnostico: "Analiza los errores de acceso y de la aplicación, y comprueba el estado del sistema.",
