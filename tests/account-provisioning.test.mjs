@@ -40,7 +40,7 @@ function provisioning({ authorized = true, duplicate = false, failSetup = false,
   const action = load("../app/plataforma/member-provisioning-actions.ts", {
     "next/cache": { revalidatePath: () => {} },
     "@/utils/supabase/admin": { createAdminClient: () => { calls.push(["admin-client"]); return admin; } },
-    "@/lib/initial-password": cryptography,
+    "@/lib/initial-password": cryptography, "@/lib/temporary-password": { TEMPORARY_PASSWORD_MIN_LENGTH: 8 },
     "./module-auth": { moduleFailure: message => ({ ok: false, message }), requireModuleActor: async roles => {
       assert.deepEqual(roles, ["admin"]); return authorized ? { actor } : { error: { ok: false, message: "forbidden" } };
     } },

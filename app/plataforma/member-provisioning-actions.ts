@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { temporaryPasswordDigest } from "@/lib/initial-password";
+import { TEMPORARY_PASSWORD_MIN_LENGTH } from "@/lib/temporary-password";
 import { moduleFailure, requireModuleActor } from "./module-auth";
 import type { PlatformActionResult } from "./actions";
 
@@ -13,8 +14,8 @@ export async function createMemberAccountAction(input: { name: string; email: st
   const email = typeof input?.email === "string" ? input.email.trim().toLowerCase() : "";
   const password = input?.temporaryPassword;
   if (name.length < 2 || name.length > 120 || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-    || typeof password !== "string" || password.length < 12 || password.length > 64 || Buffer.byteLength(password, "utf8") > 72) {
-    return moduleFailure("Indica el nombre, un correo válido y una contraseña temporal de 12 a 64 caracteres.", "invalid");
+    || typeof password !== "string" || password.length < TEMPORARY_PASSWORD_MIN_LENGTH || password.length > 64 || Buffer.byteLength(password, "utf8") > 72) {
+    return moduleFailure("Indica el nombre, un correo válido y una contraseña temporal de 8 a 64 caracteres.", "invalid");
   }
   let admin: ReturnType<typeof createAdminClient>;
   try { admin = createAdminClient(); } catch { return moduleFailure("La creación de cuentas no está disponible ahora."); }

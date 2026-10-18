@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, type FormEvent } from "react";
+import { TEMPORARY_PASSWORD_MIN_LENGTH, generateTemporaryPassword } from "@/lib/temporary-password";
 import { createMemberAccountAction } from "./member-provisioning-actions";
 import styles from "./management.module.css";
 
@@ -33,10 +34,10 @@ export function CreateMemberForm({ onCreated }: { onCreated: () => void }) {
     {open ? <form id="create-member-form" className={`${styles.form} ${styles.createMemberForm}`} onSubmit={submit}>
       <label>Nombre completo<input name="name" required minLength={2} maxLength={120} autoComplete="off" /></label>
       <label>Correo electrónico<input name="email" type="email" required maxLength={254} autoComplete="off" /></label>
-      <label>Contraseña temporal<input name="temporaryPassword" type={showPassword ? "text" : "password"} required minLength={12} maxLength={64}
+      <label>Contraseña temporal<input name="temporaryPassword" type={showPassword ? "text" : "password"} required minLength={TEMPORARY_PASSWORD_MIN_LENGTH} maxLength={64}
         autoComplete="new-password" value={password} onChange={event => setPassword(event.target.value)} /></label>
       <div className={styles.accountViews}>
-        <button type="button" className={styles.quietButton} onClick={() => setPassword(`Aa9!${crypto.randomUUID().replaceAll("-", "")}`)}>Generar contraseña</button>
+        <button type="button" className={styles.quietButton} onClick={() => { setPassword(generateTemporaryPassword()); setShowPassword(true); }}>Generar contraseña</button>
         <button type="button" className={styles.quietButton} aria-pressed={showPassword} onClick={() => setShowPassword(value => !value)}>{showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}</button>
       </div>
       <p className={styles.muted}>Se crea como miembro aprobado. Entrega la contraseña temporal directamente a la persona; después del alta no se volverá a mostrar.</p>
