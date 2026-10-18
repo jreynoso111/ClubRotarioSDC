@@ -21,7 +21,7 @@ export function FirstPasswordForm() {
       } catch { setError("No se pudo completar el cambio. Inténtalo de nuevo."); }
     });
   }
-  return <main className={styles.shell}><section className={styles.card}>
+  return <section className={styles.card}>
     <p className={styles.eyebrow}>Primer acceso</p><h1 className={styles.title}>Tu propia contraseña.</h1>
     <p className={styles.copy}>La administración creó tu cuenta con una contraseña temporal. Elige una diferente para continuar. Después iniciarás sesión con tu nueva clave.</p>
     <form className={styles.form} onSubmit={submit}>
@@ -33,5 +33,5 @@ export function FirstPasswordForm() {
     <button type="button" className={styles.link} disabled={pending} onClick={() => {
       startTransition(async () => { try { await endBrowserSession(); window.location.replace("/auth/sign-in"); } catch { setError("No se pudo cerrar la sesión. Inténtalo de nuevo."); } });
     }}>Cerrar sesión</button>
-  </section></main>;
+  </section>;
 }

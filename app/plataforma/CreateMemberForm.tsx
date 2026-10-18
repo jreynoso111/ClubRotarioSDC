@@ -30,7 +30,7 @@ export function CreateMemberForm({ onCreated }: { onCreated: () => void }) {
       <button type="button" className={styles.button} disabled={pending} aria-expanded={open} aria-controls="create-member-form"
         onClick={() => { setOpen(value => !value); setPassword(""); setNotice(null); }}>{open ? "Cancelar" : "Crear miembro"}</button>
     </div>
-    {open ? <form id="create-member-form" className={styles.form} onSubmit={submit}>
+    {open ? <form id="create-member-form" className={`${styles.form} ${styles.createMemberForm}`} onSubmit={submit}>
       <label>Nombre completo<input name="name" required minLength={2} maxLength={120} autoComplete="off" /></label>
       <label>Correo electrónico<input name="email" type="email" required maxLength={254} autoComplete="off" /></label>
       <label>Contraseña temporal<input name="temporaryPassword" type={showPassword ? "text" : "password"} required minLength={12} maxLength={64}
