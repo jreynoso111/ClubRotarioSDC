@@ -87,7 +87,8 @@ await check('public MFA requires a user session', async () => {
 });
 await check('published assets', async () => {
   const html = await (await request(site)).text();
-  const assets = [...new Set([...html.matchAll(/(?:src|href)="([^"?#]+\.(?:js|css))"/g)].map(match => match[1]))];
+  // Assets may carry the ?dpl= deployment id used for version skew protection.
+  const assets = [...new Set([...html.matchAll(/(?:src|href)="([^"?#]+\.(?:js|css)(?:\?dpl=[^"#&]+)?)"/g)].map(match => match[1]))];
   assert.ok(assets.length > 2);
   for (const asset of assets) assert.equal((await request(new URL(asset, site), { method: 'HEAD' })).status, 200);
 });

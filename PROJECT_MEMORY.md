@@ -739,3 +739,9 @@ Decisiones del usuario: avisar al miembro (plataforma y correo) al aprobar, camb
 
 - Petición del usuario: al crear la cuenta desde «Crear miembro», enviar al nuevo miembro un correo con sus credenciales. `memberCredentialsEmail` en `lib/email.ts` (correo, contraseña temporal, enlace `/auth/sign-in`, aviso de cambio obligatorio y de no compartir el mensaje); se envía por Resend solo cuando el alta terminó bien. El mensaje de éxito indica si salió el correo; si falla, pide entregar los datos en persona.
 - Commit `41f2ba1` en `main`; Node 208/208, lint y TypeScript. Publicado en `/srv/club-rotario/releases/20261018-185200` (con `RESEND_API_KEY`); `verify-deployment.mjs` 34/34. No se envió un correo real de prueba.
+
+## Pestañas abiertas durante una publicación · 2026-10-18
+
+- Reclamo del usuario: Finanzas, Auditoría y Diagnóstico a veces mostraban «no se pudo cargar» y se arreglaban al recargar. Causa en el registro de `club-rotario-web`: «Failed to find Server Action … older or newer deployment»; cada publicación cambia los identificadores de las Server Actions y una pestaña abierta antes sigue llamando a los anteriores.
+- Corrección (commit `91c1314`): `prebuild` (`scripts/write-deployment-id.mjs`) escribe `.deployment-id` (ignorado por Git) y `next.config.ts` lo usa como `deploymentId` (protección de versiones de Next: recarga completa al navegar entre versiones; los recursos llevan `?dpl=`) y como `CLUB_DEPLOYMENT_ID`. `/api/version` devuelve el identificador; `PlatformVersionWatcher` lo compara al volver a la pestaña y cada 2 minutos y muestra «Se publicó una versión nueva… Recargar». `verify-deployment.mjs` acepta `?dpl=` en los recursos. Cualquier procedimiento de publicación que use `npm run build` genera el identificador.
+- Publicado en `/srv/club-rotario/releases/20261018-191007`; `/api/version` público responde y `verify-deployment.mjs` 34/34. El aviso se verá por primera vez en la próxima publicación.
