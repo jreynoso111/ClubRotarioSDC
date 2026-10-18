@@ -76,7 +76,8 @@ for (const action of ['token', 'signup', 'recover', 'user', 'verify']) {
     const response = await request(`${api}/auth/v1/${action}`, {
       method: 'OPTIONS', headers: { Origin: site, 'Access-Control-Request-Method': 'POST', 'Access-Control-Request-Headers': 'apikey,content-type' },
     });
-    assert.equal(response.status, 204);
+    // The Ubuntu gateway answers preflights with 200; Windows answered 204. Both are valid.
+    assert.ok([200, 204].includes(response.status), `Unexpected preflight status ${response.status}`);
     assert.ok([site, '*'].includes(response.headers.get('access-control-allow-origin')));
   });
 }
