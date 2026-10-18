@@ -4,11 +4,9 @@ import { revalidatePath } from "next/cache";
 import type { FinanceLedgerEntry, FinancePaymentMethod, FinanceCategory, FinanceStatement, FinanceYearMonth } from "@/lib/finance";
 import { financeCategoryLabels, financePaymentMethodLabels } from "@/lib/finance";
 import type { PlatformActionResult } from "./actions";
-import { toPublicSupabaseUrl } from "@/utils/supabase/public-url";
 import { moduleFailure, requireModuleActor, validUuid } from "./module-auth";
 
 const ENTRY_COLUMNS = "id,direction,category,amount,occurred_on,description,member_id,member_name_snapshot,counterparty_name,activity_id,activity_name_snapshot,monthly_due_id,payment_method,receipt_reference,voided_at,void_reason,receipt_number,attachment_path";
-const RECEIPT_BUCKET = "club-finance-receipts";
 const managementRoles = ["club_manager", "admin"] as const;
 const memberRoles = ["member", "coordinator", "editor", "club_manager", "admin"] as const;
 
@@ -126,16 +124,4 @@ export async function attachFinanceReceiptAction(entryId: string, path: string):
   if (attachError) return moduleFailure("No se pudo vincular el comprobante.");
   revalidatePath("/plataforma");
   return { ok: true, message: "El comprobante quedó adjunto al movimiento." };
-}
-
-// Signed with the reader's own session, so storage policies decide access.
-export async function getFinanceReceiptUrlAction(entryId: string): Promise<PlatformActionResult & { url?: string }> {
-  const { actor, error } = await requireModuleActor([...memberRoles]);
-  if (error || !actor) return error!;
-  if (!validUuid(entryId)) return moduleFailure("El movimiento indicado no es válido.", "invalid");
-  const { data: entry } = await actor.supabase.from("finance_entries").select("attachment_path").eq("id", entryId).maybeSingle();
-  if (!entry?.attachment_path) return moduleFailure("Este movimiento no tiene comprobante adjunto.", "invalid");
-  const { data, error: signError } = await actor.supabase.storage.from(RECEIPT_BUCKET).createSignedUrl(entry.attachment_path, 300);
-  if (signError || !data?.signedUrl) return moduleFailure("No tienes acceso a este comprobante.", "forbidden");
-  return { ok: true, message: "Comprobante disponible.", url: toPublicSupabaseUrl(data.signedUrl) };
 }

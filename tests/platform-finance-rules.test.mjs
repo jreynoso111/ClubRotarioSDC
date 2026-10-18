@@ -103,3 +103,27 @@ test("attachments must live under their own entry", async () => {
   assert.equal((await actions.attachFinanceReceiptAction(entryId, `${entryId}/recibo.pdf`)).ok, true);
   assert.equal(rpcs.at(-1).name, "set_finance_entry_attachment");
 });
+
+test("receipts stream through the platform with the visitor's session", async () => {
+  const load = ({ user = { id: actorId }, path = `${entryId}/abc.png` } = {}) => {
+    const downloads = [];
+    const client = {
+      auth: { getUser: async () => ({ data: { user }, error: null }) },
+      from() { const query = { select() { return query; }, eq() { return query; }, maybeSingle: async () => ({ data: path ? { attachment_path: path } : null, error: null }) }; return query; },
+      storage: { from(bucket) { return { download: async name => { downloads.push([bucket, name]); return { data: new Blob(["png"]), error: null }; } }; } },
+    };
+    const route = {};
+    new Function("require", "exports", compile("../app/plataforma/comprobante/[id]/route.ts"))(name => ({ "@/utils/supabase/server": { createClient: async () => client } })[name], route);
+    return { get: id => route.GET(new Request("http://x"), { params: Promise.resolve({ id }) }), downloads };
+  };
+  assert.equal((await load().get("../etc")).status, 404);
+  assert.equal((await load({ user: null }).get(entryId)).status, 401);
+  assert.equal((await load({ path: `${otherId}/abc.png` }).get(entryId)).status, 404);
+  assert.equal((await load({ path: `${entryId}/abc.html` }).get(entryId)).status, 404);
+  const ok = load();
+  const response = await ok.get(entryId);
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("content-type"), "image/png");
+  assert.equal(response.headers.get("cache-control"), "private, no-store");
+  assert.deepEqual(ok.downloads, [["club-finance-receipts", `${entryId}/abc.png`]]);
+});

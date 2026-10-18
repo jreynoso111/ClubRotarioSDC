@@ -5,7 +5,7 @@ import type { FormEvent } from "react";
 import Link from "next/link";
 import { financeCategoryLabels, financePaymentMethodLabels, type FinanceDashboard, type FinanceEntryCategory, type FinanceLedgerEntry, type FinancePaymentMethod, type FinanceStatement, type FinanceYearMonth } from "@/lib/finance";
 import { createFinanceEntryAction, createFinanceMonthlyDuesAction, getFinanceDashboardAction, recordFinanceMonthlyPaymentAction } from "./actions";
-import { attachFinanceReceiptAction, exportFinanceCsvAction, getFinanceReceiptUrlAction, getFinanceStatementAction, getFinanceYearSummaryAction, voidFinanceEntryAction } from "./finance-actions";
+import { attachFinanceReceiptAction, exportFinanceCsvAction, getFinanceStatementAction, getFinanceYearSummaryAction, voidFinanceEntryAction } from "./finance-actions";
 import { createClient } from "@/utils/supabase/client";
 import styles from "./platform.module.css";
 import ui from "./finance-workspace.module.css";
@@ -168,10 +168,6 @@ export function FinanceModule({ canManage, onOpenActivities }: { canManage: bool
     if (uploadError) { setFeedback("No se pudo subir el comprobante. Inténtalo de nuevo."); setError(true); return; }
     void save(attachFinanceReceiptAction(entry.id, path));
   }
-  async function openReceipt(entry: FinanceLedgerEntry) {
-    const result = await getFinanceReceiptUrlAction(entry.id);
-    if (result.ok && result.url) window.open(result.url, "_blank", "noopener"); else { setFeedback(result.message); setError(true); }
-  }
   async function exportCsv(period: { month?: string; year?: number }) {
     setPending(true);
     try {
@@ -230,7 +226,7 @@ export function FinanceModule({ canManage, onOpenActivities }: { canManage: bool
         {dashboard.entries.length ? <div className={ui.tableScroll}><table><thead><tr><th>Fecha</th><th>Concepto</th><th>Miembro / persona</th><th>Actividad</th><th>Ingreso</th><th>Egreso</th><th>Medio / referencia</th><th>Recibo y comprobante</th></tr></thead><tbody>{dashboard.entries.map(entry=><tr key={entry.id} className={entry.voidedAt ? ui.voidedRow : undefined}><td>{date(entry.occurredOn)}</td><td><strong>{entry.description}</strong><small>{financeCategoryLabels[entry.category]}</small>{entry.voidedAt ? <small className={ui.voidedNote}>Anulado: {entry.voidReason}</small> : null}</td><td>{entry.memberName ?? entry.counterpartyName ?? "Club"}{entry.memberName && entry.counterpartyName ? <small>{entry.counterpartyName}</small> : null}</td><td>{entry.activityName ?? "—"}</td><td className={ui.income}>{entry.direction==="income" ? money(entry.amount) : "—"}</td><td className={ui.expense}>{entry.direction==="expense" ? money(entry.amount) : "—"}</td><td>{financePaymentMethodLabels[entry.paymentMethod]}<small>{entry.receiptReference ?? "Sin referencia"}</small></td>
           <td className={ui.rowActions}>
             {entry.direction==="income" && entry.receiptNumber ? <Link href={`/plataforma/recibo/${entry.id}`} target="_blank">Recibo N.º {entry.receiptNumber}</Link> : null}
-            {entry.attachmentPath ? <button type="button" onClick={() => void openReceipt(entry)}>Ver comprobante</button> : null}
+            {entry.attachmentPath ? <a href={`/plataforma/comprobante/${entry.id}`} target="_blank" rel="noopener">Ver comprobante</a> : null}
             {canManage && !entry.voidedAt ? <label className={ui.fileButton}>{entry.attachmentPath ? "Reemplazar comprobante" : "Adjuntar comprobante"}<input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" disabled={pending} onChange={e => { void attachReceipt(entry, e.target.files?.[0]); e.target.value = ""; }} /></label> : null}
             {canManage && !entry.voidedAt ? <button type="button" className={ui.voidButton} disabled={pending} onClick={() => voidEntry(entry)}>Anular</button> : null}
           </td></tr>)}</tbody></table></div> : <p className={styles.empty}>{canManage ? "No hay movimientos para este período y estos filtros. Registra el primer ingreso o egreso con el botón superior." : "No hay aportes registrados a tu nombre en este período."}</p>}
