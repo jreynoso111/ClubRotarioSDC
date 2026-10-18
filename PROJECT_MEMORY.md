@@ -727,5 +727,5 @@ Decisiones del usuario: avisar al miembro (plataforma y correo) al aprobar, camb
 
 ## Guardado de la versión en GitHub · 2026-10-18
 
-- El usuario solicita guardar toda la versión actual en GitHub. Se conserva la rama de trabajo `claude/club-security-hardening` en `jreynoso111/ClubRotarioSDC`, con los cambios publicados de revista, navegación compartida, separación de administradores y alta de miembros con cambio obligatorio de contraseña.
+- El usuario solicita guardar toda la versión actual en GitHub y precisa que debe estar en la rama principal `main` de `jreynoso111/ClubRotarioSDC`. `main` incorpora por avance directo el checkpoint `a5f0917` de `claude/club-security-hardening`, con los cambios publicados de revista, navegación compartida, separación de administradores y alta de miembros con cambio obligatorio de contraseña.
 - El checkpoint incluye el ajuste local pendiente de `tsconfig.json` (rutas de tipos generadas por Next en verificaciones anteriores). Los secretos, archivos de entorno privados, datos de miembros y respaldos de la base de datos permanecen fuera de Git. Este guardado no cambia la release publicada en Ubuntu.
