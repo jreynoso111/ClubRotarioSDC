@@ -798,3 +798,8 @@ Decisiones del usuario: avisar al miembro (plataforma y correo) al aprobar, camb
 
 - Petición del usuario: aceptar fotos de más de 10 MB y comprimirlas automáticamente; pidió usar una librería de código abierto en lugar de una propia. `lib/image-compress.ts` usa `browser-image-compression` 2.0.2 (MIT) con `useWebWorker: false` (el worker cargaría la librería desde un CDN que la CSP bloquea). Entrada hasta 60 MB; salida WebP: fotos de la web y Revista 2400 px / 1,5 MB, comprobantes 2000 px / 1,5 MB; PDF sin comprimir (5 MB); la foto de perfil se recorta a 512 px. Las pantallas muestran «Optimizando foto…» y «Foto optimizada: X → Y».
 - Commits `b0860e6` (integración) y `ca03ea9` (librería); Node 256/256. Prueba en la candidata: imagen de ruido de 18,4 MB → 1,2 MB en 13 s, guardada como `.webp`, visible en /nosotros y restaurada. HEIC depende del navegador. Publicado en `/srv/club-rotario/releases/20261019-044851`; 34/34. QA limpiado.
+
+## Fotos subidas que no llenaban su cuadro · 2026-10-19
+
+- Reclamo del usuario: la foto subida a «Nosotros · Compañerismo» no se veía bien en la web. Causa: `CoverArt` (components/public/PublicChrome.tsx) dibujaba las fotos subidas (URL https) como fondo CSS sin `background-size`, así que una foto de 2400 px mostraba solo una esquina; además no recibían los filtros de los banners. Ahora se dibujan con `next/image` `unoptimized` + `fill` (object-fit: cover, como las ilustraciones) y `.cover` usa `center / cover` como respaldo. Afecta a Nosotros, banners de Agenda y Revista y portadas de la Revista.
+- Commit `3614b39`; Node 256/256. Comprobado en la candidata con la foto real del usuario (1434 px) llenando la tarjeta. Publicado en `/srv/club-rotario/releases/20261019-123703`; 34/34.
