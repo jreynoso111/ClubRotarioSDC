@@ -151,14 +151,13 @@ export function CoverArt({
     );
   }
 
+  // Uploaded photos render as an image too, so they fill the frame (object-fit: cover)
+  // and take the same filters as the original illustrations.
   if (src?.startsWith("https://") || src?.startsWith("blob:")) {
     return (
-      <div
-        className={coverClass}
-        role="img"
-        aria-label={alt}
-        style={{ backgroundImage: `url("${encodeURI(src).replaceAll('"', "%22")}")` }}
-      />
+      <div className={coverClass}>
+        <Image src={src} alt={alt} fill sizes="(max-width: 760px) 100vw, 50vw" priority={priority} unoptimized />
+      </div>
     );
   }
 
