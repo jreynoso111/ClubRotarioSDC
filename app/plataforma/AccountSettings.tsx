@@ -4,9 +4,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 
-import { accountBioMaxLength, avatarAcceptedTypes, avatarBucket, avatarMaxBytes, avatarPathFor } from "@/lib/account";
+import { accountBioMaxLength, avatarAcceptedTypes, avatarBucket, avatarPathFor } from "@/lib/account";
 import { prepareAvatarImage } from "@/lib/avatar-image";
 import { formatClubDate } from "@/lib/club-date";
+import { MAX_INPUT_IMAGE_BYTES } from "@/lib/image-compress";
 import type { PlatformSnapshot } from "@/lib/platform";
 import { createClient } from "@/utils/supabase/client";
 
@@ -66,6 +67,7 @@ export function AccountSettings({ user }: { user: AccountUser }) {
   const [bio, setBio] = useState(user.bio);
 
   const [avatarBusy, setAvatarBusy] = useState(false);
+  const [avatarStep, setAvatarStep] = useState<"optimizing" | "uploading">("uploading");
   const [avatarNotice, setAvatarNotice] = useState<Notice>(null);
   const [confirmingRemoval, setConfirmingRemoval] = useState(false);
   const avatarInput = useRef<HTMLInputElement>(null);
@@ -115,18 +117,24 @@ export function AccountSettings({ user }: { user: AccountUser }) {
     const file = input.files?.[0];
     input.value = "";
     if (!file) return;
-    if (!avatarAcceptedTypes.includes(file.type as (typeof avatarAcceptedTypes)[number]) || file.size > avatarMaxBytes) {
-      setAvatarNotice({ tone: "error", text: "Usa una foto JPG, PNG o WebP de 5 MB o menos." });
+    if (!avatarAcceptedTypes.includes(file.type as (typeof avatarAcceptedTypes)[number])) {
+      setAvatarNotice({ tone: "error", text: "Usa una foto JPG, PNG o WebP." });
+      return;
+    }
+    if (file.size > MAX_INPUT_IMAGE_BYTES) {
+      setAvatarNotice({ tone: "error", text: "La foto es demasiado grande (máximo 60 MB)." });
       return;
     }
 
     setAvatarBusy(true);
+    setAvatarStep("optimizing");
     setAvatarNotice(null);
     const supabase = createClient();
     let uploadedPath: string | null = null;
     let saved = false;
     try {
       const prepared = await prepareAvatarImage(file);
+      setAvatarStep("uploading");
       uploadedPath = avatarPathFor(user.id, crypto.randomUUID());
       const { error: uploadError } = await supabase.storage.from(avatarBucket).upload(uploadedPath, prepared, {
         contentType: "image/webp", cacheControl: "3600", upsert: false,
@@ -197,10 +205,10 @@ export function AccountSettings({ user }: { user: AccountUser }) {
       <div className={styles.avatarRow}>
         <MemberAvatar userId={user.id} name={user.displayName} avatarVersion={user.avatarVersion} className={styles.avatarPreview} />
         <div className={styles.avatarActions}>
-          <p className={styles.hint}>JPG, PNG o WebP de hasta 5 MB. La recortamos al centro y la guardamos en un cuadrado de 512 × 512 píxeles.</p>
+          <p className={styles.hint}>JPG, PNG o WebP. Puedes subir fotos grandes; el sistema las optimiza automáticamente. La recortamos al centro y la guardamos en un cuadrado de 512 × 512 píxeles.</p>
           <div className={styles.actionRow}>
             <button type="button" className={styles.button} disabled={avatarBusy} onClick={() => avatarInput.current?.click()}>
-              {avatarBusy ? "Subiendo foto…" : "Cambiar foto"}
+              {avatarBusy ? (avatarStep === "optimizing" ? "Optimizando foto…" : "Subiendo foto…") : "Cambiar foto"}
             </button>
             {user.avatarVersion && !confirmingRemoval && <button type="button" className={styles.buttonQuiet} disabled={avatarBusy}
               onClick={() => setConfirmingRemoval(true)}>Quitar foto</button>}

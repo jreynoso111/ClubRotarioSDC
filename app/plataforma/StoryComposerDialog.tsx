@@ -5,6 +5,7 @@ import type { ChangeEvent, FormEvent } from "react";
 
 import { editorialLayouts, MAX_EDITORIAL_CONTENT_LENGTH, MAX_EDITORIAL_GALLERY_IMAGES, parseEditorialContent, serializeEditorialContent, splitEditorialParagraphs, type EditorialImageAlignment, type EditorialLayoutId } from "@/lib/editorial-content";
 import { PublicationArticle, PublicationAside } from "@/components/public/PublicationArticle";
+import { compressImage, imagePresets, optimizationNote } from "@/lib/image-compress";
 import type { PlatformStory } from "@/lib/platform";
 import { createClient } from "@/utils/supabase/client";
 
@@ -12,7 +13,8 @@ import { createStoryAction } from "./actions";
 import editor from "./story-composer.module.css";
 import styles from "./platform.module.css";
 
-const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+// Photos are optimized in the browser first; this is only the limit for the stored object.
+const MAX_STORED_IMAGE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const storyTypeLabels: Record<string, string> = { cronica: "Crónica", voces: "Voces del club", archivo: "Archivo", noticia: "Noticia", otro: "Historia" };
 
@@ -22,8 +24,8 @@ type Draft = {
   status: StoryStatus; coverImageAlt: string; inlineImageAlt: string; inlineImageCaption: string;
   inlineImageAfterParagraph: string; inlineImageAlignment: EditorialImageAlignment;
 };
-type SelectedImage = { file: File; url: string };
-type GalleryDraftImage = { id: string; path: string | null; url: string; alt: string; caption: string; file?: File };
+type SelectedImage = { file: File; url: string; note?: string };
+type GalleryDraftImage = { id: string; path: string | null; url: string; alt: string; caption: string; file?: File; note?: string };
 
 const storyStatuses: StoryStatus[] = ["draft", "review", "published", "archived"];
 const statusHelp: Record<StoryStatus, string> = {
@@ -56,10 +58,14 @@ function publicImageUrl(path: string | null | undefined) {
   return base ? `${base.replace(/\/$/, "")}/storage/v1/object/public/club-public/${path}` : undefined;
 }
 
+function imageErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "No pudimos preparar esta foto. Inténtalo de nuevo.";
+}
+
 async function uploadStoryImage(file: File | null, slot: "cover" | "inline" | "gallery") {
   if (!file) return null;
   if (!ALLOWED_IMAGE_TYPES.has(file.type)) throw new Error("Usa una imagen JPG, PNG o WebP.");
-  if (file.size > MAX_IMAGE_BYTES) throw new Error("Cada imagen debe pesar 10 MB o menos.");
+  if (file.size > MAX_STORED_IMAGE_BYTES) throw new Error("La foto optimizada supera 10 MB. Prueba con otra imagen.");
   const extension = file.type === "image/jpeg" ? "jpg" : file.type === "image/png" ? "png" : "webp";
   const path = `stories/${crypto.randomUUID()}-${slot}.${extension}`;
   const { error } = await createClient().storage.from("club-public").upload(path, file, {
@@ -103,6 +109,9 @@ export function StoryComposerDialog({ canPublish, story, onClose, onSaved }: {
   const [gallery, setGallery] = useState<GalleryDraftImage[]>(() => (originalContent?.gallery ?? []).map((image) => ({ ...image, id: image.path, url: publicImageUrl(image.path) ?? "" })));
   const [pending, startTransition] = useTransition();
   const [feedback, setFeedback] = useState("");
+  // Counts photos still being optimized; saving waits until it is zero.
+  const [optimizingCount, setOptimizingCount] = useState(0);
+  const optimizing = optimizingCount > 0;
   const dialogRef = useRef<HTMLDialogElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
   const inlineInputRef = useRef<HTMLInputElement>(null);
@@ -127,7 +136,8 @@ export function StoryComposerDialog({ canPublish, story, onClose, onSaved }: {
   }, []);
 
   function closeDialog() {
-    if (pending) return;
+    // Closing while a photo is still being optimized would discard its result.
+    if (pending || optimizing) return;
     onClose();
   }
 
@@ -135,21 +145,27 @@ export function StoryComposerDialog({ canPublish, story, onClose, onSaved }: {
     setDraft((current) => ({ ...current, [field]: value }));
   }
 
-  function chooseImage(event: ChangeEvent<HTMLInputElement>, slot: "cover" | "inline") {
-    const file = event.currentTarget.files?.[0];
+  async function chooseImage(event: ChangeEvent<HTMLInputElement>, slot: "cover" | "inline") {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
     if (!file) return;
-    if (!ALLOWED_IMAGE_TYPES.has(file.type) || file.size > MAX_IMAGE_BYTES) {
-      setFeedback("Cada fotografía debe ser JPG, PNG o WebP y pesar 10 MB o menos.");
-      event.currentTarget.value = "";
-      return;
-    }
-    const previous = slot === "cover" ? coverImage : inlineImage;
-    if (previous) { URL.revokeObjectURL(previous.url); objectUrls.current.delete(previous.url); }
-    const url = URL.createObjectURL(file);
-    objectUrls.current.add(url);
-    if (slot === "cover") setCoverImage({ file, url });
-    else setInlineImage({ file, url });
     setFeedback("");
+    setOptimizingCount(count => count + 1);
+    try {
+      const optimized = await compressImage(file, { ...imagePresets.storyImage, fileName: file.name });
+      const previous = slot === "cover" ? coverImage : inlineImage;
+      if (previous) { URL.revokeObjectURL(previous.url); objectUrls.current.delete(previous.url); }
+      const url = URL.createObjectURL(optimized.file);
+      objectUrls.current.add(url);
+      const selected: SelectedImage = { file: optimized.file, url, note: optimizationNote(optimized) ?? undefined };
+      if (slot === "cover") setCoverImage(selected);
+      else setInlineImage(selected);
+    } catch (error) {
+      input.value = "";
+      setFeedback(imageErrorMessage(error));
+    } finally {
+      setOptimizingCount(count => count - 1);
+    }
   }
 
   function removeImage(slot: "cover" | "inline") {
@@ -160,25 +176,34 @@ export function StoryComposerDialog({ canPublish, story, onClose, onSaved }: {
     else { setInlineImage(null); if (inlineInputRef.current) inlineInputRef.current.value = ""; }
   }
 
-  function chooseGalleryImages(event: ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(event.currentTarget.files ?? []);
+  async function chooseGalleryImages(event: ChangeEvent<HTMLInputElement>) {
+    const input = event.currentTarget;
+    const files = Array.from(input.files ?? []);
     if (!files.length) return;
-    event.currentTarget.value = "";
+    input.value = "";
     if (gallery.length + files.length > MAX_EDITORIAL_GALLERY_IMAGES) {
       setFeedback(`Puedes añadir hasta ${MAX_EDITORIAL_GALLERY_IMAGES} fotos al carrusel.`);
       return;
     }
-    if (files.some((file) => !ALLOWED_IMAGE_TYPES.has(file.type) || file.size > MAX_IMAGE_BYTES)) {
-      setFeedback("Cada fotografía debe ser JPG, PNG o WebP y pesar 10 MB o menos.");
-      return;
-    }
-    const selected = files.map((file) => {
-      const url = URL.createObjectURL(file);
-      objectUrls.current.add(url);
-      return { id: crypto.randomUUID(), path: null, file, url, alt: "", caption: "" };
-    });
-    setGallery((current) => [...current, ...selected]);
     setFeedback("");
+    setOptimizingCount(count => count + 1);
+    try {
+      // One photo at a time keeps memory low when several large pictures are chosen together.
+      for (const file of files) {
+        const optimized = await compressImage(file, { ...imagePresets.storyImage, fileName: file.name });
+        const url = URL.createObjectURL(optimized.file);
+        objectUrls.current.add(url);
+        const item: GalleryDraftImage = {
+          id: crypto.randomUUID(), path: null, file: optimized.file, url, alt: "", caption: "",
+          note: optimizationNote(optimized) ?? undefined,
+        };
+        setGallery((current) => [...current, item]);
+      }
+    } catch (error) {
+      setFeedback(imageErrorMessage(error));
+    } finally {
+      setOptimizingCount(count => count - 1);
+    }
   }
 
   function changeGalleryImage(id: string, field: "alt" | "caption", value: string) {
@@ -205,6 +230,10 @@ export function StoryComposerDialog({ canPublish, story, onClose, onSaved }: {
   function submitStory(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (pending) return;
+    if (optimizing) {
+      setFeedback("Espera a que terminemos de optimizar las fotos antes de guardar.");
+      return;
+    }
     if ((inlineImage || inlinePath) && !draft.inlineImageAlt.trim()) {
       setFeedback("Describe la fotografía de apoyo para que también sea accesible.");
       return;
@@ -278,7 +307,7 @@ export function StoryComposerDialog({ canPublish, story, onClose, onSaved }: {
       onCancel={(event) => { event.preventDefault(); event.stopPropagation(); }}>
         <div className={editor.dialogHeader}>
           <div><p className={styles.cardLabel}>{story ? "Editar publicación" : "Nueva publicación"} · Revista</p><h2 id={titleId}>{story ? "Editar el contenido y su diseño" : "Preparar una publicación"}</h2><p>Completa el texto y las fotos. Al final podrás elegir el diseño y ver cómo quedará.</p></div>
-          <button type="button" className={editor.closeButton} onClick={closeDialog} disabled={pending} aria-label="Cerrar formulario">×</button>
+          <button type="button" className={editor.closeButton} onClick={closeDialog} disabled={pending || optimizing} aria-label="Cerrar formulario">×</button>
         </div>
         <form className={editor.form} onSubmit={submitStory}>
           <fieldset className={editor.fieldset} disabled={pending}>
@@ -294,18 +323,18 @@ export function StoryComposerDialog({ canPublish, story, onClose, onSaved }: {
 
           <fieldset className={editor.fieldset} disabled={pending}>
             <legend>2. Fotografías de esta publicación</legend>
-            <p className={editor.sectionHelp}>Estas fotos pertenecen a este artículo de la revista. JPG, PNG o WebP, hasta 10 MB cada una.</p>
+            <p className={editor.sectionHelp}>Estas fotos pertenecen a este artículo de la revista. JPG, PNG o WebP. Puedes subir fotos grandes; el sistema las optimiza automáticamente.</p>
             <div className={editor.imageGrid}>
               <div className={editor.imageCard}>
-                <label>Fotografía principal<input ref={coverInputRef} name="coverImage" type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => chooseImage(event, "cover")} /></label>
+                <label>Fotografía principal<input ref={coverInputRef} name="coverImage" type="file" accept="image/jpeg,image/png,image/webp" disabled={optimizing} onChange={(event) => void chooseImage(event, "cover")} /></label>
                 <p className={editor.hint}>Aparece en la portada del artículo y en la lista de publicaciones.</p>
-                {coverUrl ? <><div className={editor.imageThumbnail} style={{ backgroundImage: `url("${encodeURI(coverUrl).replaceAll('"', "%22")}")` }} role="img" aria-label={draft.coverImageAlt || "Fotografía principal seleccionada"} /><div className={editor.imageCaption}><span>{coverImage?.file.name ?? "Fotografía actual de la publicación"}</span><button type="button" onClick={() => removeImage("cover")}>Quitar foto</button></div></> : <p className={editor.imageEmpty}>No hay una fotografía principal seleccionada.</p>}
+                {coverUrl ? <><div className={editor.imageThumbnail} style={{ backgroundImage: `url("${encodeURI(coverUrl).replaceAll('"', "%22")}")` }} role="img" aria-label={draft.coverImageAlt || "Fotografía principal seleccionada"} /><div className={editor.imageCaption}><span>{coverImage?.file.name ?? "Fotografía actual de la publicación"}</span><button type="button" onClick={() => removeImage("cover")}>Quitar foto</button></div>{coverImage?.note ? <p className={editor.hint}>{coverImage.note}</p> : null}</> : <p className={editor.imageEmpty}>No hay una fotografía principal seleccionada.</p>}
                 <label>Descripción de la fotografía principal<input name="coverImageAlt" maxLength={250} value={draft.coverImageAlt} onChange={(event) => changeField("coverImageAlt", event.target.value)} placeholder="Describe qué se ve en la imagen" /><span className={editor.hint}>Ayuda a personas que usan lectores de pantalla. Si queda vacío, se utiliza el título.</span></label>
               </div>
               <div className={editor.imageCard}>
-                <label>Fotografía dentro del texto<input ref={inlineInputRef} name="inlineImage" type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => chooseImage(event, "inline")} /></label>
+                <label>Fotografía dentro del texto<input ref={inlineInputRef} name="inlineImage" type="file" accept="image/jpeg,image/png,image/webp" disabled={optimizing} onChange={(event) => void chooseImage(event, "inline")} /></label>
                 <p className={editor.hint}>Elige el párrafo que acompañará y cómo se coloca a su lado.</p>
-                {inlineUrl ? <><div className={editor.imageThumbnail} style={{ backgroundImage: `url("${encodeURI(inlineUrl).replaceAll('"', "%22")}")` }} role="img" aria-label={draft.inlineImageAlt || "Fotografía de apoyo seleccionada"} /><div className={editor.imageCaption}><span>{inlineImage?.file.name ?? "Fotografía de apoyo actual"}</span><button type="button" onClick={() => removeImage("inline")}>Quitar foto</button></div></> : <p className={editor.imageEmpty}>No hay una fotografía de apoyo seleccionada.</p>}
+                {inlineUrl ? <><div className={editor.imageThumbnail} style={{ backgroundImage: `url("${encodeURI(inlineUrl).replaceAll('"', "%22")}")` }} role="img" aria-label={draft.inlineImageAlt || "Fotografía de apoyo seleccionada"} /><div className={editor.imageCaption}><span>{inlineImage?.file.name ?? "Fotografía de apoyo actual"}</span><button type="button" onClick={() => removeImage("inline")}>Quitar foto</button></div>{inlineImage?.note ? <p className={editor.hint}>{inlineImage.note}</p> : null}</> : <p className={editor.imageEmpty}>No hay una fotografía de apoyo seleccionada.</p>}
                 <label>Descripción de la fotografía de apoyo<input name="inlineImageAlt" required={Boolean(inlineImage || inlinePath)} maxLength={250} value={draft.inlineImageAlt} onChange={(event) => changeField("inlineImageAlt", event.target.value)} placeholder="Describe qué se ve en la imagen" /></label>
                 <label>Pie de la fotografía de apoyo<input name="inlineImageCaption" maxLength={300} value={draft.inlineImageCaption} onChange={(event) => changeField("inlineImageCaption", event.target.value)} placeholder="Lugar, fecha o contexto de la foto" /></label>
                 <label>Ubicación en el texto<select name="inlineImageAfterParagraph" value={inlinePosition} onChange={(event) => changeField("inlineImageAfterParagraph", event.target.value)}>
@@ -321,7 +350,7 @@ export function StoryComposerDialog({ canPublish, story, onClose, onSaved }: {
           <fieldset className={editor.fieldset} disabled={pending}>
             <legend>3. Carrusel de fotografías al final</legend>
             <p className={editor.sectionHelp}>Añade hasta {MAX_EDITORIAL_GALLERY_IMAGES} fotos. Se muestran debajo del texto, en este orden, y el carrusel vuelve a empezar al llegar a la última.</p>
-            <label className={editor.galleryUpload}>Añadir fotos al carrusel<input ref={galleryInputRef} name="galleryImages" type="file" multiple accept="image/jpeg,image/png,image/webp" onChange={chooseGalleryImages} disabled={gallery.length >= MAX_EDITORIAL_GALLERY_IMAGES} /></label>
+            <label className={editor.galleryUpload}>Añadir fotos al carrusel<input ref={galleryInputRef} name="galleryImages" type="file" multiple accept="image/jpeg,image/png,image/webp" onChange={(event) => void chooseGalleryImages(event)} disabled={optimizing || gallery.length >= MAX_EDITORIAL_GALLERY_IMAGES} /></label>
             {gallery.length ? <ol className={editor.galleryList}>
               {gallery.map((image, index) => <li className={editor.galleryItem} key={image.id}>
                 <div className={editor.galleryThumbnail} style={{ backgroundImage: `url("${encodeURI(image.url).replaceAll('"', "%22")}")` }} role="img" aria-label={image.alt || `Fotografía ${index + 1} del carrusel`} />
@@ -329,6 +358,7 @@ export function StoryComposerDialog({ canPublish, story, onClose, onSaved }: {
                   <div className={editor.galleryItemHeading}><strong>Foto {index + 1} de {gallery.length}</strong><span>{image.file?.name ?? "Fotografía guardada"}</span></div>
                   <label>Descripción de la foto {index + 1}<input name={`galleryAlt-${image.id}`} required maxLength={250} value={image.alt} onChange={(event) => changeGalleryImage(image.id, "alt", event.target.value)} placeholder="Describe qué se ve en esta imagen" /></label>
                   <label>Pie de la foto {index + 1} · opcional<input name={`galleryCaption-${image.id}`} maxLength={300} value={image.caption} onChange={(event) => changeGalleryImage(image.id, "caption", event.target.value)} placeholder="Lugar, fecha o contexto" /></label>
+                  {image.note ? <p className={editor.hint}>{image.note}</p> : null}
                 </div>
                 <div className={editor.galleryItemActions}>
                   <button type="button" disabled={index === 0} onClick={() => moveGalleryImage(image.id, -1)} aria-label={`Mover foto ${index + 1} antes`}>↑</button>
@@ -360,11 +390,12 @@ export function StoryComposerDialog({ canPublish, story, onClose, onSaved }: {
             </select></label>
             <p>{statusHelp[draft.status]}</p>
           </div>
+          {optimizing ? <p className={editor.hint} role="status">Optimizando foto…</p> : null}
           {feedback ? <p className={styles.feedbackError} role="alert">{feedback}</p> : null}
           <div className={editor.actions}>
             <span>Al cerrar sin guardar, los cambios de esta ventana se pierden.</span>
-            <button type="button" className={styles.buttonQuiet} onClick={closeDialog} disabled={pending}>Cerrar</button>
-            <button type="submit" className={editor.saveButton} disabled={pending}>{pending ? "Guardando…" : saveLabel}</button>
+            <button type="button" className={styles.buttonQuiet} onClick={closeDialog} disabled={pending || optimizing}>Cerrar</button>
+            <button type="submit" className={editor.saveButton} disabled={pending || optimizing}>{pending ? "Guardando…" : saveLabel}</button>
           </div>
         </form>
     </dialog>

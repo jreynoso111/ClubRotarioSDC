@@ -7,6 +7,8 @@ export const passwordMinLength = 8;
 export const passwordMaxBytes = 72;
 export const avatarBucket = "club-media";
 export const avatarAcceptedTypes = ["image/jpeg", "image/png", "image/webp"] as const;
+// Limit for the stored avatar object (512 x 512 WebP). The picture picked by the user may be much larger:
+// the browser crops and re-encodes it before upload, so only the stored size is checked on the server.
 export const avatarMaxBytes = 5 * 1024 * 1024;
 export const avatarOutputSize = 512;
 

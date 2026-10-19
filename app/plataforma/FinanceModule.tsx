@@ -6,10 +6,13 @@ import Link from "next/link";
 import { financeCategoryLabels, financePaymentMethodLabels, type FinanceDashboard, type FinanceEntryCategory, type FinanceLedgerEntry, type FinancePaymentMethod, type FinanceStatement, type FinanceYearMonth } from "@/lib/finance";
 import { createFinanceEntryAction, createFinanceMonthlyDuesAction, getFinanceDashboardAction, recordFinanceMonthlyPaymentAction } from "./actions";
 import { attachFinanceReceiptAction, exportFinanceCsvAction, getFinanceStatementAction, getFinanceYearSummaryAction, voidFinanceEntryAction } from "./finance-actions";
+import { compressImage, imagePresets, optimizationNote } from "@/lib/image-compress";
 import { createClient } from "@/utils/supabase/client";
 import styles from "./platform.module.css";
 import ui from "./finance-workspace.module.css";
 
+// PDF receipts are not optimized; the storage bucket accepts them up to this size.
+const MAX_RECEIPT_PDF_BYTES = 5 * 1024 * 1024;
 const incomeCategories: FinanceEntryCategory[] = ["activity_contribution", "donation", "other_income"];
 const expenseCategories: FinanceEntryCategory[] = ["activity_expense", "operating_expense", "other_expense"];
 function localDate() {
@@ -157,16 +160,31 @@ export function FinanceModule({ canManage, onOpenActivities }: { canManage: bool
   }
   async function attachReceipt(entry: FinanceLedgerEntry, file: File | undefined) {
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024 || !["application/pdf", "image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-      setFeedback("El comprobante debe ser PDF, JPG, PNG o WebP de hasta 5 MB."); setError(true); return;
+    const isPdf = file.type === "application/pdf";
+    if (isPdf && file.size > MAX_RECEIPT_PDF_BYTES) {
+      setFeedback("Los PDF deben pesar 5 MB o menos."); setError(true); return;
     }
-    setPending(true); setFeedback("");
-    const extension = file.type === "application/pdf" ? "pdf" : file.type.split("/")[1];
+    setPending(true); setFeedback(isPdf ? "" : "Optimizando foto…"); setError(false);
+    let receipt = file;
+    let note: string | null = null;
+    if (!isPdf) {
+      try {
+        const optimized = await compressImage(file, { ...imagePresets.receiptImage, fileName: file.name });
+        receipt = optimized.file;
+        note = optimizationNote(optimized);
+      } catch (failure) {
+        setPending(false);
+        setFeedback(failure instanceof Error ? failure.message : "No pudimos preparar el comprobante. Inténtalo de nuevo.");
+        setError(true);
+        return;
+      }
+    }
+    const extension = receipt.type === "application/pdf" ? "pdf" : receipt.type.split("/")[1];
     const path = `${entry.id}/${crypto.randomUUID()}.${extension}`;
-    const { error: uploadError } = await createClient().storage.from("club-finance-receipts").upload(path, file, { contentType: file.type, upsert: false });
+    const { error: uploadError } = await createClient().storage.from("club-finance-receipts").upload(path, receipt, { contentType: receipt.type, upsert: false });
     setPending(false);
     if (uploadError) { setFeedback("No se pudo subir el comprobante. Inténtalo de nuevo."); setError(true); return; }
-    void save(attachFinanceReceiptAction(entry.id, path));
+    void save(attachFinanceReceiptAction(entry.id, path).then(result => ({ ...result, message: note ? `${note}. ${result.message}` : result.message })));
   }
   async function exportCsv(period: { month?: string; year?: number }) {
     setPending(true);

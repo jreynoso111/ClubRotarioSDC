@@ -5,10 +5,10 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 
+import { compressImage, imagePresets, optimizationNote } from "@/lib/image-compress";
 import {
   emptySitePhotoSlots,
   groupSitePhotoSlots,
-  isSupportedSitePhotoType,
   MAX_SITE_PHOTO_BYTES,
   SITE_PHOTO_ASPECT_LABELS,
   sitePhotoAssetPath,
@@ -62,7 +62,11 @@ function SitePhotoCard({ slot, busy, feedback, onSave, onRestore }: {
   const [altText, setAltText] = useState(slot.altText);
   const [caption, setCaption] = useState(slot.caption ?? "");
   const [isPublished, setIsPublished] = useState(initialPublished);
+  const [optimizing, setOptimizing] = useState(false);
+  const [optimizedNote, setOptimizedNote] = useState("");
   const objectUrl = useRef<string | null>(null);
+  // Every new selection or clear bumps this counter, so a slow optimization that finishes late is discarded.
+  const selectionVersion = useRef(0);
 
   const hasPhoto = Boolean(file || hasCustom);
   const shownLive = hasCustom && slot.isPublished;
@@ -72,7 +76,7 @@ function SitePhotoCard({ slot, busy, feedback, onSave, onRestore }: {
     caption !== (slot.caption ?? "") ||
     isPublished !== initialPublished,
   );
-  const canSave = changed && hasPhoto;
+  const canSave = changed && hasPhoto && !optimizing;
   const thumbSrc = previewUrl ?? (hasCustom ? slot.imageUrl : null) ?? slot.defaultImage;
   const thumbIsRemote = Boolean(previewUrl) || hasCustom;
   const thumbAlt = previewUrl
@@ -85,35 +89,46 @@ function SitePhotoCard({ slot, busy, feedback, onSave, onRestore }: {
       : "La web muestra la imagen original del sitio.";
 
   useEffect(() => () => {
+    selectionVersion.current += 1;
     if (objectUrl.current) URL.revokeObjectURL(objectUrl.current);
   }, []);
 
   function clearSelection() {
+    selectionVersion.current += 1;
     if (objectUrl.current) URL.revokeObjectURL(objectUrl.current);
     objectUrl.current = null;
     setFile(null);
     setPreviewUrl(null);
     setFileError("");
+    setOptimizing(false);
+    setOptimizedNote("");
     setFileVersion((value) => value + 1);
   }
 
-  function choosePhoto(event: ChangeEvent<HTMLInputElement>) {
+  async function choosePhoto(event: ChangeEvent<HTMLInputElement>) {
     const selected = event.currentTarget.files?.[0];
     if (!selected) return;
-    if (!isSupportedSitePhotoType(selected.type) || selected.size > MAX_SITE_PHOTO_BYTES) {
-      clearSelection();
-      setFileError(
-        !isSupportedSitePhotoType(selected.type)
-          ? "Elige una fotografía JPG, PNG o WebP."
-          : "La fotografía debe pesar 10 MB o menos.",
-      );
-      return;
+    clearSelection();
+    const version = selectionVersion.current;
+    setOptimizing(true);
+    try {
+      const optimized = await compressImage(selected, { ...imagePresets.sitePhoto, fileName: selected.name });
+      if (version !== selectionVersion.current) return;
+      if (optimized.file.size > MAX_SITE_PHOTO_BYTES) {
+        throw new Error("La fotografía optimizada sigue superando 10 MB. Prueba con otra imagen.");
+      }
+      objectUrl.current = URL.createObjectURL(optimized.file);
+      setFile(optimized.file);
+      setPreviewUrl(objectUrl.current);
+      setOptimizedNote(optimizationNote(optimized) ?? "");
+    } catch (error) {
+      if (version === selectionVersion.current) {
+        clearSelection();
+        setFileError(error instanceof Error ? error.message : "No pudimos preparar esta foto. Inténtalo de nuevo.");
+      }
+    } finally {
+      if (version === selectionVersion.current) setOptimizing(false);
     }
-    if (objectUrl.current) URL.revokeObjectURL(objectUrl.current);
-    objectUrl.current = URL.createObjectURL(selected);
-    setFile(selected);
-    setPreviewUrl(objectUrl.current);
-    setFileError("");
   }
 
   function discardChanges() {
@@ -153,14 +168,16 @@ function SitePhotoCard({ slot, busy, feedback, onSave, onRestore }: {
         {feedback ? <p className={feedback.error ? styles.error : styles.success} role={feedback.error ? "alert" : "status"}>{feedback.message}</p> : null}
 
         <form className={styles.form} onSubmit={submit}>
-          <fieldset className={styles.fieldset} disabled={busy}>
+          <fieldset className={styles.fieldset} disabled={busy || optimizing}>
             <label className={styles.field}>
               {hasCustom ? "Reemplazar fotografía" : "Subir fotografía"}
               <input key={fileVersion} name="photo" type="file" accept="image/jpeg,image/png,image/webp" onChange={choosePhoto} />
-              <small>JPG, PNG o WebP · máximo 10 MB. Verás la vista previa antes de guardar.</small>
+              <small>JPG, PNG o WebP. Puedes subir fotos grandes; el sistema las optimiza automáticamente. Verás la vista previa antes de guardar.</small>
             </label>
+            {optimizing ? <p className={styles.loading} role="status">Optimizando foto…</p> : null}
             {fileError ? <p className={styles.error} role="alert">{fileError}</p> : null}
             {file ? <div className={styles.selection}><span>{file.name}</span><button type="button" onClick={clearSelection}>Quitar selección</button></div> : null}
+            {file && optimizedNote ? <p className={styles.where} role="status">{optimizedNote}</p> : null}
 
             <label className={styles.field}>
               Descripción de la foto <span>(texto alternativo)</span>
